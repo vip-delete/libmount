@@ -13,6 +13,7 @@ body {
 .row {
   display: flex;
   align-items: center;
+  width: fit-content;
   height: 16px;
   margin: 5px;
 }

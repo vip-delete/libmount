@@ -83,7 +83,7 @@ const MountUtil = {
 
     // A FAT12 volume cannot contain more than 4084 clusters.
     if (vars.CountOfClusters < 4085) {
-      const driver = new FATDriver(s, bs, vars);
+      const driver = new FAT12Driver(s, bs, vars);
       return new FATFileSystem(driver);
     }
 

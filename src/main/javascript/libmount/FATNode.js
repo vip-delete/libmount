@@ -21,16 +21,16 @@ class FATNode {
    * @param {number} fileSize
    * @param {number} offset
    * @param {number} length
-   * @param {number} contentOffset
+   * @param {number} clusNum
    */
-  constructor(type, shortName, longName, fileSize, offset, length, contentOffset) {
+  constructor(type, shortName, longName, fileSize, offset, length, clusNum) {
     /** @type {number}  */ this.type = type;
     /** @type {string}  */ this.shortName = shortName;
     /** @type {?string} */ this.longName = longName;
     /** @type {number}  */ this.fileSize = fileSize;
     /** @type {number}  */ this.offset = offset;
     /** @type {number}  */ this.length = length;
-    /** @type {number}  */ this.contentOffset = contentOffset;
+    /** @type {number}  */ this.clusNum = clusNum;
   }
 
   /**

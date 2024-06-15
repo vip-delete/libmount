@@ -54,6 +54,16 @@ class FATFileSystem {
   }
 
   /**
+   * @override
+   * @param {!LibMount.File} file
+   * @returns {?Uint8Array}
+   */
+  readFile(file) {
+    const f = /** @type {!FATFile} */ (file);
+    return this.driver.getContent(f.node);
+  }
+
+  /**
    * @param {!FATNode} dirNode
    * @param {function(!FATNode):boolean} predicate
    * @returns {?FATNode}

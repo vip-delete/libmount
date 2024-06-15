@@ -17,14 +17,25 @@ function createElement(name, classes, text) {
 
 const container = document.getElementById("app");
 
-function createRow(fs, dir, name) {
-  const directory = dir.isDirectory();
-  const row = createElement("div", directory ? ["row", "link"] : ["row"]);
+function createRow(fs, f, name) {
+  const directory = f.isDirectory();
+  const row = createElement("span", ["row", "link"]);
   const icon = createElement("i", ["icon", directory ? "dir" : "file"]);
   const link = createElement("span", [], name);
   if (directory) {
     row.addEventListener("click", () => {
-      showDir(fs, dir);
+      showDir(fs, f);
+    });
+  } else {
+    row.addEventListener("click", () => {
+      const buf = fs.readFile(f);
+      var blob = new Blob([buf]);
+      var url = URL.createObjectURL(blob);
+      const a = createElement("a", []);
+      a.href = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
     });
   }
   row.appendChild(icon);
@@ -40,9 +51,9 @@ function showDir(fs, dir) {
   if (dir.parent) {
     container.appendChild(createRow(fs, dir.parent, ".."));
   }
-  files.forEach((it) => {
-    it.parent = dir;
-    container.appendChild(createRow(fs, it, it.getName()));
+  files.forEach((f) => {
+    f.parent = dir;
+    container.appendChild(createRow(fs, f, f.getName()));
   });
 }
 

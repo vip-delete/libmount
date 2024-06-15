@@ -57,4 +57,10 @@ LibMount.FileSystem = class {
    * @returns {!Array<!LibMount.File>}
    */
   listFiles(file) {}
+
+  /**
+   * @param {!LibMount.File} file
+   * @returns {?Uint8Array}
+   */
+  readFile(file) {}
 };

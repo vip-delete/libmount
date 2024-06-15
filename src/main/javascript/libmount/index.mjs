@@ -1,5 +1,6 @@
 export default [
   "api.js",
+  "defines.js",
   "io.js",
   "model.js",
   "util.js",

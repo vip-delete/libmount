@@ -1,0 +1,44 @@
+html,
+body {
+  margin: 0;
+  box-sizing: border-box;
+  font-size: 12pt;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#app {
+  padding: 5px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  height: 16px;
+  margin: 5px;
+}
+
+.icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+}
+
+.link:hover {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.up {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="none" stroke="black" stroke-width="5" d="M20,27H8V17"/><path fill="black" d="M8,8L1,18H15Z"/></g></svg>')
+    no-repeat;
+}
+
+.file {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="white" stroke="gray" stroke-width="1" d="M16,1H1V27H23V7Z"/></g></svg>')
+    no-repeat;
+}
+
+.dir {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="%23FFE791" stroke="%23EBC748" stroke-width="1" d="M16,1H1V27H23V7Z M20,7V27"/></g></svg>')
+    no-repeat;
+}

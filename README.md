@@ -1,5 +1,7 @@
 # LibMount
 
+[![ci](https://github.com/vip-delete/libmount/actions/workflows/ci.yaml/badge.svg)](https://github.com/vip-delete/libmount/actions/workflows/ci.yaml)
+
 **FAT12**, **FAT16**, **FAT32** filesystem Javascript library for Browser and NodeJS
 
 ```javascript

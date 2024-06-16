@@ -2,8 +2,12 @@ html,
 body {
   margin: 0;
   box-sizing: border-box;
-  font-size: 12pt;
+  font-size: 16pt;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
 }
 
 #app {
@@ -14,19 +18,36 @@ body {
   display: flex;
   align-items: center;
   width: fit-content;
-  height: 16px;
+  height: 28px;
   margin: 5px;
 }
 
 .icon {
   display: inline-block;
-  width: 16px;
-  height: 16px;
+  min-width: 24px;
+  height: 24px;
 }
 
-.link:hover {
+.action {
+}
+
+.name {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  text-wrap: nowrap;
+}
+
+.name:hover {
   cursor: pointer;
   text-decoration: underline;
+}
+
+.status {
+  border: solid 1px black;
+  border-radius: 10px;
+  width: fit-content;
+  height: 48px;
+  padding: 5px;
 }
 
 .up {
@@ -43,3 +64,9 @@ body {
   background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="%23FFE791" stroke="%23EBC748" stroke-width="1" d="M16,1H1V27H23V7Z M20,7V27"/></g></svg>')
     no-repeat;
 }
+
+.del {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="none" stroke="%23FF6666" stroke-width="5" d="M5,5L27,27 M27,5L5,27"/></g></svg>')
+    no-repeat;
+}
+

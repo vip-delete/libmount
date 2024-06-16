@@ -26,7 +26,12 @@ class FATDriver {
    * @param {!FATNode} node
    * @returns {?Uint8Array}
    */
-  getContent(node) {}
+  readNode(node) {}
+
+  /**
+   * @param {!FATNode} node
+   */
+  deleteNode(node) {}
 }
 
 /**
@@ -84,8 +89,8 @@ class FAT12Driver {
    * @param {!FATNode} node
    * @returns {?Uint8Array}
    */
-  getContent(node) {
-    if (node.type != FAT_NODE.REGULAR_FILE) {
+  readNode(node) {
+    if (node.type !== FAT_NODE.REGULAR_FILE) {
       return null;
     }
     const fileSize = node.fileSize;
@@ -96,9 +101,6 @@ class FAT12Driver {
     while (size < fileSize) {
       const offset = this.getContentOffset(clusNum);
       if (offset == FAT_DRIVER_EOF) {
-        if (DEBUG) {
-          throw "Node is truncated: " + node.getName();
-        }
         break;
       }
       const len = Math.min(BytsPerClus, fileSize - size);
@@ -109,6 +111,42 @@ class FAT12Driver {
       clusNum = this.getNextClusNum(clusNum);
     }
     return arr;
+  }
+
+  /**
+   * @override
+   * @param {!FATNode} node
+   */
+  deleteNode(node) {
+    if (node.type === FAT_NODE.REGULAR_FILE) {
+      let clusNum = node.clusNum;
+      while (this.isAllocated(clusNum)) {
+        const nextClusNum = this.getNextClusNum(clusNum);
+        this.setNextClusNum(clusNum, 0);
+        clusNum = nextClusNum;
+      }
+      this.markNodeDeleted(node);
+    }
+    if (node.type === FAT_NODE.REGULAR_DIR) {
+      let subNode = this.getFirst(node);
+      while (subNode != null) {
+        this.deleteNode(subNode);
+        subNode = this.getNext(subNode);
+      }
+      this.markNodeDeleted(node);
+    }
+  }
+
+  /**
+   * @param {!FATNode} node
+   */
+  markNodeDeleted(node) {
+    this.s.pos = node.offset;
+    for (let i = 0; i < node.length; i += DIR_ENTRY_SIZE) {
+      this.s.pos = node.offset + i;
+      this.s.writeByte(DIR_FLAG_FREE_ENTRY);
+    }
+    node.type = FAT_NODE.DELETED;
   }
 
   /**
@@ -123,11 +161,7 @@ class FAT12Driver {
         return null;
       }
       if (offset != currentOffset) {
-        if (DEBUG) {
-          if (offset % DIR_ENTRY_SIZE !== 0) {
-            throw "Offset " + offset + " is not " + DIR_ENTRY_SIZE + " bytes aligned";
-          }
-        }
+        assert(offset % DIR_ENTRY_SIZE === 0, "Offset " + offset + " is not " + DIR_ENTRY_SIZE + " bytes aligned");
         this.s.pos = offset;
         currentOffset = offset;
       }
@@ -158,6 +192,7 @@ class FAT12Driver {
     if (flag === DIR_FLAG_FREE_ENTRY) {
       if (attr === DIR_LN_ATTR_LONG_NAME) {
         chain.clear();
+        this.s.pos += DIR_ENTRY_SIZE;
         return null;
       }
       const dir = DirEntry.load(this.s);
@@ -223,12 +258,12 @@ class FAT12Driver {
   }
 
   /**
-   * @param {number} nexClusNum
+   * @param {number} clusNum
    * @returns {number}
    */
-  getContentOffset(nexClusNum) {
-    if (2 <= nexClusNum && nexClusNum <= this.vars.MAX) {
-      return this.bs.bpb.BytsPerSec * this.getFirstSectorOfCluster(nexClusNum);
+  getContentOffset(clusNum) {
+    if (this.isAllocated(clusNum)) {
+      return this.bs.bpb.BytsPerSec * this.getFirstSectorOfCluster(clusNum);
     }
     return FAT_DRIVER_EOF;
   }
@@ -245,13 +280,41 @@ class FAT12Driver {
    * @param {number} clusNum
    * @returns {number}
    */
-  getNextClusNum(clusNum) {
+  getFATClusPos(clusNum) {
+    assert(this.isAllocated(clusNum));
     const fatOffset = clusNum + Math.floor(clusNum / 2);
     const thisFATSecNum = this.bs.bpb.RsvdSecCnt + Math.floor(fatOffset / this.bs.bpb.BytsPerSec);
     const thisFATEntOffset = fatOffset % this.bs.bpb.BytsPerSec;
-    this.s.pos = thisFATSecNum * this.bs.bpb.BytsPerSec + thisFATEntOffset;
+    return thisFATSecNum * this.bs.bpb.BytsPerSec + thisFATEntOffset;
+  }
 
+  /**
+   * @param {number} clusNum
+   * @returns {number}
+   */
+  getNextClusNum(clusNum) {
+    this.s.pos = this.getFATClusPos(clusNum);
     const fat12ClusEntryVal = this.s.readWord();
     return (clusNum & 1) === 1 ? fat12ClusEntryVal >> 4 : fat12ClusEntryVal & 0x0fff;
+  }
+
+  /**
+   * @param {number} clusNum
+   * @param {number} value
+   */
+  setNextClusNum(clusNum, value) {
+    assert(0 <= value && value <= 0xfff);
+    this.s.pos = this.getFATClusPos(clusNum);
+    const fat12ClusEntryVal = this.s.readWord();
+    this.s.pos -= 2;
+    this.s.writeWord((clusNum & 1) === 1 ? (value << 4) | (fat12ClusEntryVal & 0xf) : (fat12ClusEntryVal & 0xf000) | value);
+  }
+
+  /**
+   * @param {number} clusNum
+   * @returns {boolean}
+   */
+  isAllocated(clusNum) {
+    return 2 <= clusNum && clusNum <= this.vars.MAX;
   }
 }

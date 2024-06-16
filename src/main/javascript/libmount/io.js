@@ -45,4 +45,30 @@ class BlockDevice {
     this.pos += 4;
     return r;
   }
+
+  /**
+   * @param {number} val
+   */
+  writeByte(val) {
+    assert(0 <= val && val <= 0xff);
+    this.dataView.setUint8(this.pos, val);
+    this.pos += 2;
+  }
+
+  /**
+   * @param {number} val
+   */
+  writeWord(val) {
+    assert(0 <= val && val <= 0xffff);
+    this.dataView.setUint16(this.pos, val, true);
+    this.pos += 2;
+  }
+  /**
+   * @param {number} val
+   */
+  writeDoubleWord(val) {
+    assert(0 <= val && val <= 0xffffffff);
+    this.dataView.setUint32(this.pos, val, true);
+    this.pos += 2;
+  }
 }

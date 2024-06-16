@@ -1,5 +1,7 @@
 import js from "./index.mjs";
 
+const mountFile = "freedos722.img";
+
 js.forEach((it) => {
   const script = document.createElement("script");
   script.setAttribute("src", it);
@@ -15,29 +17,34 @@ function createElement(name, classes, text) {
   return element;
 }
 
-const container = document.getElementById("app");
+const app = document.getElementById("app");
+const container = createElement("div", []);
+app.appendChild(container);
 
 function createRow(fs, f, name) {
   const directory = f.isDirectory();
   const row = createElement("span", ["row", "link"]);
+  const del = createElement("i", ["icon", "del"]);
+  del.title = "Delete";
   const icon = createElement("i", ["icon", directory ? "dir" : "file"]);
-  const link = createElement("span", [], name);
+  const link = createElement("span", ["name"], name);
+  del.addEventListener("click", () => {
+    fs.deleteFile(f);
+    showDir(fs, f.parent);
+  });
   if (directory) {
-    row.addEventListener("click", () => {
+    link.addEventListener("click", () => {
       showDir(fs, f);
     });
   } else {
-    row.addEventListener("click", () => {
+    link.addEventListener("click", () => {
       const buf = fs.readFile(f);
-      var blob = new Blob([buf]);
-      var url = URL.createObjectURL(blob);
-      const a = createElement("a", []);
-      a.href = url;
-      a.download = name;
-      a.click();
-      URL.revokeObjectURL(url);
+      if (buf) {
+        download(buf, name);
+      }
     });
   }
+  row.appendChild(del);
   row.appendChild(icon);
   row.appendChild(link);
   return row;
@@ -57,9 +64,27 @@ function showDir(fs, dir) {
   });
 }
 
+function download(buf, name) {
+  var blob = new Blob([buf]);
+  var url = URL.createObjectURL(blob);
+  const a = createElement("a", []);
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 async function onLoad() {
-  const response = await fetch("freedos722.img");
+  const response = await fetch(mountFile);
   const buf = await response.arrayBuffer();
+
+  const status = createElement("div", ["row", "name"]);
+  status.addEventListener("click", () => {
+    download(buf, mountFile);
+  });
+  app.insertBefore(status, container);
+  status.innerHTML = mountFile;
+
   const fs = LibMount.mount(buf);
   const root = fs.getRoot();
   showDir(fs, root);

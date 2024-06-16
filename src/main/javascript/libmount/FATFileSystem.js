@@ -60,7 +60,16 @@ class FATFileSystem {
    */
   readFile(file) {
     const f = /** @type {!FATFile} */ (file);
-    return this.driver.getContent(f.node);
+    return this.driver.readNode(f.node);
+  }
+
+  /**
+   * @override
+   * @param {!LibMount.File} file
+   */
+  deleteFile(file) {
+    const f = /** @type {!FATFile} */ (file);
+    this.driver.deleteNode(f.node);
   }
 
   /**

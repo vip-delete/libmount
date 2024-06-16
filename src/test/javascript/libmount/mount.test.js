@@ -52,6 +52,30 @@ test("readFile", () => {
   expect(vimBuf.slice(-6)).toStrictEqual(new Uint8Array([0x74, 0x80, 0x00, 0x9f, 0x01, 0x1e]));
 });
 
+test("deleteFile", () => {
+  const length = fs.listFiles(fs.getRoot()).length;
+  fs.deleteFile(fs.getRoot());
+  expect(fs.listFiles(fs.getRoot()).length).toBe(length);
+
+  fs.deleteFile(fs.getFile("hello.asm"));
+  expect(fs.listFiles(fs.getRoot()).length).toBe(length - 1);
+
+  fs.deleteFile(fs.getFile("foo"));
+  expect(fs.listFiles(fs.getRoot()).length).toBe(length - 2);
+
+  fs.deleteFile(fs.getFile("x86test.asm"));
+  expect(fs.listFiles(fs.getRoot()).length).toBe(length - 3);
+
+  const length2 = fs.listFiles(fs.getFile("GaMeS")).length;
+  expect(length2).toBe(6);
+  fs.deleteFile(fs.getFile("/games/minesweeper.com"));
+  fs.deleteFile(fs.getFile("/games/rogue.exe"));
+  expect(fs.listFiles(fs.getFile("GaMeS")).length).toBe(length2 - 2);
+
+  fs.deleteFile(fs.getFile("/games"));
+  expect(fs.getFile("/games")).toBeNull();
+});
+
 function print(indent, fs, files) {
   files.forEach((it) => {
     console.log(" ".repeat(indent) + it.getName());

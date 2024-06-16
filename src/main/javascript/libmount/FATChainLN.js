@@ -44,7 +44,7 @@ class FATChainLN {
   }
 
   /**
-   * @return {void}
+   * @return {undefined}
    */
   clear() {
     this.list.length = 0;

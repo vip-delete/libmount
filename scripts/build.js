@@ -11,7 +11,7 @@ const args = {
   assume_function_wrapper: true,
   output_wrapper_file: path + "/wrapper.mjs.txt",
   summary_detail_level: 3,
-  define: "DEBUG=false",
+  define: ["DEBUG=false", "ENABLE_ASSERTIONS=false"],
   js_output_file: "dist/libmount.min.mjs",
   js: js.map((it) => path + it),
 };

@@ -63,4 +63,9 @@ LibMount.FileSystem = class {
    * @returns {?Uint8Array}
    */
   readFile(file) {}
+
+  /**
+   * @param {!LibMount.File} file
+   */
+  deleteFile(file) {}
 };

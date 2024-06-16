@@ -85,7 +85,7 @@ class FATFileSystem {
    * @returns {!Array<!FATNode>}
    */
   findAllInDir(dirNode, predicate) {
-    let nodes = [];
+    const nodes = [];
     let node = this.driver.getFirst(dirNode);
     while (node != null) {
       if (predicate(node)) {

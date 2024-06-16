@@ -1,5 +1,5 @@
 name: ci
-on: [push]
+on: [push | pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -9,5 +9,6 @@ jobs:
         with:
           node-version-file: '.node-version'
       - run: npm install
+      - run: npm run lint
       - run: npm run build
       - run: npm test

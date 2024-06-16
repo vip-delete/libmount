@@ -75,12 +75,12 @@ class FATChainLN {
       for (let i = 0; i < arr.length; i++) {
         const part = arr[i];
         for (let j = 0; j < part.length; j += 2) {
-          let b1 = part[j];
-          let b2 = part[j + 1];
+          const b1 = part[j];
+          const b2 = part[j + 1];
           if (b1 === 0 && b2 === 0) {
             return longName;
           }
-          let ch = b1 | (b2 << 8);
+          const ch = b1 | (b2 << 8);
           longName += String.fromCharCode(ch);
         }
       }

@@ -1,6 +1,7 @@
 # LibMount
 
 [![ci](https://github.com/vip-delete/libmount/actions/workflows/ci.yaml/badge.svg)](https://github.com/vip-delete/libmount/actions/workflows/ci.yaml)
+[![Code Style: Prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
 
 **FAT12**, **FAT16**, **FAT32** filesystem Javascript library for Browser and NodeJS
 

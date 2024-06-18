@@ -1,7 +1,7 @@
 name: ci
 on: [push, pull_request]
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -9,7 +9,4 @@ jobs:
         with:
           node-version-file: '.node-version'
       - run: npm install
-      - run: npm run lint
-      - run: npm run coverage
       - run: npm run build
-      - run: npm run test

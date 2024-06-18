@@ -1,7 +1,7 @@
+import globals from "globals";
 import js from "@eslint/js";
 import jsdoc from "eslint-plugin-jsdoc";
 import stylistic from "@stylistic/eslint-plugin";
-import globals from "globals";
 
 export default [
   js.configs.recommended,
@@ -11,7 +11,7 @@ export default [
     semi: true,
   }),
   {
-    ignores: ["dist", "scripts", "src/test/"],
+    ignores: ["dist", "public", "scripts", "tests"],
   },
   {
     languageOptions: {
@@ -44,8 +44,6 @@ export default [
       "@stylistic/no-extra-semi": "error",
       "@stylistic/arrow-parens": ["error", "always"],
       "@stylistic/quote-props": ["error", "consistent"],
-      // "@stylistic/arrow-parens": ["error", "always"],
-      // "@stylistic/keyword-spacing": ["error", "always"],
     },
   },
 ];

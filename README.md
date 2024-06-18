@@ -6,11 +6,11 @@
 **FAT12**, **FAT16**, **FAT32** filesystem Javascript library for Browser and NodeJS
 
 ```javascript
+import { mount } from "../dist/libmount.min.mjs";
 import { readFileSync } from "fs";
-import LibMount from "libmount.min.mjs";
 
-const file = readFileSync("freedos722.img", { flag: "r" });
-const fs = LibMount.mount(file.buffer);
+const file = readFileSync("./freedos722.img", { flag: "r" });
+const fs = mount(file.buffer);
 const root = fs.getRoot();
 const files = fs.listFiles(root);
 print(0, fs, files);
@@ -25,16 +25,13 @@ function print(indent, fs, files) {
 }
 ```
 
-API: [api.js](src/main/javascript/libmount/api.js)
+API: [api.js](src/api.js)
 
 Specification: [FAT.pdf](docs/FAT.pdf)
 
-Start locally: ```npm run dev```
-
 # Commands
 
-```npm run build``` - compile javascript source files and create ```dist/libmount.min.mjs```
+```npm run build``` - lint, compile, test and bundle javascript source files to ```dist/libmount.min.mjs```
 
-```npm run dev``` - start local http server and serve ```debug.html``` with uncompiled javascript source code
+```npm run dev``` - start local http server
 
-```npm test``` - run tests

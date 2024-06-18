@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { readFileSync } from "fs";
 
 export function testFreedos722(mount) {
-  const buf = readFileSync("src/test/resources/freedos722.img", { flag: "r" });
+  const buf = readFileSync("./public/freedos722.img", { flag: "r" });
   const fs = mount(buf.buffer);
 
   test("volumeInfo", () => {

@@ -1,8 +1,8 @@
 import Main from "google-closure-compiler";
-import js from "../src/main/javascript/libmount/index.mjs";
+import js from "../src/index.mjs";
 const Compiler = Main.compiler;
 
-const path = "./src/main/javascript/libmount/";
+const path = "./src/";
 
 const args = {
   compilation_level: "ADVANCED",

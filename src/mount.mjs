@@ -1,4 +1,4 @@
-import { BootSector, FATVariables } from "./model.mjs";
+import { loadBootSector, loadFATVariables } from "./model.mjs";
 import { BlockDevice } from "./io.mjs";
 import { FAT12Driver } from "./driver.mjs";
 import { FATFileSystem } from "./filesystem.mjs";
@@ -20,10 +20,10 @@ export function mount(buf, encoding = "cp1251") {
 
   // load boot sector
   s.pos = 0;
-  const bs = BootSector.load(s);
+  const bs = loadBootSector(s);
 
   // calculate variables which are used in specification
-  const vars = new FATVariables(bs);
+  const vars = loadFATVariables(bs);
 
   // A FAT12 volume cannot contain more than 4084 clusters.
   if (vars.CountOfClusters < 4085) {

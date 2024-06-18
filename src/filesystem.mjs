@@ -51,7 +51,7 @@ class FATFile {
    * @returns {boolean}
    */
   isRegularFile() {
-    return this.node.type === FAT_NODE.REGULAR_FILE;
+    return this.node.kind === FAT_NODE.REGULAR_FILE;
   }
 
   /**
@@ -59,7 +59,7 @@ class FATFile {
    * @returns {boolean}
    */
   isDirectory() {
-    return this.node.type === FAT_NODE.REGULAR_DIR || this.node.type === FAT_NODE.ROOT;
+    return this.node.kind === FAT_NODE.REGULAR_DIR || this.node.kind === FAT_NODE.ROOT;
   }
 
   /**
@@ -173,7 +173,7 @@ export class FATFileSystem {
    */
   listFiles(file) {
     const f = /** @type {!FATFile} */ (file);
-    const parentPath = f.node.type === FAT_NODE.ROOT ? "" : f.absolutePath;
+    const parentPath = f.node.kind === FAT_NODE.ROOT ? "" : f.absolutePath;
     return this.findAllInDir(f.node, (it) => isNodeRegularFileOrDir(it)).map((node) => new FATFile(parentPath + "/" + node.getName(), node));
   }
 
@@ -235,7 +235,7 @@ export class FATFileSystem {
  * @returns {boolean}
  */
 function isNodeRegularFileOrDir(node) {
-  return node.type === FAT_NODE.REGULAR_FILE || node.type === FAT_NODE.REGULAR_DIR;
+  return node.kind === FAT_NODE.REGULAR_FILE || node.kind === FAT_NODE.REGULAR_DIR;
 }
 
 /**

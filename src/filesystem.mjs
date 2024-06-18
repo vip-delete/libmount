@@ -1,5 +1,5 @@
 import { FATDriver, FATNode, FAT_NODE } from "./model.mjs";
-import { DateUtil } from "./util.mjs";
+import { formatDate, formatTime } from "./util.mjs";
 
 /**
  * @implements {LibMount.File}
@@ -97,7 +97,7 @@ class FATFile {
     if (dirEntry === null) {
       return "";
     }
-    return DateUtil.formatDate(dirEntry.LstAccDate);
+    return formatDate(dirEntry.LstAccDate);
   }
 }
 
@@ -108,11 +108,11 @@ class FATFile {
  * @returns {string}
  */
 function getDateTile(date, time, timeTenth) {
-  const dateStr = DateUtil.formatDate(date);
+  const dateStr = formatDate(date);
   if (dateStr === "") {
     return "";
   }
-  const timeStr = DateUtil.formatTime(time, timeTenth);
+  const timeStr = formatTime(time, timeTenth);
   return dateStr + " " + timeStr;
 }
 

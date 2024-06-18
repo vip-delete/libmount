@@ -88,7 +88,7 @@ export let DirEntryLN;
  *             TotSec: number,
  *             DataSec: number,
  *             CountOfClusters: number,
- *             MAX: number,
+ *             MaxClus: number,
  *             FirstRootDirSecNum: number,
  *             FirstDataSector: number,
  *          }}
@@ -205,7 +205,7 @@ export function loadFATVariables(bs) {
   /** @type {number} */ const TotSec = bs.bpb.TotSec16 !== 0 ? bs.bpb.TotSec16 : bs.bpb.TotSec32;
   /** @type {number} */ const DataSec = TotSec - (bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * FATSz + RootDirSectors);
   /** @type {number} */ const CountOfClusters = Math.floor(DataSec / bs.bpb.SecPerClus);
-  /** @type {number} */ const MAX = CountOfClusters + 1;
+  /** @type {number} */ const MaxClus = CountOfClusters + 1;
   /** @type {number} */ const FirstRootDirSecNum = bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * bs.bpb.FATSz16;
   /** @type {number} */ const FirstDataSector = bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * FATSz + RootDirSectors;
   return {
@@ -214,7 +214,7 @@ export function loadFATVariables(bs) {
     TotSec,
     DataSec,
     CountOfClusters,
-    MAX,
+    MaxClus,
     FirstRootDirSecNum,
     FirstDataSector,
   };

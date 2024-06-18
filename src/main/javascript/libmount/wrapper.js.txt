@@ -1,6 +1,0 @@
-/**
- * LibMount v0.0.1
- * (c) 2024-present vip.delete and LibMount contributors
- * @license MIT
- **/
-;(function(LibMount){%output%})(LibMount={});

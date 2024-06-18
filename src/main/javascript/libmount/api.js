@@ -1,16 +1,18 @@
-"use strict";
+/* eslint-disable jsdoc/require-returns-check */
+/* eslint-disable no-unused-vars */
 
 /**
- * @fileoverview Public API for LibMount
+ * @file Public API for LibMount
  * @externs
  */
-const LibMount = {};
-
-/**
- * @param {!ArrayBuffer} buf
- * @returns {?LibMount.FileSystem}
- */
-LibMount.mount = function (buf) {};
+const LibMount = {
+  /**
+   * @param {!ArrayBuffer} buf
+   * @param {string} [encoding]
+   * @returns {?LibMount.FileSystem}
+   */
+  mount(buf, encoding = "cp1251") {},
+};
 
 /**
  * @interface
@@ -20,6 +22,16 @@ LibMount.File = class {
    * @returns {string}
    */
   getName() {}
+
+  /**
+   * @returns {string}
+   */
+  getShortName() {}
+
+  /**
+   * @returns {?string}
+   */
+  getLongName() {}
 
   /**
    * @returns {string}
@@ -35,6 +47,29 @@ LibMount.File = class {
    * @returns {boolean}
    */
   isDirectory() {}
+
+  /**
+   * @returns {number}
+   */
+  getFileSize() {}
+
+  /**
+   * yyyy.MM.dd HH:mm:ss
+   * @returns {string}
+   */
+  getCreatedDate() {}
+
+  /**
+   * yyyy.MM.dd HH:mm:ss
+   * @returns {string}
+   */
+  getModifiedDate() {}
+
+  /**
+   * yyyy.MM.dd
+   * @returns {string}
+   */
+  getAccessedDate() {}
 };
 
 /**
@@ -42,7 +77,12 @@ LibMount.File = class {
  */
 LibMount.FileSystem = class {
   /**
-   * @returns {?LibMount.File}
+   * @returns {!LibMount.VolumeInfo}
+   */
+  getVolumeInfo() {}
+
+  /**
+   * @returns {!LibMount.File}
    */
   getRoot() {}
 
@@ -69,3 +109,14 @@ LibMount.FileSystem = class {
    */
   deleteFile(file) {}
 };
+
+/**
+ * @typedef {{
+ *            type:string,
+ *            label:string,
+ *            id:number,
+ *            clusterSize:number,
+ *            freeSpace:number,
+ *          }}
+ */
+LibMount.VolumeInfo;

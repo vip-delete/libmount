@@ -1,0 +1,132 @@
+html,
+body {
+  margin: 5px;
+  box-sizing: border-box;
+  font-size: 12pt;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+:root {
+  --row-height: 24px;
+  --column-width-action: 32px;
+  --column-width-name: 300px;
+  --column-width-size: 100px;
+  --column-width-datetime: 150px;
+  --column-width-date: 90px;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.btn {
+  padding: 0 7px 3px 7px;
+  border-radius: 10px;
+  background-color: lightcyan;
+}
+
+.btn:hover,
+.btn.active {
+  background-color: #00c0ff;
+}
+
+#app {
+}
+
+.row {
+  display: block;
+  margin: 2px 0;
+}
+
+.row.header > span {
+  background-color: lightgray;
+}
+
+.row > span {
+  display: inline-block;
+  vertical-align: middle;
+  text-wrap: nowrap;
+  margin-right: 5px;
+  padding: 0 5px;
+}
+
+.row > span:nth-child(1) {
+  width: calc(var(--row-height) - 5px);
+}
+
+.row > span:nth-child(2) {
+  width: calc(var(--row-height) - 5px);
+}
+
+.row > span:nth-child(3) {
+  width: var(--column-width-name);
+}
+
+.row > span:nth-child(4) {
+  width: var(--column-width-size);
+  text-align: right;
+}
+
+.row > span:nth-child(5) {
+  width: var(--column-width-datetime);
+}
+
+.row > span:nth-child(6) {
+  width: var(--column-width-datetime);
+}
+
+.row > span:nth-child(7) {
+  width: var(--column-width-date);
+}
+
+.icon {
+  height: calc(var(--row-height) - 5px);
+  width: calc(var(--row-height) - 5px);
+  display: inline-block;
+}
+
+.name {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  text-wrap: nowrap;
+  vertical-align: middle;
+}
+
+.name:hover {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.status {
+  border: solid 1px black;
+  border-radius: 10px;
+  width: fit-content;
+  height: 48px;
+}
+
+.up {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="none" stroke="black" stroke-width="3" d="M20,27H8V17"/><path fill="black" d="M8,8L1,18H15Z"/></g></svg>')
+    no-repeat;
+}
+
+.file {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="white" stroke="gray" stroke-width="2" d="M15,1H1V31H25V9Z"/></g></svg>')
+    no-repeat;
+}
+
+.dir {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="%23FFE791" stroke="%23EBC748" stroke-width="2" d="M15,1H1V31H25V9Z M20,9V30"/></g></svg>')
+    no-repeat;
+}
+
+.del {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="none" stroke="%23FF6666" stroke-linecap="round" stroke-width="6" d="M3,3L29,29 M29,3L3,29"/></g></svg>')
+    no-repeat;
+}

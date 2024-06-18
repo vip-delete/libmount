@@ -1,9 +1,9 @@
-"use strict";
+import { BlockDevice } from "./io.mjs";
 
 /**
  * BiosParameterBlock
  */
-class BiosParameterBlock {
+export class BiosParameterBlock {
   /**
    * @param {number} BytsPerSec
    * @param {number} SecPerClus
@@ -73,7 +73,7 @@ class BiosParameterBlock {
 /**
  * BiosParameterBlockFAT32
  */
-class BiosParameterBlockFAT32 {
+export class BiosParameterBlockFAT32 {
   /**
    * @param {number} FATSz32
    * @param {number} ExtFlags
@@ -123,7 +123,7 @@ class BiosParameterBlockFAT32 {
 /**
  * BootSector
  */
-class BootSector {
+export class BootSector {
   /**
    * @param {!Uint8Array} jmpBoot
    * @param {!Uint8Array} OEMName
@@ -194,22 +194,10 @@ class BootSector {
   }
 }
 
-const DIR_FLAG_LAST_ENTRY = 0x00;
-const DIR_FLAG_FREE_ENTRY = 0xe5;
-
-const DIR_ATTR = {
-  READ_ONLY: 0x01,
-  HIDDEN: 0x02,
-  SYSTEM: 0x04,
-  VOLUME_ID: 0x08,
-  DIRECTORY: 0x10,
-  ARCHIVE: 0x20,
-};
-
 /**
  * DirEntry
  */
-class DirEntry {
+export class DirEntry {
   /**
    * @param {!Uint8Array} Name
    * @param {number} Attr
@@ -276,13 +264,10 @@ class DirEntry {
   }
 }
 
-const DIR_LN_ATTR_LONG_NAME = DIR_ATTR.READ_ONLY | DIR_ATTR.HIDDEN | DIR_ATTR.SYSTEM | DIR_ATTR.VOLUME_ID;
-const DIR_LN_LAST_LONG_ENTRY = 0x40;
-
 /**
  * DirEntryLN
  */
-class DirEntryLN {
+export class DirEntryLN {
   /**
    * @param {number} Ord
    * @param {!Uint8Array} Name1
@@ -336,18 +321,113 @@ class DirEntryLN {
 /**
  * FATVariables
  */
-class FATVariables {
+export class FATVariables {
   /**
    * @param {!BootSector} bs
    */
   constructor(bs) {
     /** @type {number} */ this.RootDirSectors = Math.floor((bs.bpb.RootEntCnt * 32 + (bs.bpb.BytsPerSec - 1)) / bs.bpb.BytsPerSec);
-    /** @type {number} */ this.FATSz = bs.bpbFAT32 != null ? bs.bpbFAT32.FATSz32 : bs.bpb.FATSz16;
-    /** @type {number} */ this.TotSec = bs.bpb.TotSec16 != 0 ? bs.bpb.TotSec16 : bs.bpb.TotSec32;
+    /** @type {number} */ this.FATSz = bs.bpbFAT32 !== null ? bs.bpbFAT32.FATSz32 : bs.bpb.FATSz16;
+    /** @type {number} */ this.TotSec = bs.bpb.TotSec16 !== 0 ? bs.bpb.TotSec16 : bs.bpb.TotSec32;
     /** @type {number} */ this.DataSec = this.TotSec - (bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * this.FATSz + this.RootDirSectors);
     /** @type {number} */ this.CountOfClusters = Math.floor(this.DataSec / bs.bpb.SecPerClus);
     /** @type {number} */ this.MAX = this.CountOfClusters + 1;
     /** @type {number} */ this.FirstRootDirSecNum = bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * bs.bpb.FATSz16;
     /** @type {number} */ this.FirstDataSector = bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * this.FATSz + this.RootDirSectors;
   }
+}
+
+/**
+ * @enum
+ */
+export const FAT_NODE = {
+  ROOT: 0,
+  VOLUME_ID: 1,
+  DELETED: 2,
+  CURRENT_DIR: 3,
+  PARENT_DIR: 4,
+  REGULAR_FILE: 5,
+  REGULAR_DIR: 6,
+};
+
+export class FATNode {
+  /**
+   * @param {number} type
+   * @param {string} shortName
+   * @param {?string} longName
+   * @param {number} offset
+   * @param {number} dirSize
+   * @param {?DirEntry} dirEntry
+   */
+  constructor(type, shortName, longName, offset, dirSize, dirEntry) {
+    /** @type {number}  */ this.type = type;
+    /** @type {string}  */ this.shortName = shortName;
+    /** @type {?string} */ this.longName = longName;
+    /** @type {number}  */ this.offset = offset;
+    /** @type {number}  */ this.dirSize = dirSize;
+    /** @type {?DirEntry}  */ this.dirEntry = dirEntry;
+  }
+
+  /**
+   * @returns {string}
+   */
+  getName() {
+    return this.longName !== null ? this.longName : this.shortName;
+  }
+
+  /**
+   * @returns {number}
+   */
+  getFileSize() {
+    return this.dirEntry?.FileSize ?? 0;
+  }
+
+  /**
+   * @returns {number}
+   */
+  getClusNum() {
+    return this.dirEntry?.FstClusLO ?? 0;
+  }
+}
+
+/**
+ * @interface
+ */
+export class FATDriver {
+  /**
+   * @returns {!LibMount.VolumeInfo}
+   */
+  getVolumeInfo() {}
+
+  /**
+   * @returns {!FATNode}
+   */
+  getRoot() {}
+
+  /**
+   * @param {!FATNode} node
+   * @returns {?FATNode}
+   */
+  // eslint-disable-next-line no-unused-vars
+  getNext(node) {}
+
+  /**
+   * @param {!FATNode} node
+   * @returns {?FATNode}
+   */
+  // eslint-disable-next-line no-unused-vars
+  getFirst(node) {}
+
+  /**
+   * @param {!FATNode} node
+   * @returns {?Uint8Array}
+   */
+  // eslint-disable-next-line no-unused-vars
+  readNode(node) {}
+
+  /**
+   * @param {!FATNode} node
+   */
+  // eslint-disable-next-line no-unused-vars
+  deleteNode(node) {}
 }

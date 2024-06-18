@@ -1,52 +1,168 @@
-"use strict";
+import { BootSector, DirEntry, DirEntryLN, FATDriver, FATNode, FATVariables, FAT_NODE } from "./model.mjs";
+import { BlockDevice } from "./io.mjs";
+import { NameUtil } from "./util.mjs";
+import { assert } from "./support.mjs";
+
+const DIR_LN_LAST_LONG_ENTRY = 0x40;
+
+class FATChainLN {
+  constructor() {
+    /**
+     * @type {!Array<!DirEntryLN>}
+     */
+    this.list = [];
+  }
+
+  /**
+   * @param {!DirEntryLN} dir
+   */
+  addDirLN(dir) {
+    const last = (dir.Ord & DIR_LN_LAST_LONG_ENTRY) !== 0;
+    if (last) {
+      this.list = [dir];
+      return;
+    }
+    if (this.list.length === 0) {
+      return;
+    }
+    const prev = this.list[this.list.length - 1].Ord & (DIR_LN_LAST_LONG_ENTRY - 1);
+    const curr = dir.Ord & (DIR_LN_LAST_LONG_ENTRY - 1);
+    if (prev === curr + 1) {
+      this.list.push(dir);
+      return;
+    }
+    this.clear();
+  }
+
+  /**
+   * @param {!DirEntry} dir
+   */
+  addDir(dir) {
+    if (this.list.length === 0) {
+      return;
+    }
+    const k = this.list.length - 1;
+    const ord = this.list[k].Ord & (DIR_LN_LAST_LONG_ENTRY - 1);
+    if (ord !== 1 || this.list[k].Chksum !== NameUtil.getChkSum(dir.Name)) {
+      this.clear();
+    }
+  }
+
+  /**
+   * @returns {undefined}
+   */
+  clear() {
+    this.list.length = 0;
+  }
+
+  /**
+   * @returns {number}
+   */
+  size() {
+    return this.list.length;
+  }
+
+  /**
+   * @returns {?string}
+   */
+  getLongName() {
+    if (this.list.length === 0) {
+      return null;
+    }
+    let longName = "";
+    let k = this.list.length - 1;
+    while (k >= 0) {
+      const dir = this.list[k];
+      /**
+       * @type {!Array<!Uint8Array>}
+       */
+      const arr = [dir.Name1, dir.Name2, dir.Name3];
+      for (let i = 0; i < arr.length; i++) {
+        const part = arr[i];
+        for (let j = 0; j < part.length; j += 2) {
+          const b1 = part[j];
+          const b2 = part[j + 1];
+          if (b1 === 0 && b2 === 0) {
+            return longName;
+          }
+          const ch = b1 | (b2 << 8);
+          longName += String.fromCharCode(ch);
+        }
+      }
+      k--;
+    }
+    return longName;
+  }
+}
+
+/**
+ * @enum
+ */
+const DIR_FLAG = {
+  LAST_ENTRY: 0x00,
+  FREE_ENTRY: 0xe5,
+};
+
+/**
+ * @enum
+ */
+const DIR_ATTR = {
+  READ_ONLY: 0x01,
+  HIDDEN: 0x02,
+  SYSTEM: 0x04,
+  VOLUME_ID: 0x08,
+  DIRECTORY: 0x10,
+  ARCHIVE: 0x20,
+  LONG_NAME: 0xf, // READ_ONLY | HIDDEN | SYSTEM | VOLUME_ID
+};
 
 const FAT_DRIVER_EOF = 0;
 const DIR_ENTRY_SIZE = 32;
 
 /**
- * @interface
- */
-class FATDriver {
-  /**
-   * @returns {!FATNode}
-   */
-  getRoot() {}
-  /**
-   * @param {!FATNode} node
-   * @returns {?FATNode}
-   */
-  getNext(node) {}
-  /**
-   * @param {!FATNode} node
-   * @returns {?FATNode}
-   */
-  getFirst(node) {}
-
-  /**
-   * @param {!FATNode} node
-   * @returns {?Uint8Array}
-   */
-  readNode(node) {}
-
-  /**
-   * @param {!FATNode} node
-   */
-  deleteNode(node) {}
-}
-
-/**
  * @implements {FATDriver}
  */
-class FAT12Driver {
+export class FAT12Driver {
   /**
    * @param {!BlockDevice} s
    * @param {!BootSector} bs
    * @param {!FATVariables} vars
+   * @param {string} encoding
    */
-  constructor(s, bs, vars) {
+  constructor(s, bs, vars, encoding) {
     this.s = s;
     this.bs = bs;
     this.vars = vars;
+    this.encoding = encoding;
+  }
+
+  /**
+   * @override
+   * @returns {!LibMount.VolumeInfo}
+   */
+  getVolumeInfo() {
+    let node = this.getFirst(this.getRoot());
+    while (node !== null && node.type !== FAT_NODE.VOLUME_ID) {
+      node = this.getNext(node);
+    }
+    const type = "FAT12";
+    const label = node === null ? NameUtil.getRawName(this.bs.VolLab, this.encoding) : node.getName();
+    const id = this.bs.VolID;
+    const clusterSize = this.bs.bpb.BytsPerSec * this.bs.bpb.SecPerClus;
+    let freeSpace = 0;
+    for (let i = 2; i <= this.vars.MAX; i++) {
+      const val = this.getNextClusNum(i);
+      if (val === 0) {
+        freeSpace += clusterSize;
+      }
+    }
+    return {
+      type,
+      label,
+      id,
+      clusterSize,
+      freeSpace,
+    };
   }
 
   /**
@@ -54,7 +170,7 @@ class FAT12Driver {
    * @returns {!FATNode}
    */
   getRoot() {
-    return new FATNode(FAT_NODE.ROOT, "", null, 0, FAT_DRIVER_EOF, 0, FAT_DRIVER_EOF);
+    return new FATNode(FAT_NODE.ROOT, "", null, FAT_DRIVER_EOF, 0, null);
   }
 
   /**
@@ -63,7 +179,7 @@ class FAT12Driver {
    * @returns {?FATNode}
    */
   getNext(node) {
-    return node.type === FAT_NODE.ROOT ? null : this.loadFromOffset(this.getNextOffset(node.offset + node.length));
+    return node.type === FAT_NODE.ROOT ? null : this.loadFromOffset(this.getNextOffset(node.offset + node.dirSize * DIR_ENTRY_SIZE));
   }
 
   /**
@@ -75,13 +191,10 @@ class FAT12Driver {
     if (node.type === FAT_NODE.ROOT) {
       return this.loadFromOffset(this.bs.bpb.BytsPerSec * this.vars.FirstRootDirSecNum);
     }
-    if (node.type != FAT_NODE.REGULAR_DIR) {
+    if (node.type !== FAT_NODE.REGULAR_DIR) {
       return null;
     }
-    if (node.clusNum != FAT_DRIVER_EOF) {
-      return this.loadFromOffset(this.getContentOffset(node.clusNum));
-    }
-    return null;
+    return this.loadFromOffset(this.getContentOffset(node.getClusNum()));
   }
 
   /**
@@ -93,14 +206,14 @@ class FAT12Driver {
     if (node.type !== FAT_NODE.REGULAR_FILE) {
       return null;
     }
-    const fileSize = node.fileSize;
-    let clusNum = node.clusNum;
+    const fileSize = node.getFileSize();
+    let clusNum = node.getClusNum();
     let size = 0;
     const arr = new Uint8Array(new ArrayBuffer(fileSize));
     const BytsPerClus = this.bs.bpb.BytsPerSec * this.bs.bpb.SecPerClus;
     while (size < fileSize) {
       const offset = this.getContentOffset(clusNum);
-      if (offset == FAT_DRIVER_EOF) {
+      if (offset === FAT_DRIVER_EOF) {
         break;
       }
       const len = Math.min(BytsPerClus, fileSize - size);
@@ -119,7 +232,7 @@ class FAT12Driver {
    */
   deleteNode(node) {
     if (node.type === FAT_NODE.REGULAR_FILE) {
-      let clusNum = node.clusNum;
+      let clusNum = node.getClusNum();
       while (this.isAllocated(clusNum)) {
         const nextClusNum = this.getNextClusNum(clusNum);
         this.setNextClusNum(clusNum, 0);
@@ -129,7 +242,7 @@ class FAT12Driver {
     }
     if (node.type === FAT_NODE.REGULAR_DIR) {
       let subNode = this.getFirst(node);
-      while (subNode != null) {
+      while (subNode !== null) {
         this.deleteNode(subNode);
         subNode = this.getNext(subNode);
       }
@@ -142,9 +255,9 @@ class FAT12Driver {
    */
   markNodeDeleted(node) {
     this.s.pos = node.offset;
-    for (let i = 0; i < node.length; i += DIR_ENTRY_SIZE) {
-      this.s.pos = node.offset + i;
-      this.s.writeByte(DIR_FLAG_FREE_ENTRY);
+    for (let i = 0; i < node.dirSize; i++) {
+      this.s.pos = node.offset + i * DIR_ENTRY_SIZE;
+      this.s.writeByte(DIR_FLAG.FREE_ENTRY);
     }
     node.type = FAT_NODE.DELETED;
   }
@@ -160,18 +273,18 @@ class FAT12Driver {
       if (offset === FAT_DRIVER_EOF) {
         return null;
       }
-      if (offset != currentOffset) {
+      if (offset !== currentOffset) {
         assert(offset % DIR_ENTRY_SIZE === 0, "Offset " + offset + " is not " + DIR_ENTRY_SIZE + " bytes aligned");
         this.s.pos = offset;
         currentOffset = offset;
       }
       const flag = this.s.readByte();
       this.s.pos--;
-      if (flag === DIR_FLAG_LAST_ENTRY) {
+      if (flag === DIR_FLAG.LAST_ENTRY) {
         return null;
       }
       const node = this.visitOffset(chain, currentOffset, flag);
-      if (node != null) {
+      if (node !== null) {
         return node;
       }
       currentOffset += DIR_ENTRY_SIZE;
@@ -189,31 +302,31 @@ class FAT12Driver {
     this.s.pos += 11;
     const attr = this.s.readByte();
     this.s.pos -= 12;
-    if (flag === DIR_FLAG_FREE_ENTRY) {
-      if (attr === DIR_LN_ATTR_LONG_NAME) {
+    if (flag === DIR_FLAG.FREE_ENTRY) {
+      if (attr === DIR_ATTR.LONG_NAME) {
         chain.clear();
         this.s.pos += DIR_ENTRY_SIZE;
         return null;
       }
       const dir = DirEntry.load(this.s);
-      return new FATNode(FAT_NODE.DELETED, NameUtil.getShortName(dir.Name), null, dir.FileSize, currentOffset, DIR_ENTRY_SIZE, dir.FstClusLO);
+      return new FATNode(FAT_NODE.DELETED, NameUtil.getShortName(dir.Name, this.encoding), null, currentOffset, 1, dir);
     }
-    if (attr === DIR_LN_ATTR_LONG_NAME) {
+    if (attr === DIR_ATTR.LONG_NAME) {
       const dir = DirEntryLN.load(this.s);
       chain.addDirLN(dir);
       return null;
     }
     const dir = DirEntry.load(this.s);
-    if ((attr & DIR_ATTR.VOLUME_ID) != 0) {
-      return new FATNode(FAT_NODE.VOLUME_ID, NameUtil.getRawName(dir.Name), null, 0, currentOffset, DIR_ENTRY_SIZE, dir.FstClusLO);
+    if ((attr & DIR_ATTR.VOLUME_ID) !== 0) {
+      return new FATNode(FAT_NODE.VOLUME_ID, NameUtil.getRawName(dir.Name, this.encoding), null, currentOffset, 1, dir);
     }
     if (dir.Name[0] === ".".charCodeAt(0)) {
-      const dotName = NameUtil.getRawName(dir.Name);
+      const dotName = NameUtil.getRawName(dir.Name, this.encoding);
       if (dotName === ".") {
-        return new FATNode(FAT_NODE.CURRENT_DIR, ".", null, 0, currentOffset, DIR_ENTRY_SIZE, dir.FstClusLO);
+        return new FATNode(FAT_NODE.CURRENT_DIR, ".", null, currentOffset, 1, dir);
       }
       if (dotName === "..") {
-        return new FATNode(FAT_NODE.PARENT_DIR, "..", null, 0, currentOffset, DIR_ENTRY_SIZE, dir.FstClusLO);
+        return new FATNode(FAT_NODE.PARENT_DIR, "..", null, currentOffset, 1, dir);
       }
       chain.clear();
       return null;
@@ -223,7 +336,7 @@ class FAT12Driver {
       return null;
     }
     chain.addDir(dir);
-    const shortName = NameUtil.getShortName(dir.Name);
+    const shortName = NameUtil.getShortName(dir.Name, this.encoding);
     const longName = chain.getLongName();
     if (shortName === "" || longName === "") {
       chain.clear();
@@ -231,7 +344,7 @@ class FAT12Driver {
     }
     const type = (dir.Attr & DIR_ATTR.DIRECTORY) !== 0 ? FAT_NODE.REGULAR_DIR : FAT_NODE.REGULAR_FILE;
     const chainLength = chain.size() * DIR_ENTRY_SIZE;
-    return new FATNode(type, shortName, longName, dir.FileSize, currentOffset - chainLength, chainLength + DIR_ENTRY_SIZE, dir.FstClusLO);
+    return new FATNode(type, shortName, longName, currentOffset - chainLength, chain.size() + 1, dir);
   }
 
   /**
@@ -239,7 +352,7 @@ class FAT12Driver {
    * @returns {number}
    */
   getNextOffset(offset) {
-    if (offset % this.bs.bpb.BytsPerSec != 0) {
+    if (offset % this.bs.bpb.BytsPerSec !== 0) {
       return offset;
     }
     const secNum = Math.floor(offset / this.bs.bpb.BytsPerSec);
@@ -250,7 +363,7 @@ class FAT12Driver {
       return FAT_DRIVER_EOF;
     }
     const dataSecNum = secNum - this.vars.FirstDataSector;
-    if (dataSecNum % this.bs.bpb.SecPerClus != 0) {
+    if (dataSecNum % this.bs.bpb.SecPerClus !== 0) {
       return offset;
     }
     const nexClusNum = this.getNextClusNum(1 + Math.floor(dataSecNum / this.bs.bpb.SecPerClus));

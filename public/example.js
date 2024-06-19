@@ -1,4 +1,4 @@
-import { mount } from "../dist/libmount.min.mjs";
+import { mount } from "libmount";
 import { readFileSync } from "fs";
 
 const file = readFileSync("./freedos722.img", { flag: "r" });

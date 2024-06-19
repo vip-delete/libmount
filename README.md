@@ -5,8 +5,20 @@
 
 Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript 
 
+## Installation
+
+`npm install libmount`
+
+## API
+
 ```javascript
-import { mount } from "../dist/libmount.min.mjs";
+function mount(buf: !ArrayBuffer, encoding: string = "cp1251"): FileSystem;
+```
+
+## Example
+
+```javascript
+import { mount } from "libmount";
 import { readFileSync } from "fs";
 
 const file = readFileSync("./freedos722.img", { flag: "r" });
@@ -25,11 +37,7 @@ function print(indent, fs, files) {
 }
 ```
 
-API: [api.js](src/api.js)
-
-Specification: [FAT.pdf](docs/FAT.pdf)
-
-# Commands
+## Commands
 
 ```npm run build``` - lint, compile, test and bundle javascript source files to ```dist/libmount.min.mjs```
 

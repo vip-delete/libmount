@@ -1,17 +1,13 @@
-import { mount } from "libmount";
+import { mount } from "../dist/libmount.min.mjs";
 import { readFileSync } from "fs";
 
-const file = readFileSync("./freedos722.img", { flag: "r" });
+const file = readFileSync("./images/freedos722.img", { flag: "r" });
 const fs = mount(file.buffer);
-const root = fs.getRoot();
-const files = fs.listFiles(root);
-print(0, fs, files);
+print(0, fs.getRoot());
 
-function print(indent, fs, files) {
-  files.forEach((it) => {
-    console.log(" ".repeat(indent) + it.getName());
-    if (it.isDirectory()) {
-      print(indent + 2, fs, fs.listFiles(it));
-    }
-  });
+function print(indent, file) {
+  console.log(" ".repeat(indent) + file.getName());
+  if (file.isDirectory()) {
+    fs.listFiles(file).forEach((f) => print(indent + 2, f));
+  }
 }

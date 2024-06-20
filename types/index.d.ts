@@ -1,5 +1,5 @@
 declare module "libmount" {
-  export function mount(buf: !ArrayBuffer, encoding: string = "cp1251"): FileSystem;
+  export function mount(buf: ArrayBuffer, encoding: string = "cp1251"): FileSystem;
 
   export interface File {
     getName(): string;
@@ -20,7 +20,7 @@ declare module "libmount" {
     getFile(path: string): File | null;
     listFiles(file: File): Array<File>;
     readFile(file: File): Uint8Array | null;
-    deleteFile(file: File): undefined;
+    deleteFile(file: File): void;
   }
 
   export type VolumeInfo = {

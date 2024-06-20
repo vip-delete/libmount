@@ -6,7 +6,7 @@ export default defineConfig({
     coverage: {
       provider: "istanbul",
       reporter: ["text", "html"],
-      exclude: ["scripts", "public", "**/api.js", "**/defines.js", "**/exports.mjs", ...coverageConfigDefaults.exclude],
+      exclude: ["scripts", "public", "**/api.js", "**/defines.js", "**/exports.mjs", "**/support.mjs", ...coverageConfigDefaults.exclude],
     },
   },
 });

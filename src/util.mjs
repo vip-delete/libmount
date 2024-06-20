@@ -27,11 +27,7 @@ function isCharValid(ch) {
  * @returns {boolean}
  */
 export function isNameValid(arr) {
-  let i = 0;
-  while (i < arr.length && isCharValid(arr[i])) {
-    i++;
-  }
-  return i === arr.length;
+  return arr.every(isCharValid);
 }
 
 /**
@@ -39,11 +35,7 @@ export function isNameValid(arr) {
  * @returns {number}
  */
 export function getChkSum(arr) {
-  let sum = 0;
-  for (let i = 0; i < arr.length; i++) {
-    sum = (((sum & 1) === 1 ? 0x80 : 0) + (sum >> 1) + arr[i]) & 0xff;
-  }
-  return sum;
+  return arr.reduce((/** @type {number} */ acc, /** @type {number} */ curr) => (((acc & 1) << 7) + (acc >> 1) + curr) & 0xff, 0);
 }
 
 /**
@@ -89,14 +81,26 @@ export function formatDate(date) {
  * @returns {string}
  */
 export function formatTime(time, timeTenth) {
-  if (time === 0) {
-    return "";
-  }
   // const millis = (timeTenth % 100) * 10;
   const seconds = Math.floor(timeTenth / 100) + ((time & 0b11111) << 1);
   const minutes = (time >> 5) & 0b111111;
   const hours = (time >> 11) & 0b11111;
   return padStart2(hours) + ":" + padStart2(minutes) + ":" + padStart2(seconds);
+}
+
+/**
+ * @param {number} date
+ * @param {number} time
+ * @param {number} timeTenth
+ * @returns {string}
+ */
+export function formatDateTime(date, time, timeTenth) {
+  const dateStr = formatDate(date);
+  if (dateStr === "") {
+    return "";
+  }
+  const timeStr = formatTime(time, timeTenth);
+  return dateStr + " " + timeStr;
 }
 
 /**

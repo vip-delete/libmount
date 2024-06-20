@@ -17,15 +17,14 @@ class FATChainLN {
    * @param {!DirEntryLN} dir
    */
   addDirLN(dir) {
-    const last = (dir.Ord & DIR_LN_LAST_LONG_ENTRY) !== 0;
-    if (last) {
+    if (dir.Ord & DIR_LN_LAST_LONG_ENTRY) {
       this.list = [dir];
       return;
     }
-    if (this.list.length === 0) {
+    if (!this.list.length) {
       return;
     }
-    const prev = this.list[this.list.length - 1].Ord & (DIR_LN_LAST_LONG_ENTRY - 1);
+    const prev = this.list.at(-1).Ord & (DIR_LN_LAST_LONG_ENTRY - 1);
     const curr = dir.Ord & (DIR_LN_LAST_LONG_ENTRY - 1);
     if (prev === curr + 1) {
       this.list.push(dir);
@@ -41,9 +40,8 @@ class FATChainLN {
     if (this.list.length === 0) {
       return;
     }
-    const k = this.list.length - 1;
-    const ord = this.list[k].Ord & (DIR_LN_LAST_LONG_ENTRY - 1);
-    if (ord !== 1 || this.list[k].Chksum !== getChkSum(dir.Name)) {
+    const ord = this.list.at(-1).Ord & (DIR_LN_LAST_LONG_ENTRY - 1);
+    if (ord !== 1 || this.list.at(-1).Chksum !== getChkSum(dir.Name)) {
       this.clear();
     }
   }
@@ -66,7 +64,7 @@ class FATChainLN {
    * @returns {?string}
    */
   getLongName() {
-    if (this.list.length === 0) {
+    if (!this.list.length) {
       return null;
     }
     let longName = "";

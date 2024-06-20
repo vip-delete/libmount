@@ -12,7 +12,7 @@ Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript
 ## API
 
 ```javascript
-function mount(buf: !ArrayBuffer, encoding: string = "cp1251"): FileSystem;
+function mount(buf: ArrayBuffer, encoding: string = "cp1251"): FileSystem;
 ```
 
 ## Example

@@ -55,10 +55,7 @@ export function getRawName(arr, encoding) {
 export function getShortName(arr, encoding) {
   const filename = getRawName(arr.subarray(0, 8), encoding);
   const ext = getRawName(arr.subarray(8, 11), encoding);
-  if (ext === "") {
-    return filename;
-  }
-  return filename + "." + ext;
+  return filename + (ext === "" ? "" : "." + ext);
 }
 
 /**
@@ -66,9 +63,6 @@ export function getShortName(arr, encoding) {
  * @returns {string}
  */
 export function formatDate(date) {
-  if (date === 0) {
-    return "";
-  }
   const dayOfMonth = date & 0b11111;
   const monthOfYear = (date >> 5) & 0b1111;
   const yearSince1980 = (date >> 9) & 0b1111111;
@@ -96,9 +90,6 @@ export function formatTime(time, timeTenth) {
  */
 export function formatDateTime(date, time, timeTenth) {
   const dateStr = formatDate(date);
-  if (dateStr === "") {
-    return "";
-  }
   const timeStr = formatTime(time, timeTenth);
   return dateStr + " " + timeStr;
 }

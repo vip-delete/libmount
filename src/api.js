@@ -94,7 +94,7 @@ LibMount.FileSystem = class {
 
   /**
    * @param {!LibMount.File} file
-   * @returns {!Array<!LibMount.File>}
+   * @returns {?Array<!LibMount.File>}
    */
   listFiles(file) {}
 

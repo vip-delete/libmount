@@ -41,6 +41,7 @@ export default [
       "jsdoc/no-undefined-types": "error",
       "jsdoc/require-jsdoc": 0,
       "@stylistic/indent": ["error", 2],
+      "@stylistic/brace-style": ["error", "1tbs", { "allowSingleLine": true }],
       "@stylistic/no-extra-semi": "error",
       "@stylistic/arrow-parens": ["error", "always"],
       "@stylistic/quote-props": ["error", "consistent"],

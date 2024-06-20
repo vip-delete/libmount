@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { readFileSync } from "fs";
 
 export function testFreedos722(mount) {
-  const buf = readFileSync("./public/freedos722.img", { flag: "r" });
+  const buf = readFileSync("./public/images/freedos722.img", { flag: "r" });
   const fs = mount(buf.buffer);
 
   test("volumeInfo", () => {
@@ -84,7 +84,7 @@ export function testFreedos722(mount) {
     expect(fs.getFile("kernel.sys").getCreatedDate()).toBe("2012.04.07 08:13:05");
     expect(fs.getFile("games").getCreatedDate()).toBe("2013.05.04 03:29:07");
     expect(fs.getFile("games/rogue.exe").getCreatedDate()).toBe("2013.05.04 03:29:07");
-    expect(fs.getFile("foo").getCreatedDate()).toBe("");
+    expect(fs.getFile("foo").getCreatedDate()).toBe("1980.00.00 00:00:00");
   });
 
   test("getModifiedDate", () => {
@@ -100,7 +100,7 @@ export function testFreedos722(mount) {
     expect(fs.getFile("kernel.sys").getAccessedDate()).toBe("2012.04.07");
     expect(fs.getFile("games").getAccessedDate()).toBe("2013.05.04");
     expect(fs.getFile("games/rogue.exe").getAccessedDate()).toBe("2012.10.25");
-    expect(fs.getFile("foo").getAccessedDate()).toBe("");
+    expect(fs.getFile("foo").getAccessedDate()).toBe("1980.00.00");
   });
 
   test("deleteFile", () => {
@@ -129,9 +129,11 @@ export function testFreedos722(mount) {
 
   function print(indent, fs, files) {
     files.forEach((it) => {
-      console.log(" ".repeat(indent) + it.getName());
+      const ls = fs.listFiles(it)
       if (it.isDirectory()) {
-        print(indent + 2, fs, fs.listFiles(it));
+        print(indent + 2, fs, ls);
+      } else {
+        expect(ls).toBeNull();
       }
     });
   }

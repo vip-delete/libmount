@@ -154,9 +154,12 @@ export class FATFileSystem {
   /**
    * @override
    * @param {!LibMount.File} file
-   * @returns {!Array<!LibMount.File>}
+   * @returns {?Array<!LibMount.File>}
    */
   listFiles(file) {
+    if (!file.isDirectory()) {
+      return null;
+    }
     const f = /** @type {!FATFile} */ (file);
     const parentPath = f.node.kind === FAT_NODE.ROOT ? "" : f.absolutePath;
     return this.findAllInDir(f.node, (it) => isNodeRegularFileOrDir(it)).map((node) => new FATFile(parentPath + "/" + node.getName(), node));

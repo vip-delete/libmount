@@ -1,6 +1,6 @@
 import { mount } from "libmount"
 
-const mountFile = "freedos722.img";
+const mountFile = "images/freedos722.img";
 
 function createElement(name, classes, text) {
   const element = document.createElement(name);

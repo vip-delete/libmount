@@ -37,7 +37,7 @@ class FATChainLN {
    * @param {!DirEntry} dir
    */
   addDir(dir) {
-    if (this.list.length === 0) {
+    if (!this.list.length) {
       return;
     }
     const ord = this.list.at(-1).Ord & (DIR_LN_LAST_LONG_ENTRY - 1);
@@ -406,7 +406,7 @@ export class FAT12Driver {
   getNextClusNum(clusNum) {
     this.s.pos = this.getFATClusPos(clusNum);
     const fat12ClusEntryVal = this.s.readWord();
-    return (clusNum & 1) === 1 ? fat12ClusEntryVal >> 4 : fat12ClusEntryVal & 0x0fff;
+    return clusNum & 1 ? fat12ClusEntryVal >> 4 : fat12ClusEntryVal & 0x0fff;
   }
 
   /**
@@ -418,7 +418,7 @@ export class FAT12Driver {
     this.s.pos = this.getFATClusPos(clusNum);
     const fat12ClusEntryVal = this.s.readWord();
     this.s.pos -= 2;
-    this.s.writeWord((clusNum & 1) === 1 ? (value << 4) | (fat12ClusEntryVal & 0xf) : (fat12ClusEntryVal & 0xf000) | value);
+    this.s.writeWord(clusNum & 1 ? (value << 4) | (fat12ClusEntryVal & 0xf) : (fat12ClusEntryVal & 0xf000) | value);
   }
 
   /**

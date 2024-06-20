@@ -200,14 +200,14 @@ export function loadDirEntryLN(s) {
  * @returns {!FATVariables}
  */
 export function loadFATVariables(bs) {
-  /** @type {number} */ const RootDirSectors = Math.floor((bs.bpb.RootEntCnt * 32 + (bs.bpb.BytsPerSec - 1)) / bs.bpb.BytsPerSec);
-  /** @type {number} */ const FATSz = bs.bpbFAT32 !== null ? bs.bpbFAT32.FATSz32 : bs.bpb.FATSz16;
-  /** @type {number} */ const TotSec = bs.bpb.TotSec16 !== 0 ? bs.bpb.TotSec16 : bs.bpb.TotSec32;
-  /** @type {number} */ const DataSec = TotSec - (bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * FATSz + RootDirSectors);
-  /** @type {number} */ const CountOfClusters = Math.floor(DataSec / bs.bpb.SecPerClus);
-  /** @type {number} */ const MaxClus = CountOfClusters + 1;
-  /** @type {number} */ const FirstRootDirSecNum = bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * bs.bpb.FATSz16;
-  /** @type {number} */ const FirstDataSector = bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * FATSz + RootDirSectors;
+  const RootDirSectors = Math.floor((bs.bpb.RootEntCnt * 32 + (bs.bpb.BytsPerSec - 1)) / bs.bpb.BytsPerSec);
+  const FATSz = bs.bpbFAT32 !== null ? bs.bpbFAT32.FATSz32 : bs.bpb.FATSz16;
+  const TotSec = bs.bpb.TotSec16 !== 0 ? bs.bpb.TotSec16 : bs.bpb.TotSec32;
+  const DataSec = TotSec - (bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * FATSz + RootDirSectors);
+  const CountOfClusters = Math.floor(DataSec / bs.bpb.SecPerClus);
+  const MaxClus = CountOfClusters + 1;
+  const FirstRootDirSecNum = bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * bs.bpb.FATSz16;
+  const FirstDataSector = bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * FATSz + RootDirSectors;
   return {
     RootDirSectors,
     FATSz,
@@ -243,12 +243,12 @@ export class FATNode {
    * @param {?DirEntry} dirEntry
    */
   constructor(kind, shortName, longName, offset, dirSize, dirEntry) {
-    /** @type {number}  */ this.kind = kind;
-    /** @type {string}  */ this.shortName = shortName;
-    /** @type {?string} */ this.longName = longName;
-    /** @type {number}  */ this.offset = offset;
-    /** @type {number}  */ this.dirSize = dirSize;
-    /** @type {?DirEntry}  */ this.dirEntry = dirEntry;
+    this.kind = kind;
+    this.shortName = shortName;
+    this.longName = longName;
+    this.offset = offset;
+    this.dirSize = dirSize;
+    this.dirEntry = dirEntry;
   }
 
   /**
@@ -273,6 +273,8 @@ export class FATNode {
   }
 }
 
+/* eslint-disable no-unused-vars */
+
 /**
  * @interface
  */
@@ -291,26 +293,24 @@ export class FATDriver {
    * @param {!FATNode} node
    * @returns {?FATNode}
    */
-  // eslint-disable-next-line no-unused-vars
   getNext(node) {}
 
   /**
    * @param {!FATNode} node
    * @returns {?FATNode}
    */
-  // eslint-disable-next-line no-unused-vars
   getFirst(node) {}
 
   /**
    * @param {!FATNode} node
    * @returns {?Uint8Array}
    */
-  // eslint-disable-next-line no-unused-vars
   readNode(node) {}
 
   /**
    * @param {!FATNode} node
    */
-  // eslint-disable-next-line no-unused-vars
   deleteNode(node) {}
 }
+
+/* eslint-enable no-unused-vars */

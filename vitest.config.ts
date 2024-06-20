@@ -1,12 +1,14 @@
 import { coverageConfigDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
+  define: {
+    ENABLE_ASSERTIONS: true,
+  },
   test: {
-    setupFiles: ["./tests/setup-defines.js"],
     coverage: {
       provider: "istanbul",
       reporter: ["text", "html"],
-      exclude: ["scripts", "public", "**/api.js", "**/defines.js", "**/exports.mjs", "**/support.mjs", ...coverageConfigDefaults.exclude],
+      exclude: ["scripts", "public", "src/api.js", "src/defines.js", "src/exports.mjs", "src/support.mjs", ...coverageConfigDefaults.exclude],
     },
   },
 });

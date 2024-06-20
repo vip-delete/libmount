@@ -2,6 +2,9 @@ import { expect, test } from "vitest";
 import { readFileSync } from "fs";
 
 export function testFreedos722(mount) {
+  expect(mount(new ArrayBuffer())).toBeNull();
+  expect(mount(new ArrayBuffer(512))).toBeNull();
+
   const buf = readFileSync("./public/images/freedos722.img", { flag: "r" });
   const fs = mount(buf.buffer);
 
@@ -56,6 +59,10 @@ export function testFreedos722(mount) {
   });
 
   test("readFile", () => {
+    const games = fs.getFile("games")
+    expect(games.isDirectory()).toBeTruthy();
+    expect(fs.readFile(games)).toBeNull();
+
     const hello = fs.getFile("hello.asm");
     const helloBuf = fs.readFile(hello);
     expect(helloBuf.byteLength).toBe(163);

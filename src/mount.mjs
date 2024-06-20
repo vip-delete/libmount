@@ -6,9 +6,13 @@ import { FATFileSystem } from "./filesystem.mjs";
 /**
  * @param {!ArrayBuffer} buf
  * @param {string} [encoding]
- * @returns {?FATFileSystem}
+ * @returns {?LibMount.FileSystem}
  */
 export function mount(buf, encoding = "cp1251") {
+  if (buf.byteLength < 512) {
+    return null;
+  }
+
   const s = new BlockDevice(buf);
 
   // check signature

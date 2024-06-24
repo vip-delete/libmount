@@ -108,17 +108,17 @@ declare module "libmount" {
     /**
      * @returns The first File object which meets the predicate condition or null if this file is not a directory
      */
-    findFirst(predicate: (file: File) => boolean): File | null;
+    findFirst(predicate: (file: LmFile) => boolean): LmFile | null;
 
     /**
      * @returns An array of File objects which meet the predicate condition or null if this file is not a directory
      */
-    findAll(predicate: (file: File) => boolean): File[] | null;
+    findAll(predicate: (file: LmFile) => boolean): LmFile[] | null;
 
     /**
      * @returns An array of File objects within this directory, or null if this file is not a directory.
      */
-    listFiles(): File[] | null;
+    listFiles(): LmFile[] | null;
 
     /**
      * Reads the content of this file.

@@ -294,7 +294,8 @@ export class GnericFATDriver {
    */
   markNodeDeleted(node) {
     let offset = node.offset;
-    // mark all elements in the chain by setting 0xE5 to the first byte it is possible that the chain spans across multiple non-contiguous clusters
+    // mark all elements in the chain by setting 0xE5 to the first byte
+    // it is possible that the chain spans across multiple non-contiguous clusters
     for (let i = 0; i < node.dirs; i++) {
       if (offset === FAT_DRIVER_EOF) {
         // protect the code, however we shouldn't be here
@@ -371,10 +372,10 @@ export class GnericFATDriver {
     if (dir.Name[0] === ".".charCodeAt(0)) {
       const dotName = getRawName(dir.Name, this.encoding);
       if (dotName === ".") {
-        return new FATNode(FATNodeKind.CURRENT_DIR, ".", null, currentOffset, 1, dir);
+        return new FATNode(FATNodeKind.CURRENT_DIR, dotName, null, currentOffset, 1, dir);
       }
       if (dotName === "..") {
-        return new FATNode(FATNodeKind.PARENT_DIR, "..", null, currentOffset, 1, dir);
+        return new FATNode(FATNodeKind.PARENT_DIR, dotName, null, currentOffset, 1, dir);
       }
       chain.reset();
       return null;

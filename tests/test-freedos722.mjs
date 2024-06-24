@@ -17,14 +17,25 @@ export function freedos722(mount) {
     });
   });
 
-  test("getFile", () => {
-    const root = fs.getFile("/");
-    expect(root.getName()).toBe("");
-    expect(root.getShortName()).toBe("");
-    expect(root.getLongName()).toBeNull();
-    expect(root.length()).toBe(0);
-    expect(root.getAbsolutePath()).toBe("/");
+  test("getRoot", () => {
+    [fs.getRoot(), fs.getFile("/"), fs.getFile("\\"), fs.getFile("//"), fs.getFile("\\\\////")].forEach((root) => {
+      expect(root.getName()).toBe("");
+      expect(root.getShortName()).toBe("");
+      expect(root.getLongName()).toBeNull();
+      expect(root.isRegularFile()).toBeFalsy();
+      expect(root.isDirectory()).toBeTruthy();
+      expect(root.length()).toBe(0);
+      expect(root.getAbsolutePath()).toBe("/");
+      expect(root.lastModified().toISOString()).toBe("1970-01-01T00:00:00.000Z");
+      expect(root.creationTime().toISOString()).toBe("1970-01-01T00:00:00.000Z");
+      expect(root.lastAccessTime().toISOString()).toBe("1970-01-01T00:00:00.000Z");
+      expect(root.getData()).toBeNull();
+      expect(root.length()).toBe(0);
+      expect(root.delete()).toBeUndefined();
+    });
+  });
 
+  test("getFile", () => {
     const kernel = fs.getFile("kernel.sys");
     expect(kernel.getName()).toBe("KERNEL.SYS");
     expect(kernel.getShortName()).toBe("KERNEL.SYS");
@@ -33,7 +44,7 @@ export function freedos722(mount) {
     expect(kernel.isDirectory()).toBeFalsy();
     expect(kernel.getAbsolutePath()).toBe("/KERNEL.SYS");
 
-    const games = fs.getFile("GAMES");
+    const games = fs.getFile("\\\\GAMES");
     expect(games.getName()).toBe("games");
     expect(games.getShortName()).toBe("GAMES");
     expect(games.getLongName()).toBe("games");
@@ -45,11 +56,11 @@ export function freedos722(mount) {
     expect(games1.getName()).toBe("games");
     expect(games1.getAbsolutePath()).toBe("/games");
 
-    const games2 = fs.getFile("/GaMeS");
+    const games2 = fs.getFile("////GaMeS");
     expect(games2.getName()).toBe("games");
     expect(games2.getAbsolutePath()).toBe("/games");
 
-    const minesweeper = fs.getFile("/games/MiNeSw~1.COM");
+    const minesweeper = fs.getFile("/games///MiNeSw~1.COM//");
     expect(minesweeper.getName()).toBe("minesweeper.com");
     expect(minesweeper.getShortName()).toBe("MINESW~1.COM");
     expect(minesweeper.getLongName()).toBe("minesweeper.com");
@@ -57,7 +68,12 @@ export function freedos722(mount) {
     expect(minesweeper.isDirectory()).toBeFalsy();
     expect(minesweeper.getAbsolutePath()).toBe("/games/minesweeper.com");
 
-    expect(fs.getFile("/").listFiles().length).toBe(22);
+    expect(minesweeper.findFirst(() => true)).toBeNull();
+    expect(minesweeper.findAll(() => true)).toBeNull();
+
+    expect(fs.getRoot().listFiles().length).toBe(22);
+    expect(fs.getRoot().findFirst(it => it.length() > 1000 && it.length() < 10000).getName()).toBe("README");
+    expect(fs.getRoot().findAll(it => it.length() > 1000 && it.length() < 10000).length).toBe(6);
   });
 
   test("getData", () => {
@@ -75,7 +91,7 @@ export function freedos722(mount) {
   });
 
   test("length", () => {
-    expect(fs.getFile("/").length()).toBe(0);
+    expect(fs.getRoot().length()).toBe(0);
     expect(fs.getFile("kernel.sys").length()).toBe(45450);
     expect(fs.getFile("games").length()).toBe(0);
     expect(fs.getFile("games/rogue.exe").length()).toBe(99584);
@@ -83,7 +99,7 @@ export function freedos722(mount) {
   });
 
   test("creationTime", () => {
-    expect(fs.getFile("/").creationTime().toISOString()).toBe("1970-01-01T00:00:00.000Z");
+    expect(fs.getRoot().creationTime().toISOString()).toBe("1970-01-01T00:00:00.000Z");
     expect(fs.getFile("kernel.sys").creationTime().toISOString()).toBe("2012-04-07T08:13:05.500Z");
     expect(fs.getFile("games").creationTime().toISOString()).toBe("2013-05-04T03:29:07.000Z");
     expect(fs.getFile("games/rogue.exe").creationTime().toISOString()).toBe("2013-05-04T03:29:07.000Z");
@@ -91,7 +107,7 @@ export function freedos722(mount) {
   });
 
   test("lastModified", () => {
-    expect(fs.getFile("/").lastModified().toISOString()).toBe("1970-01-01T00:00:00.000Z");
+    expect(fs.getRoot().lastModified().toISOString()).toBe("1970-01-01T00:00:00.000Z");
     expect(fs.getFile("kernel.sys").lastModified().toISOString()).toBe("2012-04-07T08:13:00.000Z");
     expect(fs.getFile("games").lastModified().toISOString()).toBe("2013-05-04T03:29:06.000Z");
     expect(fs.getFile("games/rogue.exe").lastModified().toISOString()).toBe("2012-10-25T21:19:38.000Z");
@@ -99,7 +115,7 @@ export function freedos722(mount) {
   });
 
   test("lastAccessTime", () => {
-    expect(fs.getFile("/").lastAccessTime().toISOString()).toBe("1970-01-01T00:00:00.000Z");
+    expect(fs.getRoot().lastAccessTime().toISOString()).toBe("1970-01-01T00:00:00.000Z");
     expect(fs.getFile("kernel.sys").lastAccessTime().toISOString()).toBe("2012-04-07T00:00:00.000Z");
     expect(fs.getFile("games").lastAccessTime().toISOString()).toBe("2013-05-04T00:00:00.000Z");
     expect(fs.getFile("games/rogue.exe").lastAccessTime().toISOString()).toBe("2012-10-25T00:00:00.000Z");
@@ -107,18 +123,18 @@ export function freedos722(mount) {
   });
 
   test("delete", () => {
-    const length = fs.getFile("/").listFiles().length;
-    fs.getFile("/").delete();
-    expect(fs.getFile("/").listFiles().length).toBe(length);
+    const length = fs.getRoot().listFiles().length;
+    fs.getRoot().delete();
+    expect(fs.getRoot().listFiles().length).toBe(length);
 
     fs.getFile("hello.asm").delete();
-    expect(fs.getFile("/").listFiles().length).toBe(length - 1);
+    expect(fs.getRoot().listFiles().length).toBe(length - 1);
 
     fs.getFile("foo").delete();
-    expect(fs.getFile("/").listFiles().length).toBe(length - 2);
+    expect(fs.getRoot().listFiles().length).toBe(length - 2);
 
     fs.getFile("x86test.asm").delete();
-    expect(fs.getFile("/").listFiles().length).toBe(length - 3);
+    expect(fs.getRoot().listFiles().length).toBe(length - 3);
 
     const length2 = fs.getFile("GaMeS").listFiles().length;
     expect(length2).toBe(6);

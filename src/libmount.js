@@ -1,5 +1,3 @@
-/* eslint-disable jsdoc/check-tag-names */
-/* eslint-disable jsdoc/require-returns-check */
 /* eslint-disable no-empty-function */
 /* eslint-disable no-unused-expressions */
 /* eslint-disable no-unused-vars */

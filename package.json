@@ -5,10 +5,12 @@
   "license": "MIT",
   "keywords": [
     "filesystem",
-    "libmount",
+    "fat",
+    "fatfs",
     "fat12",
     "fat16",
-    "fat32"
+    "fat32",
+    "vfat"
   ],
   "scripts": {
     "build": "npm run lint && npm run coverage && npm run compile && npm run test",
@@ -21,8 +23,8 @@
   "devDependencies": {
     "@stylistic/eslint-plugin": "^2.2.2",
     "@vitest/coverage-istanbul": "^1.6.0",
-    "eslint": "^8.56.0",
-    "eslint-plugin-jsdoc": "^48.2.12",
+    "eslint": "^9.5.0",
+    "eslint-plugin-jsdoc": "^48.4.0",
     "express": "^4.19.2",
     "google-closure-compiler": "^20240317.0.0",
     "prettier": "^3.3.2",
@@ -31,6 +33,7 @@
   },
   "type": "module",
   "exports": {
+    "./package.json": "./package.json",
     ".": {
       "types": "./types/index.d.ts",
       "import": "./dist/libmount.min.mjs"

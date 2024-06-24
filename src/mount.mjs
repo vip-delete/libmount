@@ -1,6 +1,6 @@
 import { BlockDevice } from "./io.mjs";
 import { FATFileSystem } from "./filesystem.mjs";
-import { GnericFATDriver } from "./driver.mjs";
+import { GenericFATDriver } from "./driver.mjs";
 
 /**
  * @param {!ArrayBuffer} buf
@@ -22,7 +22,7 @@ export function mount(buf, encoding = "cp1251") {
   }
 
   try {
-    return new FATFileSystem(new GnericFATDriver(s, encoding));
+    return new FATFileSystem(new GenericFATDriver(s, encoding));
   } catch {
     return null;
   }

@@ -143,7 +143,7 @@ const DIR_ENTRY_SIZE = 32;
 /**
  * @implements {FATDriver}
  */
-export class GnericFATDriver {
+export class GenericFATDriver {
   /**
    * @param {!BlockDevice} s
    * @param {string} encoding

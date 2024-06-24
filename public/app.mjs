@@ -13,9 +13,12 @@ function createElement(name, classes, text) {
 
 const app = document.getElementById("app");
 
-const status = createElement("div", ["row", "name"]);
-status.innerText = mountFile;
-app.appendChild(status);
+const fileRow = createElement("div", ["row", "name"]);
+fileRow.innerText = mountFile;
+app.appendChild(fileRow);
+
+const nameRow = createElement("div", ["row"]);
+app.appendChild(nameRow);
 
 const info = createElement("div", ["row"]);
 info.innerText = "Loading...";
@@ -26,7 +29,16 @@ app.appendChild(path);
 
 const header = createElement("div", ["row"]);
 header.innerHTML =
-  '<div class="row header"><span>&nbsp;</span><span>&nbsp;</span><span>Name</span><span>Size</span><span>Created</span><span>Modified</span><span>Accessed</span></div>';
+  '<div class="row header">'+
+  '<span>&nbsp;</span>'+
+  '<span>&nbsp;</span>'+
+  '<span>Name</span>'+
+  '<span>Short Name</span>'+
+  '<span>Size</span>'+
+  '<span>Created</span>'+
+  '<span>Modified</span>'+
+  '<span>Accessed</span>'+
+  '</div>';
 app.appendChild(header);
 
 const container = createElement("div", []);
@@ -34,7 +46,7 @@ app.appendChild(container);
 
 function createRow(fs, f, name) {
   const directory = f.isDirectory();
-  const up = name === "..";
+  const up = name === ". .";
   const icon = up ? "up" : directory ? "dir" : "file";
 
   const iconColumn = createElement("span", ["icon", icon]);
@@ -46,7 +58,7 @@ function createRow(fs, f, name) {
     deleteColumn = createElement("span", ["icon", "del"]);
     deleteColumn.title = "Delete";
     deleteColumn.addEventListener("click", () => {
-      fs.deleteFile(f);
+      f.delete();
       info.innerText = JSON.stringify(fs.getVolumeInfo());
       showDir(fs, f.parent);
     });
@@ -57,32 +69,36 @@ function createRow(fs, f, name) {
     });
   } else {
     link.addEventListener("click", () => {
-      const buf = fs.readFile(f);
-      if (buf) {
+      const buf = f.getData();
+      // if (buf) {
         download(buf, name);
-      }
+      // }
     });
   }
 
   const nameColumn = createElement("span", []);
   nameColumn.appendChild(link);
 
+  const shortNameColumn = createElement("span", []);
+  shortNameColumn.innerText = f.getShortName();
+
   const sizeColumn = createElement("span", []);
-  sizeColumn.innerText = f.isDirectory() ? "" : f.getFileSize().toLocaleString("en");
+  sizeColumn.innerText = f.isDirectory() ? "" : f.length().toLocaleString("en");
 
   const createdColumn = createElement("span", []);
-  createdColumn.innerText = f.getCreatedDate();
+  createdColumn.innerText = f.creationTime().toISOString().replace(/(.*)T(.*).(\d{3}Z)/, '$1 $2');
 
   const modifiedColumn = createElement("span", []);
-  modifiedColumn.innerText = f.getModifiedDate();
+  modifiedColumn.innerText = f.lastModified().toISOString().replace(/(.*)T(.*).(\d{3}Z)/, '$1 $2');
 
   const accessedColumn = createElement("span", []);
-  accessedColumn.innerText = f.getAccessedDate();
+  accessedColumn.innerText = f.lastAccessTime().toISOString().replace(/(.*)T(.*)/, '$1');
 
   const row = createElement("span", ["row"]);
   row.appendChild(deleteColumn);
   row.appendChild(iconColumn);
   row.appendChild(nameColumn);
+  row.appendChild(shortNameColumn);
   row.appendChild(sizeColumn);
   row.appendChild(createdColumn);
   row.appendChild(modifiedColumn);
@@ -114,10 +130,10 @@ function showDir(fs, dir) {
   container.innerHTML = "";
   path.innerText = dir.getAbsolutePath();
 
-  const files = fs.listFiles(dir);
+  const files = dir.listFiles();
   files.sort(sortFunction);
   if (dir.parent) {
-    container.appendChild(createRow(fs, dir.parent, ".."));
+    container.appendChild(createRow(fs, dir.parent, ". ."));
   }
   files.forEach((f) => {
     f.parent = dir;
@@ -139,6 +155,7 @@ async function onLoad() {
   const response = await withTime("Fetch", () => fetch(mountFile));
   if (response.status !== 200) {
     document.title = response.status + " " + response.statusText;
+    info.style.color = 'red'
     info.innerText = await response.text();
     return;
   }
@@ -149,9 +166,10 @@ async function onLoad() {
     info.innerText = "Mount failed";
     return;
   }
-  status.addEventListener("click", () => {
+  fileRow.addEventListener("click", () => {
     download(buf, mountFile);
   });
+  nameRow.innerText = fs.getName();
   info.innerText = JSON.stringify(fs.getVolumeInfo());
   path.innerText = "/";
   const root = fs.getRoot();

@@ -2,6 +2,11 @@ import express from "express";
 import serveStatic from "serve-static";
 const app = express();
 
+app.use("*.gz", (req, res, next) => {
+  res.setHeader("Content-Encoding", "gzip");
+  next();
+});
+
 app.use(serveStatic("public", { index: ["debug.html"] }));
 app.use(serveStatic("src"));
 app.use(serveStatic("dist"));

@@ -1,7 +1,7 @@
 {
   "name": "libmount",
   "description": "Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "license": "MIT",
   "keywords": [
     "filesystem",
@@ -21,7 +21,7 @@
   "devDependencies": {
     "@stylistic/eslint-plugin": "^2.2.2",
     "@vitest/coverage-istanbul": "^1.6.0",
-    "eslint": "^9.5.0",
+    "eslint": "^8.56.0",
     "eslint-plugin-jsdoc": "^48.2.12",
     "express": "^4.19.2",
     "google-closure-compiler": "^20240317.0.0",

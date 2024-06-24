@@ -1,23 +1,28 @@
-import { expect, test } from "vitest";
 import { readFileSync } from "fs";
+import { expect, test } from "vitest";
 
-export function testFreedos722(mount) {
-  expect(mount(new ArrayBuffer())).toBeNull();
-  expect(mount(new ArrayBuffer(512))).toBeNull();
-
+export function freedos722(mount) {
   const buf = readFileSync("./public/images/freedos722.img", { flag: "r" });
   const fs = mount(buf.buffer);
 
-  test("volumeInfo", () => {
-    expect(fs.getVolumeInfo()).toStrictEqual({ "type": "FAT12", "label": "FREEDOS", "id": 3838401768, "clusterSize": 1024, "freeSpace": 46080 });
+  test("getVolumeInfo", () => {
+    expect(fs.getName()).toBe("FAT12");
+    expect(fs.getVolumeInfo()).toStrictEqual({
+      //
+      "label": "FREEDOS",
+      "serialNumber": 3838401768,
+      "clusterSize": 1024,
+      "totalClusters": 713,
+      "freeClusters": 45,
+    });
   });
 
   test("getFile", () => {
-    const root = fs.getRoot();
+    const root = fs.getFile("/");
     expect(root.getName()).toBe("");
     expect(root.getShortName()).toBe("");
     expect(root.getLongName()).toBeNull();
-    expect(root.getFileSize()).toBe(0);
+    expect(root.length()).toBe(0);
     expect(root.getAbsolutePath()).toBe("/");
 
     const kernel = fs.getFile("kernel.sys");
@@ -52,96 +57,82 @@ export function testFreedos722(mount) {
     expect(minesweeper.isDirectory()).toBeFalsy();
     expect(minesweeper.getAbsolutePath()).toBe("/games/minesweeper.com");
 
-    const files = fs.listFiles(fs.getRoot());
-    expect(files.length).toBe(22);
-
-    print(0, fs, files);
+    expect(fs.getFile("/").listFiles().length).toBe(22);
   });
 
-  test("readFile", () => {
-    const games = fs.getFile("games")
+  test("getData", () => {
+    const games = fs.getFile("games");
     expect(games.isDirectory()).toBeTruthy();
-    expect(fs.readFile(games)).toBeNull();
+    expect(games.getData()).toBeNull();
 
-    const hello = fs.getFile("hello.asm");
-    const helloBuf = fs.readFile(hello);
-    expect(helloBuf.byteLength).toBe(163);
+    expect(fs.getFile("hello.asm").getData().byteLength).toBe(163);
+    expect(new TextDecoder().decode(fs.getFile("foo").getData())).toBe("\r\nqwer\r\n\r\n");
 
-    const foo = fs.getFile("foo");
-    const fooBuf = fs.readFile(foo);
-    expect(new TextDecoder().decode(fooBuf)).toBe("\r\nqwer\r\n\r\n");
-
-    const vim = fs.getFile("vim.exe");
-    const vimBuf = fs.readFile(vim);
+    const vimBuf = fs.getFile("vim.exe").getData();
     expect(vimBuf.byteLength).toBe(205718);
     expect(vimBuf.slice(0, 6)).toStrictEqual(new Uint8Array([0x4d, 0x5a, 0x96, 0x01, 0x92, 0x01]));
     expect(vimBuf.slice(-6)).toStrictEqual(new Uint8Array([0x74, 0x80, 0x00, 0x9f, 0x01, 0x1e]));
   });
 
-  test("getFileSize", () => {
-    expect(fs.getRoot().getFileSize()).toBe(0);
-    expect(fs.getFile("kernel.sys").getFileSize()).toBe(45450);
-    expect(fs.getFile("games").getFileSize()).toBe(0);
-    expect(fs.getFile("games/rogue.exe").getFileSize()).toBe(99584);
-    expect(fs.getFile("foo").getFileSize()).toBe(10);
+  test("length", () => {
+    expect(fs.getFile("/").length()).toBe(0);
+    expect(fs.getFile("kernel.sys").length()).toBe(45450);
+    expect(fs.getFile("games").length()).toBe(0);
+    expect(fs.getFile("games/rogue.exe").length()).toBe(99584);
+    expect(fs.getFile("foo").length()).toBe(10);
   });
 
-  test("getCreatedDate", () => {
-    expect(fs.getRoot().getCreatedDate()).toBe("");
-    expect(fs.getFile("kernel.sys").getCreatedDate()).toBe("2012.04.07 08:13:05");
-    expect(fs.getFile("games").getCreatedDate()).toBe("2013.05.04 03:29:07");
-    expect(fs.getFile("games/rogue.exe").getCreatedDate()).toBe("2013.05.04 03:29:07");
-    expect(fs.getFile("foo").getCreatedDate()).toBe("1980.00.00 00:00:00");
+  test("creationTime", () => {
+    expect(fs.getFile("/").creationTime().toISOString()).toBe("1970-01-01T00:00:00.000Z");
+    expect(fs.getFile("kernel.sys").creationTime().toISOString()).toBe("2012-04-07T08:13:05.500Z");
+    expect(fs.getFile("games").creationTime().toISOString()).toBe("2013-05-04T03:29:07.000Z");
+    expect(fs.getFile("games/rogue.exe").creationTime().toISOString()).toBe("2013-05-04T03:29:07.000Z");
+    expect(fs.getFile("foo").creationTime().toISOString()).toBe("1970-01-01T00:00:00.000Z");
   });
 
-  test("getModifiedDate", () => {
-    expect(fs.getRoot().getModifiedDate()).toBe("");
-    expect(fs.getFile("kernel.sys").getModifiedDate()).toBe("2012.04.07 08:13:00");
-    expect(fs.getFile("games").getModifiedDate()).toBe("2013.05.04 03:29:06");
-    expect(fs.getFile("games/rogue.exe").getModifiedDate()).toBe("2012.10.25 21:19:38");
-    expect(fs.getFile("foo").getModifiedDate()).toBe("2012.10.25 20:38:52");
+  test("lastModified", () => {
+    expect(fs.getFile("/").lastModified().toISOString()).toBe("1970-01-01T00:00:00.000Z");
+    expect(fs.getFile("kernel.sys").lastModified().toISOString()).toBe("2012-04-07T08:13:00.000Z");
+    expect(fs.getFile("games").lastModified().toISOString()).toBe("2013-05-04T03:29:06.000Z");
+    expect(fs.getFile("games/rogue.exe").lastModified().toISOString()).toBe("2012-10-25T21:19:38.000Z");
+    expect(fs.getFile("foo").lastModified().toISOString()).toBe("2012-10-25T20:38:52.000Z");
   });
 
-  test("getAccessedDate", () => {
-    expect(fs.getRoot().getAccessedDate()).toBe("");
-    expect(fs.getFile("kernel.sys").getAccessedDate()).toBe("2012.04.07");
-    expect(fs.getFile("games").getAccessedDate()).toBe("2013.05.04");
-    expect(fs.getFile("games/rogue.exe").getAccessedDate()).toBe("2012.10.25");
-    expect(fs.getFile("foo").getAccessedDate()).toBe("1980.00.00");
+  test("lastAccessTime", () => {
+    expect(fs.getFile("/").lastAccessTime().toISOString()).toBe("1970-01-01T00:00:00.000Z");
+    expect(fs.getFile("kernel.sys").lastAccessTime().toISOString()).toBe("2012-04-07T00:00:00.000Z");
+    expect(fs.getFile("games").lastAccessTime().toISOString()).toBe("2013-05-04T00:00:00.000Z");
+    expect(fs.getFile("games/rogue.exe").lastAccessTime().toISOString()).toBe("2012-10-25T00:00:00.000Z");
+    expect(fs.getFile("foo").lastAccessTime().toISOString()).toBe("1970-01-01T00:00:00.000Z");
   });
 
-  test("deleteFile", () => {
-    const length = fs.listFiles(fs.getRoot()).length;
-    fs.deleteFile(fs.getRoot());
-    expect(fs.listFiles(fs.getRoot()).length).toBe(length);
+  test("delete", () => {
+    const length = fs.getFile("/").listFiles().length;
+    fs.getFile("/").delete();
+    expect(fs.getFile("/").listFiles().length).toBe(length);
 
-    fs.deleteFile(fs.getFile("hello.asm"));
-    expect(fs.listFiles(fs.getRoot()).length).toBe(length - 1);
+    fs.getFile("hello.asm").delete();
+    expect(fs.getFile("/").listFiles().length).toBe(length - 1);
 
-    fs.deleteFile(fs.getFile("foo"));
-    expect(fs.listFiles(fs.getRoot()).length).toBe(length - 2);
+    fs.getFile("foo").delete();
+    expect(fs.getFile("/").listFiles().length).toBe(length - 2);
 
-    fs.deleteFile(fs.getFile("x86test.asm"));
-    expect(fs.listFiles(fs.getRoot()).length).toBe(length - 3);
+    fs.getFile("x86test.asm").delete();
+    expect(fs.getFile("/").listFiles().length).toBe(length - 3);
 
-    const length2 = fs.listFiles(fs.getFile("GaMeS")).length;
+    const length2 = fs.getFile("GaMeS").listFiles().length;
     expect(length2).toBe(6);
-    fs.deleteFile(fs.getFile("/games/minesweeper.com"));
-    fs.deleteFile(fs.getFile("/games/rogue.exe"));
-    expect(fs.listFiles(fs.getFile("GaMeS")).length).toBe(length2 - 2);
+    fs.getFile("/games/minesweeper.com").delete();
+    fs.getFile("/games/rogue.exe").delete();
+    expect(fs.getFile("GaMeS").listFiles().length).toBe(length2 - 2);
 
-    fs.deleteFile(fs.getFile("/games"));
+    fs.getFile("/games").delete();
     expect(fs.getFile("/games")).toBeNull();
-  });
 
-  function print(indent, fs, files) {
-    files.forEach((it) => {
-      const ls = fs.listFiles(it)
-      if (it.isDirectory()) {
-        print(indent + 2, fs, ls);
-      } else {
-        expect(ls).toBeNull();
-      }
-    });
-  }
+    fs.getRoot()
+      .listFiles()
+      .forEach((f) => f.delete());
+    const info = fs.getVolumeInfo();
+    expect(info.freeClusters).toBe(info.totalClusters);
+  });
 }

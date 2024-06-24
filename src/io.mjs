@@ -55,9 +55,9 @@ export class BlockDevice {
    */
   writeByte(val) {
     assert(this.pos + 1 <= this.dataView.buffer.byteLength);
-    assert(0 <= val && val <= 0xff);
+    assert(val >= 0 && val <= 0xff);
     this.dataView.setUint8(this.pos, val);
-    this.pos += 2;
+    this.pos += 1;
   }
 
   /**
@@ -65,7 +65,7 @@ export class BlockDevice {
    */
   writeWord(val) {
     assert(this.pos + 2 <= this.dataView.buffer.byteLength);
-    assert(0 <= val && val <= 0xffff);
+    assert(val >= 0 && val <= 0xffff);
     this.dataView.setUint16(this.pos, val, true);
     this.pos += 2;
   }
@@ -75,8 +75,8 @@ export class BlockDevice {
    */
   writeDoubleWord(val) {
     assert(this.pos + 4 <= this.dataView.buffer.byteLength);
-    assert(0 <= val && val <= 0xffffffff);
+    assert(val >= 0 && val <= 0xffffffff);
     this.dataView.setUint32(this.pos, val, true);
-    this.pos += 2;
+    this.pos += 4;
   }
 }

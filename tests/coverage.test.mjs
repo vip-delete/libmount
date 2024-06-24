@@ -1,4 +1,4 @@
 import { mount } from "./src/mount.mjs";
-import { testFreedos722 } from "./test-freedos722.mjs";
+import { testAll } from "./test-all.mjs";
 
-testFreedos722(mount);
+testAll(mount);

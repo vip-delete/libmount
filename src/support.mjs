@@ -11,3 +11,12 @@ export function assert(expression, msg) {
     }
   }
 }
+
+/**
+ * @param {boolean} expression
+ */
+export function validate(expression) {
+  if (!expression) {
+    throw Error();
+  }
+}

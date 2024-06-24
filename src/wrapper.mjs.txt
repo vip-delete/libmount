@@ -1,8 +1,8 @@
 /**
- * LibMount v0.0.2
+ * LibMount v0.0.4
  * (c) 2024-present vip.delete and LibMount contributors
  * @license MIT
  **/
-const LibMount = {};
+const lm = {};
 (function(){%output%})();
-export const { mount } = LibMount;
+export const { mount } = lm;

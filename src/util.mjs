@@ -60,44 +60,28 @@ export function getShortName(arr, encoding) {
 
 /**
  * @param {number} date
- * @returns {string}
+ * @returns {number}
  */
-export function formatDate(date) {
+export function parseDate(date) {
+  if (date === 0) {
+    return 0;
+  }
   const dayOfMonth = date & 0b11111;
   const monthOfYear = (date >> 5) & 0b1111;
   const yearSince1980 = (date >> 9) & 0b1111111;
-  return 1980 + yearSince1980 + "." + padStart2(monthOfYear) + "." + padStart2(dayOfMonth);
-}
-
-/**
- * @param {number} time
- * @param {number} timeTenth
- * @returns {string}
- */
-export function formatTime(time, timeTenth) {
-  // const millis = (timeTenth % 100) * 10;
-  const seconds = Math.floor(timeTenth / 100) + ((time & 0b11111) << 1);
-  const minutes = (time >> 5) & 0b111111;
-  const hours = (time >> 11) & 0b11111;
-  return padStart2(hours) + ":" + padStart2(minutes) + ":" + padStart2(seconds);
+  return Date.UTC(1980 + yearSince1980, monthOfYear - 1, dayOfMonth);
 }
 
 /**
  * @param {number} date
  * @param {number} time
  * @param {number} timeTenth
- * @returns {string}
+ * @returns {number}
  */
-export function formatDateTime(date, time, timeTenth) {
-  const dateStr = formatDate(date);
-  const timeStr = formatTime(time, timeTenth);
-  return dateStr + " " + timeStr;
-}
-
-/**
- * @param {number} num
- * @returns {string}
- */
-function padStart2(num) {
-  return num.toString().padStart(2, "0");
+export function parseDateTime(date, time, timeTenth) {
+  const millis = (timeTenth % 100) * 10;
+  const seconds = Math.floor(timeTenth / 100) + ((time & 0b11111) << 1);
+  const minutes = (time >> 5) & 0b111111;
+  const hours = (time >> 11) & 0b11111;
+  return parseDate(date) + Date.UTC(1970, 0, 1, hours, minutes, seconds, millis);
 }

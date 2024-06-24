@@ -16,7 +16,7 @@ import { BlockDevice } from "./io.mjs";
  *            TotSec32: number,
  *          }}
  */
-let BiosParameterBlock;
+export const BiosParameterBlock = {};
 
 /**
  * @typedef {{
@@ -29,7 +29,7 @@ let BiosParameterBlock;
  *            Reserved: !Uint8Array,
  *          }}
  */
-let BiosParameterBlockFAT32;
+export const BiosParameterBlockFAT32 = {};
 
 /**
  * @typedef {{
@@ -44,10 +44,10 @@ let BiosParameterBlockFAT32;
  *            VolLab: !Uint8Array,
  *            FilSysType: !Uint8Array,
  *            BootCode: !Uint8Array,
- *            Signature_word: number,
+ *            SignatureWord: number,
  *          }}
  */
-export let BootSector;
+export const BootSector = {};
 
 /**
  * @typedef {{
@@ -65,7 +65,7 @@ export let BootSector;
  *            FileSize: number,
  *          }}
  */
-export let DirEntry;
+export const DirEntry = {};
 
 /**
  * @typedef {{
@@ -79,7 +79,7 @@ export let DirEntry;
  *            Name3: !Uint8Array,
  *          }}
  */
-export let DirEntryLN;
+export const DirEntryLFN = {};
 
 /**
  * @typedef {{
@@ -87,13 +87,14 @@ export let DirEntryLN;
  *             FATSz: number,
  *             TotSec: number,
  *             DataSec: number,
+ *             SizeOfCluster: number,
  *             CountOfClusters: number,
  *             MaxClus: number,
  *             FirstRootDirSecNum: number,
  *             FirstDataSector: number,
  *          }}
  */
-export let FATVariables;
+export const FATVariables = {};
 
 /**
  * @param {!BlockDevice} s
@@ -142,10 +143,10 @@ export function loadBootSector(s) {
   const bpb = loadBiosParameterBlock(s);
   const bpbFAT32 = bpb.RootEntCnt === 0 ? loadBiosParameterBlockFAT32(s) : null;
   return {
-    jmpBoot: jmpBoot,
-    OEMName: OEMName,
-    bpb: bpb,
-    bpbFAT32: bpbFAT32,
+    jmpBoot,
+    OEMName,
+    bpb,
+    bpbFAT32,
     DrvNum: s.readByte(),
     Reserved1: s.readByte(),
     BootSig: s.readByte(),
@@ -153,7 +154,7 @@ export function loadBootSector(s) {
     VolLab: s.readArray(11),
     FilSysType: s.readArray(8),
     BootCode: s.readArray(bpbFAT32 ? 420 : 448),
-    Signature_word: s.readWord(),
+    SignatureWord: s.readWord(),
   };
 }
 
@@ -180,9 +181,9 @@ export function loadDirEntry(s) {
 
 /**
  * @param {!BlockDevice} s
- * @returns {!DirEntryLN}
+ * @returns {!DirEntryLFN}
  */
-export function loadDirEntryLN(s) {
+export function loadDirEntryLFN(s) {
   return {
     Ord: s.readByte(),
     Name1: s.readArray(10),
@@ -201,9 +202,10 @@ export function loadDirEntryLN(s) {
  */
 export function loadFATVariables(bs) {
   const RootDirSectors = Math.floor((bs.bpb.RootEntCnt * 32 + (bs.bpb.BytsPerSec - 1)) / bs.bpb.BytsPerSec);
-  const FATSz = bs.bpbFAT32 !== null ? bs.bpbFAT32.FATSz32 : bs.bpb.FATSz16;
-  const TotSec = bs.bpb.TotSec16 !== 0 ? bs.bpb.TotSec16 : bs.bpb.TotSec32;
+  const FATSz = bs.bpbFAT32 === null ? bs.bpb.FATSz16 : bs.bpbFAT32.FATSz32;
+  const TotSec = bs.bpb.TotSec16 === 0 ? bs.bpb.TotSec32 : bs.bpb.TotSec16;
   const DataSec = TotSec - (bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * FATSz + RootDirSectors);
+  const SizeOfCluster = bs.bpb.BytsPerSec * bs.bpb.SecPerClus;
   const CountOfClusters = Math.floor(DataSec / bs.bpb.SecPerClus);
   const MaxClus = CountOfClusters + 1;
   const FirstRootDirSecNum = bs.bpb.RsvdSecCnt + bs.bpb.NumFATs * bs.bpb.FATSz16;
@@ -213,6 +215,7 @@ export function loadFATVariables(bs) {
     FATSz,
     TotSec,
     DataSec,
+    SizeOfCluster,
     CountOfClusters,
     MaxClus,
     FirstRootDirSecNum,
@@ -223,7 +226,7 @@ export function loadFATVariables(bs) {
 /**
  * @enum
  */
-export const FAT_NODE = {
+export const FATNodeKind = {
   ROOT: 0,
   VOLUME_ID: 1,
   DELETED: 2,
@@ -239,15 +242,15 @@ export class FATNode {
    * @param {string} shortName
    * @param {?string} longName
    * @param {number} offset
-   * @param {number} dirSize
+   * @param {number} dirs
    * @param {?DirEntry} dirEntry
    */
-  constructor(kind, shortName, longName, offset, dirSize, dirEntry) {
+  constructor(kind, shortName, longName, offset, dirs, dirEntry) {
     this.kind = kind;
     this.shortName = shortName;
     this.longName = longName;
     this.offset = offset;
-    this.dirSize = dirSize;
+    this.dirs = dirs;
     this.dirEntry = dirEntry;
   }
 
@@ -255,7 +258,7 @@ export class FATNode {
    * @returns {string}
    */
   getName() {
-    return this.longName !== null ? this.longName : this.shortName;
+    return this.longName ?? this.shortName;
   }
 
   /**
@@ -271,16 +274,50 @@ export class FATNode {
   getClusNum() {
     return this.dirEntry?.FstClusLO ?? 0;
   }
+
+  /**
+   * @returns {boolean}
+   */
+  isRoot() {
+    return this.kind === FATNodeKind.ROOT;
+  }
+
+  /**
+   * @returns {boolean}
+   */
+  isRegularFile() {
+    return this.kind === FATNodeKind.REGULAR_FILE;
+  }
+
+  /**
+   * @returns {boolean}
+   */
+  isRegularDirectory() {
+    return this.kind === FATNodeKind.REGULAR_DIR;
+  }
+
+  /**
+   * @returns {boolean}
+   */
+  isRegular() {
+    return this.isRegularFile() || this.isRegularDirectory();
+  }
 }
 
 /* eslint-disable no-unused-vars */
+/* eslint-disable no-empty-function */
 
 /**
  * @interface
  */
 export class FATDriver {
   /**
-   * @returns {!LibMount.VolumeInfo}
+   * @returns {string}
+   */
+  getFileSystemName() {}
+
+  /**
+   * @returns {!lm.VolumeInfo}
    */
   getVolumeInfo() {}
 
@@ -312,5 +349,3 @@ export class FATDriver {
    */
   deleteNode(node) {}
 }
-
-/* eslint-enable no-unused-vars */

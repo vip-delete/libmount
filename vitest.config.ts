@@ -8,7 +8,7 @@ export default defineConfig({
     coverage: {
       provider: "istanbul",
       reporter: ["text", "html"],
-      exclude: ["scripts", "public", "src/api.js", "src/defines.js", "src/exports.mjs", "src/support.mjs", ...coverageConfigDefaults.exclude],
+      exclude: ["scripts", "public", "src/libmount.js", "src/defines.js", "src/exports.mjs", "src/support.mjs", ...coverageConfigDefaults.exclude],
     },
   },
 });

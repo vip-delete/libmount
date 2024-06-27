@@ -1,7 +1,7 @@
 {
   "name": "libmount",
   "description": "Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "license": "MIT",
   "keywords": [
     "filesystem",
@@ -45,7 +45,9 @@
   },
   "files": [
     "dist/libmount.min.mjs",
+    "dist/charmap.mjs",
     "types/index.d.ts",
+    "types/charmap.d.ts",
     "LICENSE",
     "README.md"
   ],

@@ -1,16 +1,17 @@
 import Main from "google-closure-compiler";
 import js from "../src/index.mjs";
-import { copyFile } from "fs";
+import fs from "fs";
 const Compiler = Main.compiler;
 
-const src = "./src/";
-const output_file = "dist/libmount.min.mjs";
-copyFile(src + "charmap.mjs", "dist/charmap.mjs", (e) => {
-  if (e) {
-    console.error("Operation Failed: ", e);
-    process.exit(2);
-  }
-});
+const src = "./src";
+const dist = "./dist";
+const output_file = dist + "/libmount.min.mjs";
+const charmap_file = dist + "/charmap.mjs";
+
+if (!fs.existsSync(dist)){
+  fs.mkdirSync(dist);
+}
+fs.copyFileSync(src + "/charmap.mjs", charmap_file);
 
 const args = {
   compilation_level: "ADVANCED",
@@ -22,7 +23,7 @@ const args = {
   summary_detail_level: 3,
   define: ["ENABLE_ASSERTIONS=false"],
   js_output_file: output_file,
-  js: js.map((it) => src + it),
+  js: js.map((it) => src + "/" + it),
 };
 
 new Compiler(args).run((exitCode, stdout, stderr) => {

@@ -254,7 +254,7 @@ export class FATDriver {
     const fileSize = node.DirEntry.FileSize;
     let clusNum = getClusNum(node);
     let size = 0;
-    const arr = new Uint8Array(new ArrayBuffer(fileSize));
+    const arr = new Uint8Array(fileSize);
     while (size < fileSize) {
       const offset = this.getContentOffset(clusNum);
       if (offset === FAT_DRIVER_EOF) {

@@ -1,6 +1,6 @@
 /**
- * LibMount v0.0.4
- * (c) 2024-present vip.delete and LibMount contributors
+ * LibMount v0.1.0
+ * (c) 2024-present vip.delete
  * @license MIT
  **/
 const lm = {};

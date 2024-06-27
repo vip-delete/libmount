@@ -1,17 +1,20 @@
+/* global process */
+/* eslint-disable no-console */
+/* eslint-disable camelcase */
+
 import Main from "google-closure-compiler";
-import js from "../src/index.mjs";
+import codecFiles from "../src/codec/index.mjs";
 import fs from "fs";
+import srcFiles from "../src/index.mjs";
 const Compiler = Main.compiler;
 
-const src = "./src";
-const dist = "./dist";
-const output_file = dist + "/libmount.min.mjs";
-const charmap_file = dist + "/charmap.mjs";
+fs.cpSync("./types", "./dist", { recursive: true });
+fs.cpSync("./src/codec", "./dist/codec", { recursive: true });
+fs.rmSync("./dist/codec/codec.js");
+fs.rmSync("./dist/codec/index.mjs");
 
-if (!fs.existsSync(dist)){
-  fs.mkdirSync(dist);
-}
-fs.copyFileSync(src + "/charmap.mjs", charmap_file);
+const codecJs = codecFiles.map((it) => "./src/codec/" + it);
+const srcJs = srcFiles.map((it) => "./src/" + it);
 
 const args = {
   compilation_level: "ADVANCED",
@@ -19,11 +22,16 @@ const args = {
   jscomp_error: "*",
   jscomp_warning: "reportUnknownTypes",
   assume_function_wrapper: true,
-  output_wrapper_file: src + "/wrapper.mjs.txt",
+  output_wrapper_file: "./src/wrapper.mjs.txt",
   summary_detail_level: 3,
-  define: ["ENABLE_ASSERTIONS=false"],
-  js_output_file: output_file,
-  js: js.map((it) => src + "/" + it),
+  use_types_for_optimization: true,
+  define: [
+    //
+    "ENABLE_LOGGER=false",
+    "ENABLE_ASSERTIONS=false",
+  ],
+  js_output_file: "./dist/libmount.min.mjs",
+  js: codecJs.concat(srcJs),
 };
 
 new Compiler(args).run((exitCode, stdout, stderr) => {
@@ -39,6 +47,6 @@ new Compiler(args).run((exitCode, stdout, stderr) => {
     process.exit(2);
   }
 
-  console.log(exitCode == 0 ? "\x1b[92mBUILD SUCCESSFUL\x1b[0m\n" : "\x1b[91mBUILD FAILED\x1b[0m\n");
+  console.log(exitCode === 0 ? "\x1b[92mBUILD SUCCESSFUL\x1b[0m\n" : "\x1b[91mBUILD FAILED\x1b[0m\n");
   process.exit(exitCode);
 });

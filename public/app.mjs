@@ -178,6 +178,12 @@ async function onLoad() {
   fileRow.addEventListener("click", () => {
     download(buf, mountFile);
   });
+  fs.mkfile("fdos/🐀/.TXT");
+  fs.mkfile("fdos/🐀/+.TXT");
+  fs.mkfile("fdos/🐀/++.TXT");
+  fs.mkfile("fdos/🐀/+++.TXT");
+  fs.mkfile("fdos .TXT");
+  fs.mkfile("fdos/🐀/🐀🐀🐀🐀🐀🐀🐀🐀🐀🐀🐀🐀.txt");
   nameRow.innerText = fs.getName();
   info.innerText = JSON.stringify(fs.getVolumeInfo());
   path.innerText = "/";

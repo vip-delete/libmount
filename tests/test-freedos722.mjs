@@ -1,5 +1,6 @@
-import { readFileSync } from "fs";
+/* eslint-disable max-lines-per-function */
 import { expect, test } from "vitest";
+import { readFileSync } from "fs";
 
 export function freedos722(mount) {
   const fs = mount(new Uint8Array(readFileSync("./public/images/freedos722.img", { flag: "r" }))).getFileSystem();
@@ -9,7 +10,7 @@ export function freedos722(mount) {
     expect(fs.getVolumeInfo()).toStrictEqual({
       //
       "label": "FREEDOS",
-      "OEMName": "FreeDOS",
+      "oemName": "FreeDOS",
       "serialNumber": 3838401768,
       "clusterSize": 1024,
       "totalClusters": 713,
@@ -57,7 +58,7 @@ export function freedos722(mount) {
     expect(games2.getName()).toBe("games");
     expect(games2.getAbsolutePath()).toBe("/games");
 
-    const minesweeper = fs.getFile("/games///MiNeSw~1.COM//");
+    const minesweeper = games2.getFile("MiNeSw~1.COM//");
     expect(minesweeper.getName()).toBe("minesweeper.com");
     expect(minesweeper.getShortName()).toBe("MINESW~1.COM");
     expect(minesweeper.isRegularFile()).toBeTruthy();
@@ -68,8 +69,13 @@ export function freedos722(mount) {
     expect(minesweeper.findAll(() => true)).toBeNull();
 
     expect(fs.getRoot().listFiles().length).toBe(22);
-    expect(fs.getRoot().findFirst(it => it.length() > 1000 && it.length() < 10000).getName()).toBe("README");
-    expect(fs.getRoot().findAll(it => it.length() > 1000 && it.length() < 10000).length).toBe(6);
+    expect(
+      fs
+        .getRoot()
+        .findFirst((it) => it.length() > 1000 && it.length() < 10000)
+        .getName(),
+    ).toBe("README");
+    expect(fs.getRoot().findAll((it) => it.length() > 1000 && it.length() < 10000).length).toBe(6);
   });
 
   test("getData", () => {
@@ -146,5 +152,34 @@ export function freedos722(mount) {
       .forEach((f) => f.delete());
     const info = fs.getVolumeInfo();
     expect(info.freeClusters).toBe(info.totalClusters);
+  });
+
+  test("mkfile", () => {
+    expect(fs.mkfile("A.TXT").isRegularFile()).toBeTruthy();
+    expect(fs.mkdir("B.TXT").isDirectory()).toBeTruthy();
+    expect(fs.mkfile("c.txt").isRegularFile()).toBeTruthy();
+    expect(fs.mkfile("c.txt").mkdir("1")).toBeNull();
+    expect(fs.mkdir("d.txt").isDirectory()).toBeTruthy();
+    expect(fs.mkfile("/+/+/+.txt").getAbsolutePath()).toBe("/+/+/+.txt");
+    expect(fs.mkfile("/+/+/.txt").getAbsolutePath()).toBe("/+/+/.txt");
+    expect(fs.mkfile("/+/🐀/🐀.txt").getAbsolutePath()).toBe("/+/🐀/🐀.txt");
+    expect(fs.mkfile("/+/🐀/гггг.txt").getAbsolutePath()).toBe("/+/🐀/гггг.txt");
+    expect(fs.mkfile("TEST1/A.TXT").isRegularFile()).toBeTruthy();
+    expect(fs.mkdir("TEST2/B.TXT").isDirectory()).toBeTruthy();
+    expect(fs.mkfile("test3/c.txt").isRegularFile()).toBeTruthy();
+    expect(fs.mkdir("test4/d.txt").isDirectory()).toBeTruthy();
+    expect(fs.mkfile("TEST1/A1.TXT").isRegularFile()).toBeTruthy();
+    expect(fs.mkdir("TEST2/B2.TXT").isDirectory()).toBeTruthy();
+    expect(fs.mkfile("test3/c3.txt").isRegularFile()).toBeTruthy();
+    expect(fs.mkdir("test4/d4.txt").isDirectory()).toBeTruthy();
+    expect(fs.mkfile("test4/d4.txt")).toBeNull();
+    expect(fs.mkfile("a/b/c/d/e.f").isRegularFile()).toBeTruthy();
+    expect(fs.mkdir("a/b/c/d/e.f")).toBeNull();
+    expect(fs.mkdir("a/*")).toBeNull();
+    expect(fs.mkfile("a/?.txt")).toBeNull();
+    const name = " .+,;=[]...";
+    fs.mkdir(name);
+    const d = fs.getFile(name);
+    expect(d.isDirectory()).toBeTruthy();
   });
 }

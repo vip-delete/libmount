@@ -1,6 +1,6 @@
-import { readFileSync } from "fs";
 import { expect, test } from "vitest";
 import { gunzipSync } from "zlib";
+import { readFileSync } from "fs";
 
 export function f1(mount) {
   const fs = mount(new Uint8Array(gunzipSync(readFileSync("./public/images/f1.img.gz", { flag: "r" })))).getFileSystem();
@@ -10,7 +10,7 @@ export function f1(mount) {
     expect(fs.getVolumeInfo()).toStrictEqual({
       //
       "label": "NO NAME",
-      "OEMName": "mkfs.fat",
+      "oemName": "mkfs.fat",
       "serialNumber": 939647049,
       "clusterSize": 2048,
       "totalClusters": 4301,
@@ -29,11 +29,11 @@ export function f1(mount) {
   });
 
   test("f1-delete", () => {
-    const f = fs.getFile("BIG_DATA.txt");
-    expect(f.length()).toBe(2560);
+    const big = fs.getFile("BIG_DATA.txt");
+    expect(big.length()).toBe(2560);
 
     const info = fs.getVolumeInfo();
-    f.delete();
+    big.delete();
     const info2 = fs.getVolumeInfo();
 
     expect(info2.freeClusters - info.freeClusters).toBe(Math.ceil(2560 / info.clusterSize));

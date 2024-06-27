@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import express from "express";
 import serveStatic from "serve-static";
 const app = express();

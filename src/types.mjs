@@ -53,7 +53,7 @@ export const BiosParameterBlockFAT32 = {};
 /**
  * @typedef {{
  *            jmpBoot: !Uint8Array,
- *            OEMName: !Uint8Array,
+ *            oemName: !Uint8Array,
  *            bpb: !BiosParameterBlock,
  *            bpbFAT32: ?BiosParameterBlockFAT32,
  *            DrvNum: number,
@@ -127,6 +127,16 @@ export const DirEntryLFN = {};
  */
 export const FATVariables = {};
 
+/**
+ * @typedef {{
+ *            longName: string,
+ *            shortName: string,
+ *            dirLFNs: !Array<!DirEntryLFN>,
+ *            dir: !DirEntry,
+ *          }}
+ */
+export const DirChain = {};
+
 /* eslint-disable no-empty-function */
 /* eslint-disable no-unused-vars */
 
@@ -192,29 +202,116 @@ export class Device {
 }
 
 /**
- * @enum
+ * @interface
  */
-export const FATNodeType = {
-  ROOT: 0,
-  VOLUME_ID: 1,
-  DELETED: 2,
-  CURRENT_DIR: 3,
-  PARENT_DIR: 4,
-  REGULAR_FILE: 5,
-  REGULAR_DIR: 6,
-};
+export class FATMath {
+  /**
+   * @returns {number}
+   */
+  getClusterSize() {}
+
+  /**
+   * @returns {number}
+   */
+  getRootDirOffset() {}
+
+  /**
+   * @param {number} clusNum
+   * @returns {?number}
+   */
+  getContentOffset(clusNum) {}
+
+  /**
+   * @param {number} clusNum
+   * @returns {boolean}
+   */
+  isAllocated(clusNum) {}
+
+  /**
+   * @returns {number}
+   */
+  getFreeClusters() {}
+
+  /**
+   * @param {number} count
+   * @returns {?Array<number>}
+   */
+  allocateClusters(count) {}
+
+  /**
+   * @param {number} offset
+   * @returns {?number}
+   */
+  getNextDirEntryOffset(offset) {}
+
+  // specific methods
+
+  /**
+   * @returns {string}
+   */
+  getFileSystemName() {}
+
+  /**
+   * @param {number} clusNum
+   * @returns {number}
+   */
+  getNextClusNum(clusNum) {}
+
+  /**
+   * @param {number} clusNum
+   * @param {number} value
+   */
+  setNextClusNum(clusNum, value) {}
+
+  /**
+   * @returns {number}
+   */
+  getFinalClus() {}
+}
 
 /**
- * @typedef {{
- *            Type: number,
- *            Name: string,
- *            ShortName: string,
- *            FirstDirOffset: number,
- *            DirCount: number,
- *            DirEntry: !DirEntry
- *          }}
+ * @interface
+ * @template T
  */
-export const FATNode = {};
+export class NodeCrawler {
+  /**
+   * @param {!T} node
+   * @returns {?T}
+   */
+  getFirst(node) {}
+
+  /**
+   * @param {!T} node
+   * @returns {?T}
+   */
+  getNext(node) {}
+
+  /**
+   * @param {!T} node
+   * @returns {!Iterable<!T>}
+   */
+  getSubNodes(node) {}
+}
+
+/**
+ * @interface
+ * @template T
+ */
+export class NodeBee {
+  /**
+   * @param {!T} node
+   * @param {string} name
+   * @returns {?T}
+   */
+  mkdir(node, name) {}
+
+  /**
+   * @param {!T} node
+   * @param {string} name
+   * @returns {?T}
+   */
+  mkfile(node, name) {}
+}
 
 /**
  * @interface
@@ -237,16 +334,9 @@ export class FileSystemDriver {
   getRoot() {}
 
   /**
-   * @param {!T} node
-   * @returns {?T}
+   * @returns {!NodeCrawler<!T>}
    */
-  getNext(node) {}
-
-  /**
-   * @param {!T} node
-   * @returns {?T}
-   */
-  getFirst(node) {}
+  getCrawler() {}
 
   /**
    * @param {!T} node
@@ -258,4 +348,18 @@ export class FileSystemDriver {
    * @param {!T} node
    */
   deleteNode(node) {}
+
+  /**
+   * @param {!T} node
+   * @param {string} name
+   * @returns {?T}
+   */
+  mkdir(node, name) {}
+
+  /**
+   * @param {!T} node
+   * @param {string} name
+   * @returns {?T}
+   */
+  mkfile(node, name) {}
 }

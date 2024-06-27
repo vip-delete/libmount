@@ -1,8 +1,11 @@
+/* eslint-disable sort-imports */
 import { expect, test } from "vitest";
 import { freedos722 } from "./test-freedos722.mjs";
 
+import { codec } from "./test-codec.mjs";
 import { io } from "./test-io.mjs";
-import { util } from "./test-util.mjs";
+import { dateUtils } from "./test-date-utils.mjs";
+import { nameUtils, nameUtils2 } from "./test-name-utils.mjs";
 
 import { d1 } from "./test-d1.mjs";
 import { d2 } from "./test-d2.mjs";
@@ -12,8 +15,11 @@ import { f3 } from "./test-f3.mjs";
 import { mbr } from "./test-mbr.mjs";
 
 export function unitTests() {
+  codec();
   io();
-  util();
+  dateUtils();
+  nameUtils();
+  nameUtils2();
 }
 
 export function integrationTests(mount) {

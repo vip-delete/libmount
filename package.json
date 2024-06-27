@@ -1,11 +1,11 @@
 {
   "name": "libmount",
   "description": "Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript",
-  "version": "0.0.6",
+  "version": "0.1.0",
   "license": "MIT",
   "keywords": [
     "filesystem",
-    "fat",
+    "mount",
     "fatfs",
     "fat12",
     "fat16",
@@ -21,33 +21,29 @@
     "test": "vitest run libmount.test.mjs"
   },
   "devDependencies": {
-    "@stylistic/eslint-plugin": "^2.3.0",
-    "@vitest/coverage-istanbul": "^1.6.0",
-    "eslint": "^9.5.0",
-    "eslint-plugin-jsdoc": "^48.5.0",
-    "express": "^4.19.2",
+    "@stylistic/eslint-plugin": "^2.10.1",
+    "@vitest/coverage-istanbul": "^2.1.4",
+    "eslint": "^9.14.0",
+    "eslint-plugin-jsdoc": "^50.4.3",
+    "express": "^4.21.1",
     "google-closure-compiler": "^20240317.0.0",
-    "prettier": "^3.3.2",
-    "serve-static": "^1.15.0",
-    "vitest": "^1.6.0"
+    "prettier": "^3.3.3",
+    "serve-static": "^1.16.2",
+    "vitest": "^2.1.4"
   },
   "type": "module",
   "exports": {
-    "./package.json": "./package.json",
-    ".": {
-      "types": "./types/index.d.ts",
-      "import": "./dist/libmount.min.mjs"
-    },
-    "./charmap": {
-      "types": "./types/charmap.d.ts",
-      "import": "./dist/charmap.mjs"
-    }
+    ".": "./dist/libmount.min.mjs",
+    "./codecs": "./dist/codec/codecs.mjs",
+    "./codecs/cp437": "./dist/codec/cp437.mjs",
+    "./codecs/cp850": "./dist/codec/cp850.mjs",
+    "./codecs/cp1251": "./dist/codec/cp1251.mjs",
+    "./codecs/cp1252": "./dist/codec/cp1252.mjs",
+    "./codecs/bestfit1251": "./dist/codec/bestfit1251.mjs",
+    "./codecs/bestfit1252": "./dist/codec/bestfit1252.mjs"
   },
   "files": [
-    "dist/libmount.min.mjs",
-    "dist/charmap.mjs",
-    "types/index.d.ts",
-    "types/charmap.d.ts",
+    "dist/**",
     "LICENSE",
     "README.md"
   ],

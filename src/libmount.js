@@ -9,10 +9,10 @@
 const lm = {
   /**
    * @param {!Uint8Array} img
-   * @param {string} [charmap]
+   * @param {!codec.Codec} [codec]
    * @returns {!lm.Disk}
    */
-  mount(img, charmap) {},
+  mount(img, codec) {},
 
   /**
    * @interface
@@ -49,10 +49,22 @@ const lm = {
     getRoot() {}
 
     /**
-     * @param {string} path
+     * @param {string} absolutePath
      * @returns {?lm.File}
      */
-    getFile(path) {}
+    getFile(absolutePath) {}
+
+    /**
+     * @param {string} absolutePath
+     * @returns {?lm.File}
+     */
+    mkdir(absolutePath) {}
+
+    /**
+     * @param {string} absolutePath
+     * @returns {?lm.File}
+     */
+    mkfile(absolutePath) {}
   },
 
   /**
@@ -133,6 +145,41 @@ const lm = {
      * @returns {undefined}
      */
     delete() {}
+
+    /**
+     * @param {string} relativePath
+     * @returns {?lm.File}
+     */
+    getFile(relativePath) {}
+
+    /**
+     * @param {string} relativePath
+     * @returns {?lm.File}
+     */
+    mkdir(relativePath) {}
+
+    /**
+     * @param {string} relativePath
+     * @returns {?lm.File}
+     */
+    mkfile(relativePath) {}
+  },
+
+  /**
+   * @interface
+   */
+  Codec: class {
+    /**
+     * @param {!Uint8Array} array
+     * @returns {string}
+     */
+    decode(array) {}
+
+    /**
+     * @param {string} text
+     * @returns {!Uint8Array}
+     */
+    encode(text) {}
   },
 };
 
@@ -149,7 +196,7 @@ lm.Partition;
 /**
  * @typedef {{
  *            label: string,
- *            OEMName: string,
+ *            oemName: string,
  *            serialNumber: number,
  *            clusterSize: number,
  *            totalClusters: number,

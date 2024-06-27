@@ -1,5 +1,5 @@
 import { mount } from "../dist/libmount.min.mjs";
-import { cp1251 } from "../dist/charmap.mjs";
+import { cp1251 } from "../dist/codec/cp1251.mjs";
 import { readFileSync } from "fs";
 
 const img = new Uint8Array(readFileSync("./images/freedos722.img", { flag: "r" }));

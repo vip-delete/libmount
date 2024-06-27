@@ -1,6 +1,6 @@
-import { readFileSync } from "fs";
 import { expect, test } from "vitest";
 import { gunzipSync } from "zlib";
+import { readFileSync } from "fs";
 
 export function f2(mount) {
   const fs = mount(new Uint8Array(gunzipSync(readFileSync("./public/images/f2.img.gz", { flag: "r" })))).getFileSystem();
@@ -10,7 +10,7 @@ export function f2(mount) {
     expect(fs.getVolumeInfo()).toStrictEqual({
       //
       "label": "NO NAME",
-      "OEMName": "mkfs.fat",
+      "oemName": "mkfs.fat",
       "serialNumber": 215907190,
       "clusterSize": 32768,
       "totalClusters": 248,
@@ -22,7 +22,7 @@ export function f2(mount) {
     const f = fs.getFile("/Hello.txt");
     expect(f.length()).toBe(44);
     expect(new TextDecoder().decode(f.getData())).toBe("THIS IS A BIG STEP IN MY LIFE\n*************\n");
-    
+
     const info = fs.getVolumeInfo();
     f.delete();
     const info2 = fs.getVolumeInfo();

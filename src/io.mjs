@@ -44,8 +44,9 @@ export class RawDevice {
    */
   readArray(len) {
     assert(this.pos + len <= this.length());
-    const r = this.img.subarray(this.pos, this.pos + len);
+    const r = new Uint8Array(this.img.subarray(this.pos, this.pos + len));
     this.pos += len;
+    assert(r.length === len);
     return r;
   }
 

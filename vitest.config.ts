@@ -2,6 +2,7 @@ import { coverageConfigDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   define: {
+    ENABLE_LOGGER: true,
     ENABLE_ASSERTIONS: true,
   },
   test: {
@@ -11,6 +12,8 @@ export default defineConfig({
       exclude: [
         "scripts",
         "public",
+        "types",
+        "src/codec/codec.js",
         "src/libmount.js",
         "src/defines.js",
         "src/support.mjs",

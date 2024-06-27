@@ -1,3 +1,5 @@
+import { Codec } from "libmount/codecs";
+
 /**
  * Declaration file for the npm module "libmount".
  *
@@ -14,10 +16,10 @@ declare module "libmount" {
    * Mount a raw image.
    *
    * @param img raw image
-   * @param charmap Charmap used to decode symbols in the upper half of the ASCII table (optional, defaults to cp1252).
+   * @param codec The codec used to decode/encode FAT short names only. Defaults to cp1252 if not specified.
    * @returns A mounted disk.
    */
-  export function mount(img: Uint8Array, charmap?: string): LmDisk;
+  export function mount(img: Uint8Array, codec?: Codec): LmDisk;
 
   /**
    * Represents a disk.
@@ -61,11 +63,25 @@ declare module "libmount" {
     getRoot(): LmFile;
 
     /**
-     * Retrieves a file object given its path.
-     * @param path The path to the file.
-     * @returns The File located at the specified path, otherwise null.
+     * Retrieves a file object given its absolute path.
+     * @param absolutePath The absolute path to the file.
+     * @returns The File located at the specified absolute path, otherwise null.
      */
-    getFile(path: string): LmFile | null;
+    getFile(absolutePath: string): LmFile | null;
+
+    /**
+     * Make an empty directory
+     * @param path The path for which directories are to be created.
+     * @returns The directory located at the specified path, otherwise null.
+     */
+    mkdir(absolutePath: string): LmFile | null;
+
+    /**
+     * Make an empty file
+     * @param path The path for which directories are to be created.
+     * @returns The file located at the specified path, otherwise null.
+     */
+    mkfile(absolutePath: string): LmFile | null;
   }
 
   /**
@@ -157,6 +173,27 @@ declare module "libmount" {
      * The root directory cannot be deleted.
      */
     delete(): void;
+
+    /**
+     * Retrieves a file object given its path relative to the current file
+     * @param path The path to the file.
+     * @returns The File located at the specified path, otherwise null.
+     */
+    getFile(path: string): LmFile | null;
+
+    /**
+     * Make an empty directory relative to the current file
+     * @param path The path for which directories are to be created.
+     * @returns The directory located at the specified path, otherwise null.
+     */
+    mkdir(path: string): LmFile | null;
+
+    /**
+     * Make an empty file relative to the current file
+     * @param path The path for which directories are to be created.
+     * @returns The file located at the specified path, otherwise null.
+     */
+    mkfile(path: string): LmFile | null;
   }
 
   /**
@@ -196,7 +233,7 @@ declare module "libmount" {
     /**
      * OEM Name Identifier. Typically this is some indication of what system formatted the volume
      */
-    OEMName: string;
+    oemName: string;
 
     /**
      * The volume serial number.

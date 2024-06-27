@@ -1,16 +1,5 @@
-import {
-  BiosParameterBlock,
-  BiosParameterBlockFAT32,
-  BootSector,
-  CHS,
-  Device,
-  DirEntry,
-  DirEntryLFN,
-  FATVariables,
-  FSInfo,
-  PartitionEntry,
-} from "./types.mjs";
-import { validate } from "./support.mjs";
+import { BiosParameterBlock, BiosParameterBlockFAT32, BootSector, CHS, Device, DirEntry, DirEntryLFN, FATVariables, FSInfo, PartitionEntry } from "./types.mjs";
+import { assert, validate } from "./support.mjs";
 
 /**
  * @param {!Device} device
@@ -151,12 +140,12 @@ function validateBiosParameterBlockFAT32(bpbFAT32) {
  */
 function loadBootSector(device) {
   const jmpBoot = device.readArray(3);
-  const OEMName = device.readArray(8);
+  const oemName = device.readArray(8);
   const bpb = loadBiosParameterBlock(device);
   const bpbFAT32 = bpb.RootEntCnt === 0 ? loadBiosParameterBlockFAT32(device) : null;
   return {
     jmpBoot,
-    OEMName,
+    oemName,
     bpb,
     bpbFAT32,
     DrvNum: device.readByte(),
@@ -246,6 +235,26 @@ export function loadDirEntry(device) {
 
 /**
  * @param {!Device} device
+ * @param {!DirEntry} dir
+ */
+export function writeDirEntry(device, dir) {
+  assert(dir.Name.length === 11);
+  device.writeArray(dir.Name);
+  device.writeByte(dir.Attr);
+  device.writeByte(dir.NTRes);
+  device.writeByte(dir.CrtTimeTenth);
+  device.writeWord(dir.CrtTime);
+  device.writeWord(dir.CrtDate);
+  device.writeWord(dir.LstAccDate);
+  device.writeWord(dir.FstClusHI);
+  device.writeWord(dir.WrtTime);
+  device.writeWord(dir.WrtDate);
+  device.writeWord(dir.FstClusLO);
+  device.writeDoubleWord(dir.FileSize);
+}
+
+/**
+ * @param {!Device} device
  * @returns {!DirEntryLFN}
  */
 export function loadDirEntryLFN(device) {
@@ -259,6 +268,24 @@ export function loadDirEntryLFN(device) {
     FstClusLO: device.readWord(),
     Name3: device.readArray(4),
   };
+}
+
+/**
+ * @param {!Device} device
+ * @param {!DirEntryLFN} dir
+ */
+export function writeDirEntryLFN(device, dir) {
+  assert(dir.Name1.length === 10);
+  assert(dir.Name2.length === 12);
+  assert(dir.Name3.length === 4);
+  device.writeByte(dir.Ord);
+  device.writeArray(dir.Name1);
+  device.writeByte(dir.Attr);
+  device.writeByte(dir.Type);
+  device.writeByte(dir.Chksum);
+  device.writeArray(dir.Name2);
+  device.writeWord(dir.FstClusLO);
+  device.writeArray(dir.Name3);
 }
 
 /**

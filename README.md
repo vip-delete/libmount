@@ -22,12 +22,21 @@ function mount(img: Uint8Array, charmap?: string): LmDisk;
 ```javascript
 import { mount } from "libmount";
 import { readFileSync } from "fs";
+import { cp1251 } from "libmount/codecs/cp1251";
 
-const file = readFileSync("./freedos722.img", { flag: "r" });
+const file = readFileSync("./freedos722.img", { flag: "r" }, cp1251);
 const disk = mount(new Uint8Array(file));
 const fs = disk.getFileSystem();
 
+if (fs === null) {
+    console.error("FileSystem is not detected");
+    process.exit(2);
+}
+fs.mkfile('/test/bar.txt').getAbsolutePath();
 print(fs.getRoot());
+
+console.log(`FileSystem: ${fs.getName()}`);
+console.log(`VolumeInfo: ${JSON.stringify(fs.getVolumeInfo())}`);
 
 function print(f) {
   console.log(f.getAbsolutePath());

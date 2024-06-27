@@ -1,6 +1,6 @@
-import { readFileSync } from "fs";
 import { expect, test } from "vitest";
 import { gunzipSync } from "zlib";
+import { readFileSync } from "fs";
 
 export function d1(mount) {
   const img = new Uint8Array(gunzipSync(readFileSync("./public/images/disk1.img.gz", { flag: "r" })));
@@ -17,7 +17,7 @@ export function d1(mount) {
     expect(fs.getVolumeInfo()).toStrictEqual({
       //
       "label": "P-FAT16",
-      "OEMName": "mkfs.fat",
+      "oemName": "mkfs.fat",
       "serialNumber": 0xa7100a92,
       "clusterSize": 2048,
       "totalClusters": 65399,

@@ -11,12 +11,16 @@ export default [
     semi: true,
   }),
   {
-    ignores: ["dist", "public", "scripts", "tests"],
+    ignores: ["dist", "public"],
   },
   {
     languageOptions: {
       globals: {
         ...globals.browser,
+        Iterator: "readonly",
+        Iterable: "readonly",
+        IIterableResult: "readonly",
+        codec: "readonly",
         lm: "readonly",
       },
     },
@@ -35,7 +39,7 @@ export default [
       "class-methods-use-this": 0,
       "func-style": 0,
       "id-length": 0,
-      "jsdoc/check-tag-names": ["error", { "definedTags": ["externs", "define"] }],
+      "jsdoc/check-tag-names": ["error", { "definedTags": ["externs", "define", "nosideeffects"] }],
       "jsdoc/no-undefined-types": "error",
       "jsdoc/require-jsdoc": 0,
       "jsdoc/require-param-description": 0,

@@ -8,11 +8,26 @@
  */
 const lm = {
   /**
-   * @param {!ArrayBuffer} buf
-   * @param {string} [encoding]
-   * @returns {?lm.FileSystem}
+   * @param {!Uint8Array} img
+   * @param {string} [codepage]
+   * @returns {!lm.Disk}
    */
-  mount(buf, encoding = "cp1251") {},
+  mount(img, codepage = "cp1252") {},
+
+  /**
+   * @interface
+   */
+  Disk: class {
+    /**
+     * @returns {?lm.FileSystem}
+     */
+    getFileSystem() {}
+
+    /**
+     * @returns {!Array<!lm.Partition>}
+     */
+    getPartitions() {}
+  },
 
   /**
    * @interface
@@ -53,11 +68,6 @@ const lm = {
      * @returns {string}
      */
     getShortName() {}
-
-    /**
-     * @returns {?string}
-     */
-    getLongName() {}
 
     /**
      * @returns {string}
@@ -128,11 +138,22 @@ const lm = {
 
 /**
  * @typedef {{
- *            label:string,
- *            serialNumber:number,
- *            clusterSize:number,
- *            totalClusters:number,
- *            freeClusters:number,
+ *            active: boolean,
+ *            type: number,
+ *            begin: number,
+ *            end: number,
+ *          }}
+ */
+lm.Partition;
+
+/**
+ * @typedef {{
+ *            label: string,
+ *            OEMName: string,
+ *            serialNumber: number,
+ *            clusterSize: number,
+ *            totalClusters: number,
+ *            freeClusters: number,
  *          }}
  */
 lm.VolumeInfo;

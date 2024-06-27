@@ -3,11 +3,12 @@ export default [
   "defines.js",
   "support.mjs",
   //
-  "io.mjs",
-  "model.mjs",
+  "types.mjs",
   "util.mjs",
-  "driver.mjs",
+  "io.mjs",
+  "loaders.mjs",
   "filesystem.mjs",
+  "driver.mjs",
   "mount.mjs",
   //
   "exports.mjs",

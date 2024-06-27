@@ -11,42 +11,59 @@
  */
 declare module "libmount" {
   /**
-   * Mount a volume.
+   * Mount a raw image.
    *
-   * @param buf Raw volume buffer.
-   * @param encoding Codepage used to decode symbols in the upper half of the ASCII table (optional; defaults to cp1251).
-   * @returns A FileSystem object or null if no filesystem is detected.
+   * @param img raw image
+   * @param codepage Codepage used to decode symbols in the upper half of the ASCII table (optional, defaults to cp1252).
+   * @returns A mounted disk.
    */
-  export function mount(buf: ArrayBuffer, encoding?: string): LmFileSystem | null;
+  export function mount(img: Uint8Array, codepage?: string): LmDisk;
 
   /**
-   * Represents a file system with methods to interact with files and directories.
+   * Represents a disk.
+   */
+  export interface LmDisk {
+    /**
+     * Retrieves the file system associated with the disk if detected.
+     * Returning null may indicate the disk is either empty, partitioned, or lacks a known file system.
+     * @returns The file system object if available.
+     */
+    getFileSystem(): LmFileSystem | null;
+
+    /**
+     * Retrieves an array of MBR partitions on the disk.
+     * The array may be empty if the disk has no partitions (e.g., like a floppy disk, or empty disk).
+     * @returns An array of MBR partitions.
+     */
+    getPartitions(): LmPartition[];
+  }
+
+  /**
+   * Represents a file system.
    */
   export interface LmFileSystem {
     /**
-     * Returns the name of the mounted filesystem.
-     *
-     * @returns FileSystem name (e.g. FAT12, FAT16, FAT32)
+     * Retrieves the name of the file system.
+     * @returns The name of the file system (e.g. FAT12, FAT16, FAT32).
      */
     getName(): string;
 
     /**
-     * Retrieves information about the volume.
-     *
-     * @returns An object containing volume information.
+     * Retrieves volume information associated with the file system.
+     * @returns Volume information structure
      */
     getVolumeInfo(): LmVolumeInfo;
 
     /**
-     * The root directory
+     * Retrieves the root directory of the file system.
+     * @returns The root directory file object
      */
     getRoot(): LmFile;
 
     /**
-     * Retrieves a File object located at the specified path.
-     *
+     * Retrieves a file object given its path.
      * @param path The path to the file.
-     * @returns The File object if found, otherwise null.
+     * @returns The File located at the specified path, otherwise null.
      */
     getFile(path: string): LmFile | null;
   }
@@ -56,82 +73,116 @@ declare module "libmount" {
    */
   export interface LmFile {
     /**
-     * @returns The long name if available, otherwise returns the short name.
+     * Retrieves the name of the file.
+     * @returns The name of the file.
      */
     getName(): string;
 
     /**
-     * @returns 8dot3 file name
+     * Retrieves the short name (8.3 format) of the file.
+     * @returns The short name of the file
      */
     getShortName(): string;
 
     /**
-     * @returns LFN name (long file name) if exists.
-     */
-    getLongName(): string | null;
-
-    /**
-     * @returns The absolute path of the file or directory.
+     * Retrieves the absolute path of the file.
+     * @returns The absolute path of the file.
      */
     getAbsolutePath(): string;
 
     /**
-     * @returns True if the object is a regular file (not a directory), false otherwise.
+     * Checks if the file is a regular file.
+     * @returns True if the file is a regular file (not a directory), otherwise false.
      */
     isRegularFile(): boolean;
 
     /**
-     * @returns True if the object is a directory (or the root directory), false otherwise.
+     * Checks if the file is a directory.
+     * @returns True if the file is a directory (or the root directory), otherwise false.
      */
     isDirectory(): boolean;
 
     /**
-     * @returns The length of the file in bytes, or unspecified if this file is not a regular file
+     * Retrieves the length of the file in bytes.
+     * @returns The length of the file in bytes, or unspecified if not a regular file
      */
     length(): number;
 
     /**
-     * @returns The last modified date
+     * Retrieves the last modified timestamp of the file.
+     * @returns The last modified timestamp of the file.
      */
     lastModified(): Date;
 
     /**
-     * @returns The creation date
+     * Retrieves the creation timestamp of the file.
+     * @returns The creation timestamp of the file.
      */
     creationTime(): Date;
 
     /**
-     * @returns The last accessed date
+     * Retrieves the last access timestamp of the file.
+     * @returns The last access timestamp of the file.
      */
     lastAccessTime(): Date;
 
     /**
-     * @returns The first File object which meets the predicate condition or null if this file is not a directory
+     * Finds the first file matching the given predicate.
+     * @param predicate The predicate function.
+     * @returns The first file matching the predicate, or null if not a directory or nothing found.
      */
     findFirst(predicate: (file: LmFile) => boolean): LmFile | null;
 
     /**
-     * @returns An array of File objects which meet the predicate condition or null if this file is not a directory
+     * Finds all files matching the given predicate.
+     * @param predicate The predicate function.
+     * @returns An array of files matching the predicate or null if not a directory.
      */
     findAll(predicate: (file: LmFile) => boolean): LmFile[] | null;
 
     /**
-     * @returns An array of File objects within this directory, or null if this file is not a directory.
+     * Lists all files in the directory.
+     * @returns An array of files in the directory, or null if not a directory.
      */
     listFiles(): LmFile[] | null;
 
     /**
-     * Reads the content of this file.
-     * @returns A Uint8Array containing the file's data, or null if this file is not a regular file.
+     * Retrieves the data content of the file.
+     * @returns The data content of the file, or null if not a regular file.
      */
     getData(): Uint8Array | null;
 
     /**
-     * Deletes this file or directory recursive. After deletion, this file becomes unusable.
+     * Deletes the file or directory recursive. After deletion, this file becomes unusable.
      * The root directory cannot be deleted.
      */
     delete(): void;
   }
+
+  /**
+   * Represents the disk partition information
+   */
+  export type LmPartition = {
+    /**
+     * Flag indicating whether the partition is active.
+     */
+    active: boolean;
+
+    /**
+     * Partition Type (e.g. 0xE for FAT)
+     */
+    type: number;
+
+    /**
+     * Offset (in bytes) from the beginning of the disk to the start of the partition.
+     */
+    begin: number;
+
+    /**
+     * Offset (in bytes) from the beginning of the disk to the end of the partition.
+     */
+    end: number;
+  };
 
   /**
    * Represents information about a volume.
@@ -141,6 +192,11 @@ declare module "libmount" {
      * The label or name assigned to the volume.
      */
     label: string;
+
+    /**
+     * OEM Name Identifier. Typically this is some indication of what system formatted the volume
+     */
+    OEMName: string;
 
     /**
      * The volume serial number.

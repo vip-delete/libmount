@@ -2,14 +2,14 @@ import { readFileSync } from "fs";
 import { expect, test } from "vitest";
 
 export function freedos722(mount) {
-  const buf = readFileSync("./public/images/freedos722.img", { flag: "r" });
-  const fs = mount(buf.buffer);
+  const fs = mount(new Uint8Array(readFileSync("./public/images/freedos722.img", { flag: "r" }))).getFileSystem();
 
   test("getVolumeInfo", () => {
     expect(fs.getName()).toBe("FAT12");
     expect(fs.getVolumeInfo()).toStrictEqual({
       //
       "label": "FREEDOS",
+      "OEMName": "FreeDOS",
       "serialNumber": 3838401768,
       "clusterSize": 1024,
       "totalClusters": 713,
@@ -21,7 +21,6 @@ export function freedos722(mount) {
     [fs.getRoot(), fs.getFile("/"), fs.getFile("\\"), fs.getFile("//"), fs.getFile("\\\\////")].forEach((root) => {
       expect(root.getName()).toBe("");
       expect(root.getShortName()).toBe("");
-      expect(root.getLongName()).toBeNull();
       expect(root.isRegularFile()).toBeFalsy();
       expect(root.isDirectory()).toBeTruthy();
       expect(root.length()).toBe(0);
@@ -39,7 +38,6 @@ export function freedos722(mount) {
     const kernel = fs.getFile("kernel.sys");
     expect(kernel.getName()).toBe("KERNEL.SYS");
     expect(kernel.getShortName()).toBe("KERNEL.SYS");
-    expect(kernel.getLongName()).toBeNull();
     expect(kernel.isRegularFile()).toBeTruthy();
     expect(kernel.isDirectory()).toBeFalsy();
     expect(kernel.getAbsolutePath()).toBe("/KERNEL.SYS");
@@ -47,7 +45,6 @@ export function freedos722(mount) {
     const games = fs.getFile("\\\\GAMES");
     expect(games.getName()).toBe("games");
     expect(games.getShortName()).toBe("GAMES");
-    expect(games.getLongName()).toBe("games");
     expect(games.isRegularFile()).toBeFalsy();
     expect(games.isDirectory()).toBeTruthy();
     expect(games.getAbsolutePath()).toBe("/games");
@@ -63,7 +60,6 @@ export function freedos722(mount) {
     const minesweeper = fs.getFile("/games///MiNeSw~1.COM//");
     expect(minesweeper.getName()).toBe("minesweeper.com");
     expect(minesweeper.getShortName()).toBe("MINESW~1.COM");
-    expect(minesweeper.getLongName()).toBe("minesweeper.com");
     expect(minesweeper.isRegularFile()).toBeTruthy();
     expect(minesweeper.isDirectory()).toBeFalsy();
     expect(minesweeper.getAbsolutePath()).toBe("/games/minesweeper.com");

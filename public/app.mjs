@@ -1,4 +1,4 @@
-import { mount } from "libmount"
+import { mount } from "libmount";
 
 const mountFile = "images/freedos722.img";
 
@@ -29,16 +29,16 @@ app.appendChild(path);
 
 const header = createElement("div", ["row"]);
 header.innerHTML =
-  '<div class="row header">'+
-  '<span>&nbsp;</span>'+
-  '<span>&nbsp;</span>'+
-  '<span>Name</span>'+
-  '<span>Short Name</span>'+
-  '<span>Size</span>'+
-  '<span>Created</span>'+
-  '<span>Modified</span>'+
-  '<span>Accessed</span>'+
-  '</div>';
+  '<div class="row header">' +
+  "<span>&nbsp;</span>" +
+  "<span>&nbsp;</span>" +
+  "<span>Name</span>" +
+  "<span>Short Name</span>" +
+  "<span>Size</span>" +
+  "<span>Created</span>" +
+  "<span>Modified</span>" +
+  "<span>Accessed</span>" +
+  "</div>";
 app.appendChild(header);
 
 const container = createElement("div", []);
@@ -71,7 +71,7 @@ function createRow(fs, f, name) {
     link.addEventListener("click", () => {
       const buf = f.getData();
       // if (buf) {
-        download(buf, name);
+      download(buf, name);
       // }
     });
   }
@@ -86,13 +86,22 @@ function createRow(fs, f, name) {
   sizeColumn.innerText = f.isDirectory() ? "" : f.length().toLocaleString("en");
 
   const createdColumn = createElement("span", []);
-  createdColumn.innerText = f.creationTime().toISOString().replace(/(.*)T(.*).(\d{3}Z)/, '$1 $2');
+  createdColumn.innerText = f
+    .creationTime()
+    .toISOString()
+    .replace(/(.*)T(.*).(\d{3}Z)/, "$1 $2");
 
   const modifiedColumn = createElement("span", []);
-  modifiedColumn.innerText = f.lastModified().toISOString().replace(/(.*)T(.*).(\d{3}Z)/, '$1 $2');
+  modifiedColumn.innerText = f
+    .lastModified()
+    .toISOString()
+    .replace(/(.*)T(.*).(\d{3}Z)/, "$1 $2");
 
   const accessedColumn = createElement("span", []);
-  accessedColumn.innerText = f.lastAccessTime().toISOString().replace(/(.*)T(.*)/, '$1');
+  accessedColumn.innerText = f
+    .lastAccessTime()
+    .toISOString()
+    .replace(/(.*)T(.*)/, "$1");
 
   const row = createElement("span", ["row"]);
   row.appendChild(deleteColumn);
@@ -152,16 +161,16 @@ function download(buf, name) {
 }
 
 async function onLoad() {
-  const response = await withTime("Fetch", () => fetch(mountFile));
+  const response = await fetch(mountFile);
   if (response.status !== 200) {
     document.title = response.status + " " + response.statusText;
-    info.style.color = 'red'
+    info.style.color = "red";
     info.innerText = await response.text();
     return;
   }
   document.title = mountFile;
   const buf = await response.arrayBuffer();
-  const fs = await withTime("Mount", () => mount(buf));
+  const fs = mount(new Uint8Array(buf)).getFileSystem();
   if (!fs) {
     info.innerText = "Mount failed";
     return;
@@ -177,11 +186,3 @@ async function onLoad() {
 }
 
 addEventListener("load", onLoad);
-
-async function withTime(name, func) {
-  const begin = performance.now();
-  const ret = await func();
-  const end = performance.now();
-  console.log(name + ": " + (end - begin) + " ms");
-  return ret;
-}

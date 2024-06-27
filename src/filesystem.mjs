@@ -1,4 +1,4 @@
-import { FATDriver, FATNode } from "./model.mjs";
+import { FATNode, FATNodeType, FileSystemDriver } from "./types.mjs";
 import { parseDate, parseDateTime } from "./util.mjs";
 
 /**
@@ -6,7 +6,7 @@ import { parseDate, parseDateTime } from "./util.mjs";
  */
 export class FATFileSystem {
   /**
-   * @param {!FATDriver} driver
+   * @param {!FileSystemDriver<!FATNode>} driver
    */
   constructor(driver) {
     this.driver = driver;
@@ -76,7 +76,7 @@ class FATFile {
    * @returns {string}
    */
   getName() {
-    return this.node.getName();
+    return this.node.Name;
   }
 
   /**
@@ -84,15 +84,7 @@ class FATFile {
    * @returns {string}
    */
   getShortName() {
-    return this.node.shortName;
-  }
-
-  /**
-   * @override
-   * @returns {?string}
-   */
-  getLongName() {
-    return this.node.longName;
+    return this.node.ShortName;
   }
 
   /**
@@ -108,7 +100,7 @@ class FATFile {
    * @returns {boolean}
    */
   isRegularFile() {
-    return this.node.isRegularFile();
+    return this.node.Type === FATNodeType.REGULAR_FILE;
   }
 
   /**
@@ -116,7 +108,7 @@ class FATFile {
    * @returns {boolean}
    */
   isDirectory() {
-    return this.node.isRegularDirectory() || this.node.isRoot();
+    return this.node.Type === FATNodeType.REGULAR_DIR || this.node.Type === FATNodeType.ROOT;
   }
 
   /**
@@ -124,7 +116,7 @@ class FATFile {
    * @returns {number}
    */
   length() {
-    return this.node.getFileSize();
+    return this.node.DirEntry?.FileSize;
   }
 
   /**
@@ -133,8 +125,8 @@ class FATFile {
    * @returns {!Date}
    */
   lastModified() {
-    const dirEntry = this.node.dirEntry;
-    return new Date(dirEntry === null ? 0 : parseDateTime(dirEntry.WrtDate, dirEntry.WrtTime, 0));
+    const dirEntry = this.node.DirEntry;
+    return new Date(parseDateTime(dirEntry.WrtDate, dirEntry.WrtTime, 0));
   }
 
   /**
@@ -143,8 +135,8 @@ class FATFile {
    * @returns {!Date}
    */
   creationTime() {
-    const dirEntry = this.node.dirEntry;
-    return new Date(dirEntry === null ? 0 : parseDateTime(dirEntry.CrtDate, dirEntry.CrtTime, dirEntry.CrtTimeTenth));
+    const dirEntry = this.node.DirEntry;
+    return new Date(parseDateTime(dirEntry.CrtDate, dirEntry.CrtTime, dirEntry.CrtTimeTenth));
   }
 
   /**
@@ -153,8 +145,8 @@ class FATFile {
    * @returns {!Date}
    */
   lastAccessTime() {
-    const dirEntry = this.node.dirEntry;
-    return new Date(dirEntry === null ? 0 : parseDate(dirEntry.LstAccDate));
+    const dirEntry = this.node.DirEntry;
+    return new Date(parseDate(dirEntry.LstAccDate));
   }
 
   /**
@@ -166,11 +158,11 @@ class FATFile {
     if (!this.isDirectory()) {
       return null;
     }
-    const parentPath = this.node.isRoot() ? "" : this.absolutePath;
+    const parentPath = this.node.Type === FATNodeType.ROOT ? "" : this.absolutePath;
     let node = this.fs.driver.getFirst(this.node);
     while (node !== null) {
-      if (node.isRegular()) {
-        const file = new FATFile(this.fs, parentPath + "/" + node.getName(), node);
+      if (node.Type === FATNodeType.REGULAR_DIR || node.Type === FATNodeType.REGULAR_FILE) {
+        const file = new FATFile(this.fs, parentPath + "/" + node.Name, node);
         if (predicate(file)) {
           return file;
         }
@@ -228,6 +220,6 @@ class FATFile {
    */
   match(name) {
     const upperCaseName = name.toUpperCase();
-    return upperCaseName === this.node.shortName.toUpperCase() || upperCaseName === this.node.longName?.toUpperCase();
+    return upperCaseName === this.node.Name.toUpperCase() || upperCaseName === this.node.ShortName.toUpperCase();
   }
 }

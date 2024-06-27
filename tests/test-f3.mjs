@@ -3,14 +3,14 @@ import { expect, test } from "vitest";
 import { gunzipSync } from "zlib";
 
 export function f3(mount) {
-  const buf = gunzipSync(readFileSync("./public/images/f3.img.gz", { flag: "r" })).buffer;
+  const fs = mount(new Uint8Array(gunzipSync(readFileSync("./public/images/f3.img.gz", { flag: "r" })))).getFileSystem();
 
-  const fs = mount(buf);
   test("f3-volumeInfo", () => {
     expect(fs.getName()).toBe("FAT16");
     expect(fs.getVolumeInfo()).toStrictEqual({
       //
       "label": "HELLO",
+      "OEMName": "mkfs.fat",
       "serialNumber": 2752861672,
       "clusterSize": 2048,
       "totalClusters": 4981,

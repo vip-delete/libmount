@@ -18,8 +18,16 @@ function isDigit(ch) {
  * @param {number} ch
  * @returns {boolean}
  */
+function isCharValidAscii(ch) {
+  return isCapital(ch) || isDigit(ch) || " $%'-_@~`!(){}^#&".includes(String.fromCharCode(ch));
+}
+
+/**
+ * @param {number} ch
+ * @returns {boolean}
+ */
 function isCharValid(ch) {
-  return ch > 127 || isCapital(ch) || isDigit(ch) || " $%'-_@~`!(){}^#&".includes(String.fromCharCode(ch));
+  return ch > 127 || isCharValidAscii(ch);
 }
 
 /**
@@ -40,21 +48,21 @@ export function getChkSum(arr) {
 
 /**
  * @param {!Uint8Array} arr
- * @param {string} encoding
+ * @param {string} codepage
  * @returns {string}
  */
-export function getRawName(arr, encoding) {
-  return new TextDecoder(encoding).decode(arr).trimEnd();
+export function getRawName(arr, codepage) {
+  return new TextDecoder(codepage).decode(arr).trimEnd();
 }
 
 /**
  * @param {!Uint8Array} arr
- * @param {string} encoding
+ * @param {string} codepage
  * @returns {string}
  */
-export function getShortName(arr, encoding) {
-  const filename = getRawName(arr.subarray(0, 8), encoding);
-  const ext = getRawName(arr.subarray(8, 11), encoding);
+export function getShortName(arr, codepage) {
+  const filename = getRawName(arr.subarray(0, 8), codepage);
+  const ext = getRawName(arr.subarray(8, 11), codepage);
   return filename + (ext === "" ? "" : "." + ext);
 }
 

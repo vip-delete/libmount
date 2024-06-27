@@ -12,14 +12,7 @@ Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript
 ## API
 
 ```javascript
-/**
- * Mount a raw image.
- *
- * @param img raw image
- * @param codepage Codepage used to decode symbols in the upper half of the ASCII table (optional, defaults to cp1252).
- * @returns A mounted disk.
- */
-function mount(img: Uint8Array, codepage?: string): LmDisk;
+function mount(img: Uint8Array, charmap?: string): LmDisk;
 ```
 
 [index.d.ts](types/index.d.ts)

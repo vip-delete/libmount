@@ -1,16 +1,17 @@
-import { DataViewDevice } from "./io.mjs";
 import { Device } from "./types.mjs";
 import { FATDriver } from "./driver.mjs";
 import { FATFileSystem } from "./filesystem.mjs";
+import { RawDevice } from "./io.mjs";
+import { cp1252 } from "./charmap.mjs";
 import { loadPartitionTable } from "./loaders.mjs";
 
 /**
  * @param {!Uint8Array} img
- * @param {string} [codepage]
+ * @param {string} [charmap]
  * @returns {!lm.Disk}
  */
-export function mount(img, codepage = "cp1252") {
-  return new LmDisk(new DataViewDevice(img), codepage);
+export function mount(img, charmap) {
+  return new LmDisk(new RawDevice(img), charmap && charmap.length === cp1252.length ? charmap : cp1252);
 }
 
 /**
@@ -19,11 +20,11 @@ export function mount(img, codepage = "cp1252") {
 class LmDisk {
   /**
    * @param {!Device} device
-   * @param {string} codepage
+   * @param {string} charmap
    */
-  constructor(device, codepage) {
+  constructor(device, charmap) {
     this.device = device;
-    this.codepage = codepage;
+    this.charmap = charmap;
   }
 
   /**
@@ -35,7 +36,7 @@ class LmDisk {
       return null;
     }
     try {
-      return new FATFileSystem(new FATDriver(this.device, this.codepage));
+      return new FATFileSystem(new FATDriver(this.device, this.charmap));
     } catch {
       return null;
     }

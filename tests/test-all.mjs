@@ -1,13 +1,22 @@
 import { expect, test } from "vitest";
 import { freedos722 } from "./test-freedos722.mjs";
+
+import { io } from "./test-io.mjs";
+import { util } from "./test-util.mjs";
+
+import { d1 } from "./test-d1.mjs";
+import { d2 } from "./test-d2.mjs";
 import { f1 } from "./test-f1.mjs";
 import { f2 } from "./test-f2.mjs";
 import { f3 } from "./test-f3.mjs";
 import { mbr } from "./test-mbr.mjs";
-import { d1 } from "./test-d1.mjs";
-import { d2 } from "./test-d2.mjs";
 
-export function testAll(mount) {
+export function unitTests() {
+  io();
+  util();
+}
+
+export function integrationTests(mount) {
   test("general-checks", () => {
     const buf = [
       //
@@ -20,6 +29,10 @@ export function testAll(mount) {
       expect(disk.getFileSystem()).toBeNull();
       expect(disk.getPartitions().length).toBe(0);
     }
+
+    expect(mount(new Uint8Array(), "_".repeat(0))).toBeDefined();
+    expect(mount(new Uint8Array(), "_".repeat(128))).toBeDefined();
+    expect(mount(new Uint8Array(), "_".repeat(256))).toBeDefined();
   });
 
   freedos722(mount);

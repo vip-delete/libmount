@@ -4,6 +4,7 @@ export default [
   "support.mjs",
   //
   "types.mjs",
+  "charmap.mjs",
   "util.mjs",
   "io.mjs",
   "loaders.mjs",

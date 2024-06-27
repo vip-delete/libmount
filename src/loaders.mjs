@@ -13,13 +13,13 @@ import {
 import { validate } from "./support.mjs";
 
 /**
- * @param {!Device} s
+ * @param {!Device} device
  * @returns {!CHS}
  */
-function loadCHS(s) {
-  const b1 = s.readByte();
-  const b2 = s.readByte();
-  const b3 = s.readByte();
+function loadCHS(device) {
+  const b1 = device.readByte();
+  const b2 = device.readByte();
+  const b3 = device.readByte();
   return {
     Cylinder: ((b2 >> 6) << 8) | b3,
     Head: b1,
@@ -28,17 +28,17 @@ function loadCHS(s) {
 }
 
 /**
- * @param {!Device} s
+ * @param {!Device} device
  * @returns {!PartitionEntry}
  */
-function loadPartitionEntry(s) {
+function loadPartitionEntry(device) {
   return {
-    BootIndicator: s.readByte(),
-    Starting: loadCHS(s),
-    SystemID: s.readByte(),
-    Ending: loadCHS(s),
-    RelativeSectors: s.readDoubleWord(),
-    TotalSectors: s.readDoubleWord(),
+    BootIndicator: device.readByte(),
+    Starting: loadCHS(device),
+    SystemID: device.readByte(),
+    Ending: loadCHS(device),
+    RelativeSectors: device.readDoubleWord(),
+    TotalSectors: device.readDoubleWord(),
   };
 }
 
@@ -70,13 +70,13 @@ function isPartitionEntryValid(e) {
 }
 
 /**
- * @param {!Device} s
+ * @param {!Device} device
  * @returns {!Array<!PartitionEntry>}
  */
-export function loadPartitionTable(s) {
+export function loadPartitionTable(device) {
   const table = [];
   for (let i = 0; i < 4; i++) {
-    const e = loadPartitionEntry(s);
+    const e = loadPartitionEntry(device);
     if (isPartitionEntryValid(e)) {
       table.push(e);
     }
@@ -85,23 +85,23 @@ export function loadPartitionTable(s) {
 }
 
 /**
- * @param {!Device} s
+ * @param {!Device} device
  * @returns {!BiosParameterBlock}
  */
-function loadBiosParameterBlock(s) {
+function loadBiosParameterBlock(device) {
   return {
-    BytsPerSec: s.readWord(),
-    SecPerClus: s.readByte(),
-    RsvdSecCnt: s.readWord(),
-    NumFATs: s.readByte(),
-    RootEntCnt: s.readWord(),
-    TotSec16: s.readWord(),
-    Media: s.readByte(),
-    FATSz16: s.readWord(),
-    SecPerTrk: s.readWord(),
-    NumHeads: s.readWord(),
-    HiddSec: s.readDoubleWord(),
-    TotSec32: s.readDoubleWord(),
+    BytsPerSec: device.readWord(),
+    SecPerClus: device.readByte(),
+    RsvdSecCnt: device.readWord(),
+    NumFATs: device.readByte(),
+    RootEntCnt: device.readWord(),
+    TotSec16: device.readWord(),
+    Media: device.readByte(),
+    FATSz16: device.readWord(),
+    SecPerTrk: device.readWord(),
+    NumHeads: device.readWord(),
+    HiddSec: device.readDoubleWord(),
+    TotSec32: device.readDoubleWord(),
   };
 }
 
@@ -120,18 +120,18 @@ function validateBiosParameterBlock(bpb) {
 }
 
 /**
- * @param {!Device} s
+ * @param {!Device} device
  * @returns {!BiosParameterBlockFAT32}
  */
-function loadBiosParameterBlockFAT32(s) {
+function loadBiosParameterBlockFAT32(device) {
   return {
-    FATSz32: s.readDoubleWord(),
-    ExtFlags: s.readWord(),
-    FSVer: s.readWord(),
-    RootClus: s.readDoubleWord(),
-    FSInfo: s.readWord(),
-    BkBootSec: s.readWord(),
-    Reserved: s.readArray(12),
+    FATSz32: device.readDoubleWord(),
+    ExtFlags: device.readWord(),
+    FSVer: device.readWord(),
+    RootClus: device.readDoubleWord(),
+    FSInfo: device.readWord(),
+    BkBootSec: device.readWord(),
+    Reserved: device.readArray(12),
   };
 }
 
@@ -146,36 +146,36 @@ function validateBiosParameterBlockFAT32(bpbFAT32) {
 }
 
 /**
- * @param {!Device} s
+ * @param {!Device} device
  * @returns {!BootSector}
  */
-function loadBootSector(s) {
-  const jmpBoot = s.readArray(3);
-  const OEMName = s.readArray(8);
-  const bpb = loadBiosParameterBlock(s);
-  const bpbFAT32 = bpb.RootEntCnt === 0 ? loadBiosParameterBlockFAT32(s) : null;
+function loadBootSector(device) {
+  const jmpBoot = device.readArray(3);
+  const OEMName = device.readArray(8);
+  const bpb = loadBiosParameterBlock(device);
+  const bpbFAT32 = bpb.RootEntCnt === 0 ? loadBiosParameterBlockFAT32(device) : null;
   return {
     jmpBoot,
     OEMName,
     bpb,
     bpbFAT32,
-    DrvNum: s.readByte(),
-    Reserved1: s.readByte(),
-    BootSig: s.readByte(),
-    VolID: s.readDoubleWord(),
-    VolLab: s.readArray(11),
-    FilSysType: s.readArray(8),
-    BootCode: s.readArray(bpbFAT32 ? 420 : 448),
-    SignatureWord: s.readWord(),
+    DrvNum: device.readByte(),
+    Reserved1: device.readByte(),
+    BootSig: device.readByte(),
+    VolID: device.readDoubleWord(),
+    VolLab: device.readArray(11),
+    FilSysType: device.readArray(8),
+    BootCode: device.readArray(bpbFAT32 ? 420 : 448),
+    SignatureWord: device.readWord(),
   };
 }
 
 /**
- * @param {!Device} s
+ * @param {!Device} device
  * @returns {!BootSector}
  */
-export function loadAndValidateBootSector(s) {
-  const bs = loadBootSector(s);
+export function loadAndValidateBootSector(device) {
+  const bs = loadBootSector(device);
   validateBiosParameterBlock(bs.bpb);
   if (bs.bpbFAT32 !== null) {
     validateBiosParameterBlockFAT32(bs.bpbFAT32);
@@ -184,17 +184,17 @@ export function loadAndValidateBootSector(s) {
 }
 
 /**
- * @param {!Device} s
+ * @param {!Device} device
  * @returns {!FSInfo}
  */
-function loadFSInfo(s) {
-  const LeadSig = s.readDoubleWord();
-  s.skip(480);
-  const StrucSig = s.readDoubleWord();
-  const FreeCount = s.readDoubleWord();
-  const NxtFree = s.readDoubleWord();
-  s.skip(12);
-  const TrailSig = s.readDoubleWord();
+function loadFSInfo(device) {
+  const LeadSig = device.readDoubleWord();
+  device.skip(480);
+  const StrucSig = device.readDoubleWord();
+  const FreeCount = device.readDoubleWord();
+  const NxtFree = device.readDoubleWord();
+  device.skip(12);
+  const TrailSig = device.readDoubleWord();
   return {
     LeadSig,
     StrucSig,
@@ -214,50 +214,50 @@ function validateFSInfo(fsi) {
 }
 
 /**
- * @param {!Device} s
+ * @param {!Device} device
  * @returns {!FSInfo}
  */
-export function loadAndValidateFSInfo(s) {
-  const fsi = loadFSInfo(s);
+export function loadAndValidateFSInfo(device) {
+  const fsi = loadFSInfo(device);
   validateFSInfo(fsi);
   return fsi;
 }
 
 /**
- * @param {!Device} s
+ * @param {!Device} device
  * @returns {!DirEntry}
  */
-export function loadDirEntry(s) {
+export function loadDirEntry(device) {
   return {
-    Name: s.readArray(11),
-    Attr: s.readByte(),
-    NTRes: s.readByte(),
-    CrtTimeTenth: s.readByte(),
-    CrtTime: s.readWord(),
-    CrtDate: s.readWord(),
-    LstAccDate: s.readWord(),
-    FstClusHI: s.readWord(),
-    WrtTime: s.readWord(),
-    WrtDate: s.readWord(),
-    FstClusLO: s.readWord(),
-    FileSize: s.readDoubleWord(),
+    Name: device.readArray(11),
+    Attr: device.readByte(),
+    NTRes: device.readByte(),
+    CrtTimeTenth: device.readByte(),
+    CrtTime: device.readWord(),
+    CrtDate: device.readWord(),
+    LstAccDate: device.readWord(),
+    FstClusHI: device.readWord(),
+    WrtTime: device.readWord(),
+    WrtDate: device.readWord(),
+    FstClusLO: device.readWord(),
+    FileSize: device.readDoubleWord(),
   };
 }
 
 /**
- * @param {!Device} s
+ * @param {!Device} device
  * @returns {!DirEntryLFN}
  */
-export function loadDirEntryLFN(s) {
+export function loadDirEntryLFN(device) {
   return {
-    Ord: s.readByte(),
-    Name1: s.readArray(10),
-    Attr: s.readByte(),
-    Type: s.readByte(),
-    Chksum: s.readByte(),
-    Name2: s.readArray(12),
-    FstClusLO: s.readWord(),
-    Name3: s.readArray(4),
+    Ord: device.readByte(),
+    Name1: device.readArray(10),
+    Attr: device.readByte(),
+    Type: device.readByte(),
+    Chksum: device.readByte(),
+    Name2: device.readArray(12),
+    FstClusLO: device.readWord(),
+    Name3: device.readArray(4),
   };
 }
 

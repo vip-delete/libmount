@@ -170,10 +170,10 @@ export class Device {
    */
   readDoubleWord() {}
 
-  // /**
-  //  * @param {!Uint8Array} array
-  //  */
-  // writeArray(array) {}
+  /**
+   * @param {!Uint8Array} array
+   */
+  writeArray(array) {}
 
   /**
    * @param {number} byte

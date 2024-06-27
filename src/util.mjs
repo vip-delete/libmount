@@ -1,3 +1,28 @@
+const SHORT_NAME_SPECIAL_CHARACTERS = [
+  " ".charCodeAt(0),
+  "$".charCodeAt(0),
+  "%".charCodeAt(0),
+  "'".charCodeAt(0),
+  "-".charCodeAt(0),
+  "_".charCodeAt(0),
+  "@".charCodeAt(0),
+  "~".charCodeAt(0),
+  "`".charCodeAt(0),
+  "!".charCodeAt(0),
+  "(".charCodeAt(0),
+  ")".charCodeAt(0),
+  "{".charCodeAt(0),
+  "}".charCodeAt(0),
+  "^".charCodeAt(0),
+  "#".charCodeAt(0),
+  "&".charCodeAt(0),
+];
+
+/**
+ * @type {number}
+ */
+const UNKNOWN_CHARACTER_CODE = "_".charCodeAt(0);
+
 /**
  * @param {number} ch
  * @returns {boolean}
@@ -18,24 +43,16 @@ function isDigit(ch) {
  * @param {number} ch
  * @returns {boolean}
  */
-function isCharValidAscii(ch) {
-  return isCapital(ch) || isDigit(ch) || " $%'-_@~`!(){}^#&".includes(String.fromCharCode(ch));
-}
-
-/**
- * @param {number} ch
- * @returns {boolean}
- */
-function isCharValid(ch) {
-  return ch > 127 || isCharValidAscii(ch);
+function isShortNameCharValid(ch) {
+  return ch > 127 || isCapital(ch) || isDigit(ch) || SHORT_NAME_SPECIAL_CHARACTERS.includes(ch);
 }
 
 /**
  * @param {!Uint8Array} arr
  * @returns {boolean}
  */
-export function isNameValid(arr) {
-  return arr.every(isCharValid);
+export function isShortNameValid(arr) {
+  return arr.every(isShortNameCharValid);
 }
 
 /**
@@ -48,21 +65,39 @@ export function getChkSum(arr) {
 
 /**
  * @param {!Uint8Array} arr
- * @param {string} codepage
+ * @param {string} charmap
  * @returns {string}
  */
-export function getRawName(arr, codepage) {
-  return new TextDecoder(codepage).decode(arr).trimEnd();
+export function decode(arr, charmap) {
+  let text = "";
+  for (let i = 0; i < arr.length; i++) {
+    text += charmap.charAt(arr[i]);
+  }
+  return text.trimEnd();
+}
+
+/**
+ * @param {string} text
+ * @param {string} charmap
+ * @returns {!Uint8Array}
+ */
+export function encode(text, charmap) {
+  return new Uint8Array(
+    text.split("").map((it) => {
+      const i = charmap.indexOf(it);
+      return i < 0 ? UNKNOWN_CHARACTER_CODE : i;
+    }),
+  );
 }
 
 /**
  * @param {!Uint8Array} arr
- * @param {string} codepage
+ * @param {string} charmap
  * @returns {string}
  */
-export function getShortName(arr, codepage) {
-  const filename = getRawName(arr.subarray(0, 8), codepage);
-  const ext = getRawName(arr.subarray(8, 11), codepage);
+export function getShortName(arr, charmap) {
+  const filename = decode(arr.subarray(0, 8), charmap);
+  const ext = decode(arr.subarray(8, 11), charmap);
   return filename + (ext === "" ? "" : "." + ext);
 }
 

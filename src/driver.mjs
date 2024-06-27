@@ -1,5 +1,5 @@
 import { Device, DirEntry, DirEntryLFN, FATNode, FATNodeType, FileSystemDriver } from "./types.mjs";
-import { getChkSum, getRawName, getShortName, isNameValid } from "./util.mjs";
+import { decode, getChkSum, getShortName, isShortNameValid } from "./util.mjs";
 import { loadAndValidateBootSector, loadAndValidateFSInfo, loadDirEntry, loadDirEntryLFN, loadFATVariables } from "./loaders.mjs";
 import { assert } from "./support.mjs";
 
@@ -156,14 +156,14 @@ const ROOT_NODE = {
  */
 export class FATDriver {
   /**
-   * @param {!Device} s
-   * @param {string} codepage
+   * @param {!Device} device
+   * @param {string} charmap
    */
-  constructor(s, codepage) {
-    this.s = s;
-    this.codepage = codepage;
-    s.seek(0);
-    this.bs = loadAndValidateBootSector(s);
+  constructor(device, charmap) {
+    this.device = device;
+    this.charmap = charmap;
+    device.seek(0);
+    this.bs = loadAndValidateBootSector(device);
     this.vars = loadFATVariables(this.bs);
     if (this.vars.CountOfClusters < 4085) {
       // A FAT12 volume cannot contain more than 4084 clusters.
@@ -178,8 +178,8 @@ export class FATDriver {
       this.getNextClusNum = this.getNextClusNum16;
       this.setNextClusNum = this.setNextClusNum16;
     } else {
-      this.s.seek(this.bs.bpb.BytsPerSec);
-      this.fsi = loadAndValidateFSInfo(s);
+      this.device.seek(this.bs.bpb.BytsPerSec);
+      this.fsi = loadAndValidateFSInfo(device);
       this.fileSystemName = "FAT32";
       this.getNextClusNum = this.getNextClusNum32;
       this.setNextClusNum = this.setNextClusNum32;
@@ -201,7 +201,7 @@ export class FATDriver {
   getVolumeInfo() {
     return {
       label: this.getVolumName(),
-      OEMName: getRawName(this.bs.OEMName, this.codepage),
+      OEMName: decode(this.bs.OEMName, this.charmap),
       serialNumber: this.bs.VolID,
       clusterSize: this.vars.SizeOfCluster,
       totalClusters: this.vars.CountOfClusters,
@@ -262,8 +262,8 @@ export class FATDriver {
         break;
       }
       const len = Math.min(this.vars.SizeOfCluster, fileSize - size);
-      this.s.seek(offset);
-      const chunk = this.s.readArray(len);
+      this.device.seek(offset);
+      const chunk = this.device.readArray(len);
       arr.set(chunk, size);
       size += len;
       clusNum = this.getNextClusNum(clusNum);
@@ -318,8 +318,8 @@ export class FATDriver {
       }
       // offset is supposed to be 32-bytes aligned
       assert(offset % DIR_ENTRY_SIZE === 0);
-      this.s.seek(offset);
-      this.s.writeByte(DirEntryFlag.FREE_ENTRY);
+      this.device.seek(offset);
+      this.device.writeByte(DirEntryFlag.FREE_ENTRY);
       offset = this.getNextOffset(offset + DIR_ENTRY_SIZE);
     }
     node.Type = FATNodeType.DELETED;
@@ -338,11 +338,11 @@ export class FATDriver {
       }
       if (offset !== currentOffset) {
         assert(offset % DIR_ENTRY_SIZE === 0, "Offset " + offset + " is not " + DIR_ENTRY_SIZE + " bytes aligned");
-        this.s.seek(offset);
+        this.device.seek(offset);
         currentOffset = offset;
       }
-      const flag = this.s.readByte();
-      this.s.skip(-1);
+      const flag = this.device.readByte();
+      this.device.skip(-1);
       if (flag === DirEntryFlag.LAST_ENTRY) {
         return null;
       }
@@ -362,17 +362,17 @@ export class FATDriver {
    * @returns {?FATNode}
    */
   visitOffset(chain, currentOffset, flag) {
-    this.s.skip(11);
-    const attr = this.s.readByte();
-    this.s.skip(-12);
+    this.device.skip(11);
+    const attr = this.device.readByte();
+    this.device.skip(-12);
     if (flag === DirEntryFlag.FREE_ENTRY) {
       if (attr === DirEntryAttr.LONG_NAME) {
         chain.reset();
-        this.s.skip(DIR_ENTRY_SIZE);
+        this.device.skip(DIR_ENTRY_SIZE);
         return null;
       }
-      const dir = loadDirEntry(this.s);
-      const name = getShortName(dir.Name, this.codepage);
+      const dir = loadDirEntry(this.device);
+      const name = getShortName(dir.Name, this.charmap);
       return {
         Type: FATNodeType.DELETED,
         Name: name,
@@ -383,13 +383,13 @@ export class FATDriver {
       };
     }
     if (attr === DirEntryAttr.LONG_NAME) {
-      const dir = loadDirEntryLFN(this.s);
+      const dir = loadDirEntryLFN(this.device);
       chain.addDirEntryLFN(dir);
       return null;
     }
-    const dir = loadDirEntry(this.s);
+    const dir = loadDirEntry(this.device);
     if ((attr & DirEntryAttr.VOLUME_ID) !== 0) {
-      const label = getRawName(dir.Name, this.codepage);
+      const label = decode(dir.Name, this.charmap);
       return {
         Type: FATNodeType.VOLUME_ID,
         Name: label,
@@ -400,7 +400,7 @@ export class FATDriver {
       };
     }
     if (dir.Name[0] === ".".charCodeAt(0)) {
-      const dotName = getRawName(dir.Name, this.codepage);
+      const dotName = decode(dir.Name, this.charmap);
       if (dotName === ".") {
         return {
           Type: FATNodeType.CURRENT_DIR,
@@ -425,13 +425,13 @@ export class FATDriver {
       chain.reset();
       return null;
     }
-    if (!isNameValid(dir.Name)) {
+    if (!isShortNameValid(dir.Name)) {
       // protect the code: wrong name?
       chain.reset();
       return null;
     }
     chain.addDirEntry(dir);
-    const shortName = getShortName(dir.Name, this.codepage);
+    const shortName = getShortName(dir.Name, this.charmap);
     const longName = chain.getLongName();
     if (shortName === "" || longName === "") {
       // protect the code: wrong name?
@@ -525,7 +525,7 @@ export class FATDriver {
     while (node !== null && node.Type !== FATNodeType.VOLUME_ID) {
       node = this.getNext(node);
     }
-    return node === null ? getRawName(this.bs.VolLab, this.codepage) : node.Name;
+    return node === null ? decode(this.bs.VolLab, this.charmap) : node.Name;
   }
 
   /**
@@ -558,8 +558,8 @@ export class FATDriver {
    * @returns {number}
    */
   getNextClusNum12(clusNum) {
-    this.s.seek(this.getFATClusPos12(clusNum));
-    const val = this.s.readWord();
+    this.device.seek(this.getFATClusPos12(clusNum));
+    const val = this.device.readWord();
     return clusNum & 1 ? val >> 4 : val & 0x0fff;
   }
 
@@ -569,10 +569,10 @@ export class FATDriver {
    */
   setNextClusNum12(clusNum, value) {
     assert(value >= 0 && value <= 0xfff);
-    this.s.seek(this.getFATClusPos12(clusNum));
-    const val = this.s.readWord();
-    this.s.skip(-2);
-    this.s.writeWord(clusNum & 1 ? (value << 4) | (val & 0xf) : (val & 0xf000) | value);
+    this.device.seek(this.getFATClusPos12(clusNum));
+    const val = this.device.readWord();
+    this.device.skip(-2);
+    this.device.writeWord(clusNum & 1 ? (value << 4) | (val & 0xf) : (val & 0xf000) | value);
   }
 
   // FAT16
@@ -591,8 +591,8 @@ export class FATDriver {
    * @returns {number}
    */
   getNextClusNum16(clusNum) {
-    this.s.seek(this.getFATClusPos16(clusNum));
-    return this.s.readWord();
+    this.device.seek(this.getFATClusPos16(clusNum));
+    return this.device.readWord();
   }
 
   /**
@@ -601,8 +601,8 @@ export class FATDriver {
    */
   setNextClusNum16(clusNum, value) {
     assert(value >= 0 && value <= 0xffff);
-    this.s.seek(this.getFATClusPos16(clusNum));
-    this.s.writeWord(value);
+    this.device.seek(this.getFATClusPos16(clusNum));
+    this.device.writeWord(value);
   }
 
   // FAT32
@@ -621,8 +621,8 @@ export class FATDriver {
    * @returns {number}
    */
   getNextClusNum32(clusNum) {
-    this.s.seek(this.getFATClusPos32(clusNum));
-    return this.s.readDoubleWord() & 0x0fffffff;
+    this.device.seek(this.getFATClusPos32(clusNum));
+    return this.device.readDoubleWord() & 0x0fffffff;
   }
 
   /**
@@ -631,10 +631,10 @@ export class FATDriver {
    */
   setNextClusNum32(clusNum, value) {
     assert(value >= 0 && value <= 0x0fffffff);
-    this.s.seek(this.getFATClusPos32(clusNum));
-    const val = this.s.readDoubleWord();
-    this.s.skip(-4);
-    this.s.writeDoubleWord((val & 0xf0000000) | value);
+    this.device.seek(this.getFATClusPos32(clusNum));
+    const val = this.device.readDoubleWord();
+    this.device.skip(-4);
+    this.device.writeDoubleWord((val & 0xf0000000) | value);
   }
 }
 

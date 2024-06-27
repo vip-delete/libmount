@@ -9,10 +9,10 @@
 const lm = {
   /**
    * @param {!Uint8Array} img
-   * @param {string} [codepage]
+   * @param {string} [charmap]
    * @returns {!lm.Disk}
    */
-  mount(img, codepage = "cp1252") {},
+  mount(img, charmap) {},
 
   /**
    * @interface

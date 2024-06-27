@@ -14,10 +14,10 @@ declare module "libmount" {
    * Mount a raw image.
    *
    * @param img raw image
-   * @param codepage Codepage used to decode symbols in the upper half of the ASCII table (optional, defaults to cp1252).
+   * @param charmap Charmap used to decode symbols in the upper half of the ASCII table (optional, defaults to cp1252).
    * @returns A mounted disk.
    */
-  export function mount(img: Uint8Array, codepage?: string): LmDisk;
+  export function mount(img: Uint8Array, charmap?: string): LmDisk;
 
   /**
    * Represents a disk.

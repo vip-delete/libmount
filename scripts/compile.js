@@ -1,9 +1,16 @@
 import Main from "google-closure-compiler";
 import js from "../src/index.mjs";
+import { copyFile } from "fs";
 const Compiler = Main.compiler;
 
 const src = "./src/";
-const output_file =  "dist/libmount.min.mjs"
+const output_file = "dist/libmount.min.mjs";
+copyFile(src + "charmap.mjs", "dist/charmap.mjs", (e) => {
+  if (e) {
+    console.error("Operation Failed: ", e);
+    process.exit(2);
+  }
+});
 
 const args = {
   compilation_level: "ADVANCED",

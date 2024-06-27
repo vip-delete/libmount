@@ -1,4 +1,5 @@
 import { mount } from "./src/mount.mjs";
-import { testAll } from "./test-all.mjs";
+import { unitTests, integrationTests } from "./test-all.mjs";
 
-testAll(mount);
+unitTests();
+integrationTests(mount);

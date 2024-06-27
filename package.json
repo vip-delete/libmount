@@ -37,6 +37,10 @@
     ".": {
       "types": "./types/index.d.ts",
       "import": "./dist/libmount.min.mjs"
+    },
+    "./charmap": {
+      "types": "./types/charmap.d.ts",
+      "import": "./dist/charmap.mjs"
     }
   },
   "files": [

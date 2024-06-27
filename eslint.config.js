@@ -29,6 +29,7 @@ export default [
       "@stylistic/brace-style": ["error", "1tbs", { "allowSingleLine": true }],
       "@stylistic/indent": ["error", 2],
       "@stylistic/no-extra-semi": "error",
+      "@stylistic/operator-linebreak": 0,
       "@stylistic/quote-props": ["error", "consistent"],
       "capitalized-comments": 0,
       "class-methods-use-this": 0,

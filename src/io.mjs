@@ -4,12 +4,12 @@ import { assert } from "./support.mjs";
 /**
  * @implements {Device}
  */
-export class DataViewDevice {
+export class RawDevice {
   /**
    * @param {!Uint8Array} img
    */
   constructor(img) {
-    this.dataView = new DataView(img.buffer, img.byteOffset, img.length);
+    this.img = img;
     this.pos = 0;
   }
 
@@ -18,7 +18,7 @@ export class DataViewDevice {
    * @returns {number}
    */
   length() {
-    return this.dataView.byteLength;
+    return this.img.length;
   }
 
   /**
@@ -44,7 +44,7 @@ export class DataViewDevice {
    */
   readArray(len) {
     assert(this.pos + len <= this.length());
-    const r = new Uint8Array(this.dataView.buffer, this.dataView.byteOffset + this.pos, len);
+    const r = this.img.subarray(this.pos, this.pos + len);
     this.pos += len;
     return r;
   }
@@ -55,9 +55,7 @@ export class DataViewDevice {
    */
   readByte() {
     assert(this.pos + 1 <= this.length());
-    const r = this.dataView.getUint8(this.pos);
-    this.pos += 1;
-    return r;
+    return this.img[this.pos++];
   }
 
   /**
@@ -66,9 +64,7 @@ export class DataViewDevice {
    */
   readWord() {
     assert(this.pos + 2 <= this.length());
-    const r = this.dataView.getUint16(this.pos, true);
-    this.pos += 2;
-    return r;
+    return this.img[this.pos++] | (this.img[this.pos++] << 8);
   }
 
   /**
@@ -77,9 +73,17 @@ export class DataViewDevice {
    */
   readDoubleWord() {
     assert(this.pos + 4 <= this.length());
-    const r = this.dataView.getUint32(this.pos, true);
-    this.pos += 4;
-    return r;
+    return (this.img[this.pos++] | (this.img[this.pos++] << 8) | (this.img[this.pos++] << 16) | (this.img[this.pos++] << 24)) >>> 0;
+  }
+
+  /**
+   * @override
+   * @param {!Uint8Array} array
+   */
+  writeArray(array) {
+    assert(this.pos + array.length <= this.length());
+    this.img.set(array, this.pos);
+    this.pos += array.length;
   }
 
   /**
@@ -89,8 +93,7 @@ export class DataViewDevice {
   writeByte(val) {
     assert(this.pos + 1 <= this.length());
     assert(val >= 0 && val <= 0xff);
-    this.dataView.setUint8(this.pos, val);
-    this.pos += 1;
+    this.img[this.pos++] = val;
   }
 
   /**
@@ -100,8 +103,8 @@ export class DataViewDevice {
   writeWord(val) {
     assert(this.pos + 2 <= this.length());
     assert(val >= 0 && val <= 0xffff);
-    this.dataView.setUint16(this.pos, val, true);
-    this.pos += 2;
+    this.img[this.pos++] = val & 0xff;
+    this.img[this.pos++] = val >>> 8;
   }
 
   /**
@@ -111,7 +114,9 @@ export class DataViewDevice {
   writeDoubleWord(val) {
     assert(this.pos + 4 <= this.length());
     assert(val >= 0 && val <= 0xffffffff);
-    this.dataView.setUint32(this.pos, val, true);
-    this.pos += 4;
+    this.img[this.pos++] = val & 0xff;
+    this.img[this.pos++] = (val >>> 8) & 0xff;
+    this.img[this.pos++] = (val >>> 16) & 0xff;
+    this.img[this.pos++] = val >>> 24;
   }
 }

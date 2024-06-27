@@ -1,4 +1,4 @@
 import { mount } from "./dist/libmount.min.mjs";
-import { testAll } from "./test-all.mjs";
+import { integrationTests } from "./test-all.mjs";
 
-testAll(mount);
+integrationTests(mount);

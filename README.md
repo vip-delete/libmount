@@ -12,7 +12,7 @@ Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript
 ## API
 
 ```javascript
-function mount(img: Uint8Array, charmap?: string): LmDisk;
+function mount(img: Uint8Array, codec: Codec): LmDisk;
 ```
 
 [index.d.ts](types/index.d.ts)
@@ -24,8 +24,8 @@ import { mount } from "libmount";
 import { readFileSync } from "fs";
 import { cp1251 } from "libmount/codecs/cp1251";
 
-const file = readFileSync("./freedos722.img", { flag: "r" }, cp1251);
-const disk = mount(new Uint8Array(file));
+const file = readFileSync("./freedos722.img", { flag: "r" });
+const disk = mount(new Uint8Array(file), cp1251);
 const fs = disk.getFileSystem();
 
 if (fs === null) {

@@ -38,11 +38,14 @@ function validatePartitionEntry(e) {
   validate([0x00, 0x80].includes(e.BootIndicator));
   validate(e.Starting.Sector !== 0);
   validate(e.Ending.Sector !== 0);
-  const StartingLBA = (e.Starting.Cylinder * 255 + e.Starting.Head) * 63 + (e.Starting.Sector - 1);
-  const EndingLBA = (e.Ending.Cylinder * 255 + e.Ending.Head) * 63 + (e.Ending.Sector - 1);
+  const TH = 255; // or 16, ...
+  const TS = 63;
+  const StartingLBA = (e.Starting.Cylinder * TH + e.Starting.Head) * TS + (e.Starting.Sector - 1);
+  const EndingLBA = (e.Ending.Cylinder * TH + e.Ending.Head) * TS + (e.Ending.Sector - 1);
   validate(StartingLBA < EndingLBA);
-  validate(StartingLBA === e.RelativeSectors);
-  validate(EndingLBA - StartingLBA + 1 === e.TotalSectors);
+  // TH and TS depends on BIOS and the next validations are not always correct
+  // validate(StartingLBA === e.RelativeSectors);
+  // validate(EndingLBA - StartingLBA + 1 === e.TotalSectors);
 }
 
 /**
@@ -105,7 +108,7 @@ function validateBiosParameterBlock(bpb) {
   validate((bpb.RootEntCnt * 32) % bpb.BytsPerSec === 0);
   validate([0xf0, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff].includes(bpb.Media));
   validate(bpb.RootEntCnt === 0 || bpb.FATSz16 > 0);
-  validate(bpb.TotSec16 === 0 ? bpb.TotSec32 >= 0x10000 : bpb.TotSec32 === 0);
+  validate(bpb.TotSec16 > 0 || bpb.TotSec32 >= 0x10000);
 }
 
 /**

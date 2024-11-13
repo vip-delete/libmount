@@ -127,16 +127,6 @@ export const DirEntryLFN = {};
  */
 export const FATVariables = {};
 
-/**
- * @typedef {{
- *            longName: string,
- *            shortName: string,
- *            dirLFNs: !Array<!DirEntryLFN>,
- *            dir: !DirEntry,
- *          }}
- */
-export const DirChain = {};
-
 /* eslint-disable no-empty-function */
 /* eslint-disable no-unused-vars */
 
@@ -228,6 +218,11 @@ export class FATMath {
   isAllocated(clusNum) {}
 
   /**
+   * @param {number} clusNum
+   */
+  writeZeros(clusNum) {}
+
+  /**
    * @returns {number}
    */
   getFreeClusters() {}
@@ -243,6 +238,12 @@ export class FATMath {
    * @returns {?number}
    */
   getNextDirEntryOffset(offset) {}
+
+  /**
+   * @param {number} offset
+   * @returns {?number}
+   */
+  getClusNum(offset) {}
 
   // specific methods
 
@@ -297,26 +298,6 @@ export class NodeCrawler {
  * @interface
  * @template T
  */
-export class NodeBee {
-  /**
-   * @param {!T} node
-   * @param {string} name
-   * @returns {?T}
-   */
-  mkdir(node, name) {}
-
-  /**
-   * @param {!T} node
-   * @param {string} name
-   * @returns {?T}
-   */
-  mkfile(node, name) {}
-}
-
-/**
- * @interface
- * @template T
- */
 export class FileSystemDriver {
   /**
    * @returns {string}
@@ -352,14 +333,14 @@ export class FileSystemDriver {
   /**
    * @param {!T} node
    * @param {string} name
+   * @param {boolean} isDirectory
    * @returns {?T}
    */
-  mkdir(node, name) {}
+  makeNode(node, name, isDirectory) {}
 
   /**
-   * @param {!T} node
-   * @param {string} name
-   * @returns {?T}
+   * @param {!T} src
+   * @param {!T} dest
    */
-  mkfile(node, name) {}
+  moveNode(src, dest) {}
 }

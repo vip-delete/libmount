@@ -3,16 +3,44 @@
 /* eslint-disable no-unused-vars */
 
 /**
- * @file Public API for "libmount"
+ * @file Public API of "libmount" for Closure Compiler (not used in production)
  * @externs
  */
 const lm = {
   /**
    * @param {!Uint8Array} img
-   * @param {!codec.Codec} [codec]
+   * @param {!lm.Codepage} [codepage]
    * @returns {!lm.Disk}
    */
-  mount(img, codec) {},
+  mount(img, codepage) {},
+
+  /**
+   * Encoding and decoding single-byte character sets (e.g. cp1251, cp1252).
+   * @interface
+   */
+  Codepage: class {
+    /**
+     * Decodes an array of single-byte characters into a string.
+     * @param {!Uint8Array} array
+     * @returns {string}
+     */
+    decode(array) {}
+
+    /**
+     * Encodes a string into an array of single-byte characters.
+     * @param {string} text
+     * @param {number} [defaultCharCode]
+     * @returns {!Uint8Array}
+     */
+    encode(text, defaultCharCode) {}
+
+    /**
+     * Convert a wide character code to a single-byte character code if possible.
+     * @param {number} wcCode
+     * @returns {?number}
+     */
+    encodeChar(wcCode) {}
+  },
 
   /**
    * @interface
@@ -56,15 +84,17 @@ const lm = {
 
     /**
      * @param {string} absolutePath
+     * @param {boolean} isDirectory
      * @returns {?lm.File}
      */
-    mkdir(absolutePath) {}
+    makeFile(absolutePath, isDirectory) {}
 
     /**
-     * @param {string} absolutePath
+     * @param {string} src
+     * @param {string} dest
      * @returns {?lm.File}
      */
-    mkfile(absolutePath) {}
+    moveFile(src, dest) {}
   },
 
   /**
@@ -154,32 +184,16 @@ const lm = {
 
     /**
      * @param {string} relativePath
+     * @param {boolean} isDirectory
      * @returns {?lm.File}
      */
-    mkdir(relativePath) {}
+    makeFile(relativePath, isDirectory) {}
 
     /**
-     * @param {string} relativePath
+     * @param {string} dest
      * @returns {?lm.File}
      */
-    mkfile(relativePath) {}
-  },
-
-  /**
-   * @interface
-   */
-  Codec: class {
-    /**
-     * @param {!Uint8Array} array
-     * @returns {string}
-     */
-    decode(array) {}
-
-    /**
-     * @param {string} text
-     * @returns {!Uint8Array}
-     */
-    encode(text) {}
+    moveFile(dest) {}
   },
 };
 

@@ -3,17 +3,12 @@
 /* eslint-disable camelcase */
 
 import Main from "google-closure-compiler";
-import codecFiles from "../src/codec/index.mjs";
 import fs from "fs";
 import srcFiles from "../src/index.mjs";
 const Compiler = Main.compiler;
 
-fs.cpSync("./types", "./dist", { recursive: true });
-fs.cpSync("./src/codec", "./dist/codec", { recursive: true });
-fs.rmSync("./dist/codec/codec.js");
-fs.rmSync("./dist/codec/index.mjs");
+fs.cpSync("./src/codepages", "./dist/codepages", { recursive: true });
 
-const codecJs = codecFiles.map((it) => "./src/codec/" + it);
 const srcJs = srcFiles.map((it) => "./src/" + it);
 
 const args = {
@@ -31,7 +26,11 @@ const args = {
     "ENABLE_ASSERTIONS=false",
   ],
   js_output_file: "./dist/libmount.min.mjs",
-  js: codecJs.concat(srcJs),
+  js: [
+    "./src/module.js",
+    "./src/codepages/oem-codepage.mjs",
+    "./src/codepages/cp1252.mjs",
+  ].concat(srcJs),
 };
 
 new Compiler(args).run((exitCode, stdout, stderr) => {

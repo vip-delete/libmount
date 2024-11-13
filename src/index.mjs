@@ -1,5 +1,4 @@
 export default [
-  "libmount.js",
   "defines.js",
   "support.mjs",
   //
@@ -14,7 +13,6 @@ export default [
   //
   "driver/math.mjs",
   "driver/node-crawler.mjs",
-  "driver/node-bee.mjs",
   "driver/driver.mjs",
   "mount.mjs",
   //

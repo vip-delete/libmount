@@ -54,19 +54,22 @@ export class FATFileSystem {
   /**
    * @override
    * @param {string} absolutePath
-   * @returns {?lm.File}
+   * @param {boolean} isDirectory
+   * @returns {?FATFile}
    */
-  mkdir(absolutePath) {
-    return this.getRoot().mkdir(absolutePath);
+  makeFile(absolutePath, isDirectory) {
+    return this.getRoot().makeFile(absolutePath, isDirectory);
   }
 
   /**
    * @override
-   * @param {string} absolutePath
-   * @returns {?lm.File}
+   * @param {string} src
+   * @param {string} dest
+   * @returns {?FATFile}
    */
-  mkfile(absolutePath) {
-    return this.getRoot().mkfile(absolutePath);
+  moveFile(src, dest) {
+    const file = this.getFile(src);
+    return file === null ? null : file.moveFile(dest);
   }
 }
 
@@ -185,6 +188,9 @@ class FATFile {
       return null;
     }
     for (const subNode of this.fs.driver.getCrawler().getSubNodes(this.node)) {
+      if (subNode.isLast()) {
+        break;
+      }
       if (subNode.isRegularDir() || subNode.isRegularFile()) {
         const file = this.getChild(subNode);
         if (predicate(file)) {
@@ -243,30 +249,85 @@ class FATFile {
    * @returns {?FATFile}
    */
   getFile(relativePath) {
-    return traverse(relativePath, this, (file, name) => file.findFirst((f) => f.match(name)));
+    return traverse(relativePath, this, (file, i, names) => file.findFirst((f) => f.match(names[i])));
   }
 
   /**
    * @override
    * @param {string} relativePath
+   * @param {boolean} isDirectory
    * @returns {?FATFile}
    */
-  mkdir(relativePath) {
-    return traverse(relativePath, this, (file, name) => file.getChildOrNull(this.fs.driver.mkdir(file.node, name)));
-  }
-
-  /**
-   * @override
-   * @param {string} relativePath
-   * @returns {?FATFile}
-   */
-  mkfile(relativePath) {
-    return traverse(relativePath, this, (file, name, i, names) => {
-      if (i < names.length - 1) {
-        return file.getChildOrNull(this.fs.driver.mkdir(file.node, name));
-      }
-      return file.getChildOrNull(this.fs.driver.mkfile(file.node, name));
+  makeFile(relativePath, isDirectory) {
+    return traverse(relativePath, this, (file, i, names) => {
+      const node = this.fs.driver.makeNode(file.node, names[i], isDirectory || i < names.length - 1);
+      return node === null ? null : file.getChild(node);
     });
+  }
+
+  /**
+   * @override
+   * @param {string} dest
+   * @returns {?FATFile}
+   */
+  moveFile(dest) {
+    if (this.node.isRoot()) {
+      return null;
+    }
+    if (!dest.startsWith("/") && !dest.startsWith("\\")) {
+      dest = this.absolutePath.substring(0, this.absolutePath.length - this.node.longName.length) + dest;
+    }
+    if (this.contains(dest)) {
+      return null;
+    }
+    const destFile = this.fs.getFile(dest);
+    if (destFile !== null && destFile.node.isRegularFile()) {
+      // dest is an existing regular file
+      return null;
+    }
+    const isDirectory = this.node.isRegularDir();
+    const target = destFile === null ? this.fs.makeFile(dest, isDirectory) : destFile.makeFile(this.node.longName, isDirectory);
+    if (target === null) {
+      return null;
+    }
+    this.fs.driver.moveNode(this.node, target.node);
+    return target;
+  }
+
+  /**
+   * @param {string} absolutePath
+   * @returns {boolean}
+   */
+  contains(absolutePath) {
+    if (this.isRegularFile()) {
+      return false;
+    }
+    const srcNames = this.absolutePath.split(/[/\\]/u).filter((it) => it !== "");
+    const destNames = absolutePath.split(/[/\\]/u).filter((it) => it !== "");
+    let i = this.fs.getRoot();
+    let j = this.fs.getRoot();
+    let k = 0;
+    while (true) {
+      if (k === srcNames.length) {
+        return true;
+      }
+      if (k === destNames.length) {
+        return false;
+      }
+      const srcName = srcNames[k];
+      const destName = destNames[k];
+      const srcChild = i.findFirst((f) => f.match(srcName));
+      const destChild = j.findFirst((f) => f.match(destName));
+      if (destChild === null) {
+        return false;
+      }
+      if (srcChild.node.firstDirOffset !== destChild.node.firstDirOffset) {
+        return false;
+      }
+      i = srcChild;
+      j = destChild;
+      k++;
+    }
   }
 
   /**
@@ -286,30 +347,21 @@ class FATFile {
     const absolutePath = this.node.isRoot() ? "/" + node.longName : this.absolutePath + "/" + node.longName;
     return new FATFile(this.fs, absolutePath, node);
   }
-
-  /**
-   * @param {?FATNode} node
-   * @returns {?FATFile}
-   */
-  getChildOrNull(node) {
-    return node === null ? null : this.getChild(node);
-  }
 }
 
 /**
  * @param {string} path
  * @param {!FATFile} current
- * @param {function(!FATFile,string,number,!Array<string>):?FATFile} func
+ * @param {function(!FATFile,number,!Array<string>):?FATFile} func
  * @returns {?FATFile}
  */
 function traverse(path, current, func) {
-  let item = current;
+  let file = current;
   const names = path.split(/[/\\]/u).filter((it) => it !== "");
   let i = 0;
-  while (i < names.length && item !== null) {
-    const name = names[i];
-    item = func(item, name, i, names);
+  while (i < names.length && file !== null) {
+    file = func(file, i, names);
     i++;
   }
-  return item;
+  return file;
 }

@@ -2,7 +2,7 @@
 import { expect, test } from "vitest";
 import { readFileSync } from "fs";
 
-export function freedos722(mount) {
+export function testFreedos722(mount) {
   const fs = mount(new Uint8Array(readFileSync("./public/images/freedos722.img", { flag: "r" }))).getFileSystem();
 
   test("getVolumeInfo", () => {
@@ -154,32 +154,87 @@ export function freedos722(mount) {
     expect(info.freeClusters).toBe(info.totalClusters);
   });
 
-  test("mkfile", () => {
-    expect(fs.mkfile("A.TXT").isRegularFile()).toBeTruthy();
-    expect(fs.mkdir("B.TXT").isDirectory()).toBeTruthy();
-    expect(fs.mkfile("c.txt").isRegularFile()).toBeTruthy();
-    expect(fs.mkfile("c.txt").mkdir("1")).toBeNull();
-    expect(fs.mkdir("d.txt").isDirectory()).toBeTruthy();
-    expect(fs.mkfile("/+/+/+.txt").getAbsolutePath()).toBe("/+/+/+.txt");
-    expect(fs.mkfile("/+/+/.txt").getAbsolutePath()).toBe("/+/+/.txt");
-    expect(fs.mkfile("/+/🐀/🐀.txt").getAbsolutePath()).toBe("/+/🐀/🐀.txt");
-    expect(fs.mkfile("/+/🐀/гггг.txt").getAbsolutePath()).toBe("/+/🐀/гггг.txt");
-    expect(fs.mkfile("TEST1/A.TXT").isRegularFile()).toBeTruthy();
-    expect(fs.mkdir("TEST2/B.TXT").isDirectory()).toBeTruthy();
-    expect(fs.mkfile("test3/c.txt").isRegularFile()).toBeTruthy();
-    expect(fs.mkdir("test4/d.txt").isDirectory()).toBeTruthy();
-    expect(fs.mkfile("TEST1/A1.TXT").isRegularFile()).toBeTruthy();
-    expect(fs.mkdir("TEST2/B2.TXT").isDirectory()).toBeTruthy();
-    expect(fs.mkfile("test3/c3.txt").isRegularFile()).toBeTruthy();
-    expect(fs.mkdir("test4/d4.txt").isDirectory()).toBeTruthy();
-    expect(fs.mkfile("test4/d4.txt")).toBeNull();
-    expect(fs.mkfile("a/b/c/d/e.f").isRegularFile()).toBeTruthy();
-    expect(fs.mkdir("a/b/c/d/e.f")).toBeNull();
-    expect(fs.mkdir("a/*")).toBeNull();
-    expect(fs.mkfile("a/?.txt")).toBeNull();
+  test("makeFile", () => {
+    expect(fs.makeFile("A.TXT", false).isRegularFile()).toBeTruthy();
+    expect(fs.makeFile("B.TXT", true).isDirectory()).toBeTruthy();
+    expect(fs.makeFile("c.txt", false).isRegularFile()).toBeTruthy();
+    expect(fs.makeFile("c.txt", false).makeFile("1", true)).toBeNull();
+    expect(fs.makeFile("d.txt", true).isDirectory()).toBeTruthy();
+    expect(fs.makeFile("/+/+/+.txt", false).getAbsolutePath()).toBe("/+/+/+.txt");
+    expect(fs.makeFile("/+/+/.txt", false).getAbsolutePath()).toBe("/+/+/.txt");
+    expect(fs.makeFile("/+/🐀/🐀.txt", false).getAbsolutePath()).toBe("/+/🐀/🐀.txt");
+    expect(fs.makeFile("/+/🐀/гггг.txt", false).getAbsolutePath()).toBe("/+/🐀/гггг.txt");
+    expect(fs.makeFile("TEST1/A.TXT", false).isRegularFile()).toBeTruthy();
+    expect(fs.makeFile("TEST2/B.TXT", true).isDirectory()).toBeTruthy();
+    expect(fs.makeFile("test3/c.txt", false).isRegularFile()).toBeTruthy();
+    expect(fs.makeFile("test4/d.txt", true).isDirectory()).toBeTruthy();
+    expect(fs.makeFile("TEST1/A1.TXT", false).isRegularFile()).toBeTruthy();
+    expect(fs.makeFile("TEST2/B2.TXT", true).isDirectory()).toBeTruthy();
+    expect(fs.makeFile("test3/c3.txt", false).isRegularFile()).toBeTruthy();
+    expect(fs.makeFile("test4/d4.txt", true).isDirectory()).toBeTruthy();
+    expect(fs.makeFile("test4/d4.txt", false)).toBeNull();
+    expect(fs.makeFile("a/b/c/d/e.f", false).isRegularFile()).toBeTruthy();
+    expect(fs.makeFile("a/b/c/d/e.f", true)).toBeNull();
+    expect(fs.makeFile("a/*", true)).toBeNull();
+    expect(fs.makeFile("a/?.txt", false)).toBeNull();
     const name = " .+,;=[]...";
-    fs.mkdir(name);
+    fs.makeFile(name, true);
     const d = fs.getFile(name);
     expect(d.isDirectory()).toBeTruthy();
+  });
+
+  test("moveDir", () => {
+    expect(fs.moveFile("/", "/")).toBeNull();
+    expect(fs.moveFile("/", "")).toBeNull();
+    expect(fs.moveFile("", "/")).toBeNull();
+    expect(fs.moveFile("", "")).toBeNull();
+    expect(fs.moveFile("/", "/123")).toBeNull();
+
+    fs.makeFile("moveTest", true);
+    fs.makeFile("abc123", true);
+    fs.makeFile("abc123/subDir", true);
+    fs.makeFile("abc123/someFile", false);
+    expect(fs.moveFile("notExisted", "/")).toBeNull();
+    expect(fs.moveFile("notExisted/unknown", "/")).toBeNull();
+    expect(fs.moveFile("invalid*name", "/")).toBeNull();
+    expect(fs.moveFile("abc123", "/").getAbsolutePath()).toBe("/abc123");
+    expect(fs.moveFile("abc123/subDir", "/abc123").getAbsolutePath()).toBe("/abc123/subDir");
+    expect(fs.moveFile("moveTest", "invalid*name")).toBeNull();
+    expect(fs.moveFile("moveTest", "abc123/invalid*name")).toBeNull();
+    expect(fs.moveFile("moveTest", "abc123/invalid*name/invalid*name")).toBeNull();
+    expect(fs.moveFile("moveTest", "abc123/newDir/invalid*name")).toBeNull();
+    expect(fs.moveFile("moveTest", "abc123/someFile")).toBeNull();
+    expect(fs.moveFile("moveTest", "abc123").getAbsolutePath()).toBe("/abc123/moveTest");
+    expect(fs.moveFile("abc123", "moveRenamed").getAbsolutePath()).toBe("/moveRenamed");
+    expect(fs.getFile("moveTest")).toBeNull();
+    expect(fs.getFile("abc123")).toBeNull();
+    expect(fs.getFile("moveRenamed")).toBeDefined();
+
+    fs.makeFile("/d1+/d2+", true);
+    expect(fs.moveFile("/d1+", "/D1+/D2+")).toBeNull();
+    expect(fs.moveFile("/d1+/d2+", "/D1+/D3+").getAbsolutePath()).toBe("/d1+/D3+");
+
+    fs.makeFile("/1/2/3/4/5", false);
+    expect(fs.moveFile("/1/2/3", "/1").getAbsolutePath()).toBe("/1/3");
+    expect(fs.getFile("/1/2").isDirectory()).toBeTruthy();
+    expect(fs.getFile("/1/2").listFiles().length).toBe(0);
+    expect(fs.getFile("/1/3/4/5").isRegularFile()).toBeTruthy();
+  });
+
+  test("moveFile", () => {
+    fs.makeFile("moveFile", false);
+    fs.makeFile("appleDir", true);
+    fs.makeFile("appleDir/dummy", false);
+    expect(fs.moveFile("moveFile", "/").getAbsolutePath()).toBe("/moveFile");
+    expect(fs.moveFile("appleDir/dummy", "/appleDir").getAbsolutePath()).toBe("/appleDir/dummy");
+    expect(fs.moveFile("moveFile", "invalid*name")).toBeNull();
+    expect(fs.moveFile("moveFile", "appleDir/invalid*name")).toBeNull();
+    expect(fs.moveFile("moveFile", "appleDir/newDir/invalid*name")).toBeNull();
+    expect(fs.moveFile("moveFile", "appleDir").getAbsolutePath()).toBe("/appleDir/moveFile");
+    expect(fs.moveFile("appleDir/moveFile", "dummy")).toBeNull();
+    expect(fs.moveFile("appleDir/moveFile", "dummy1").getAbsolutePath()).toBe("/appleDir/dummy1");
+    expect(fs.moveFile("appleDir/dummy1", "/moveFile1").getAbsolutePath()).toBe("/moveFile1");
+    expect(fs.moveFile("moveFile1", "appleDir/dummy")).toBeNull();
+    expect(fs.moveFile("moveFile1", "appleDir/newFile").getAbsolutePath()).toBe("/appleDir/newFile");
   });
 }

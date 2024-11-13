@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { gunzipSync } from "zlib";
 import { readFileSync } from "fs";
 
-export function f2(mount) {
+export function testF2(mount) {
   const fs = mount(new Uint8Array(gunzipSync(readFileSync("./public/images/f2.img.gz", { flag: "r" })))).getFileSystem();
 
   test("f2-volumeInfo", () => {

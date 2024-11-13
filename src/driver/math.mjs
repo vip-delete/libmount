@@ -70,6 +70,18 @@ class FATMathBase {
 
   /**
    * @override
+   * @param {number} clusNum
+   */
+  writeZeros(clusNum) {
+    const off = this.getContentOffset(clusNum);
+    if (off !== null) {
+      this.device.seek(off);
+      this.device.writeArray(new Uint8Array(this.vars.SizeOfCluster));
+    }
+  }
+
+  /**
+   * @override
    * @returns {number}
    */
   getFreeClusters() {
@@ -88,9 +100,8 @@ class FATMathBase {
    * @returns {?Array<number>}
    */
   allocateClusters(count) {
-    if (count <= 0) {
-      return null;
-    }
+    assert(Number.isInteger(count));
+    assert(count > 0);
     /**
      * @type {!Array<number>}
      */
@@ -106,6 +117,7 @@ class FATMathBase {
       // no space
       return null;
     }
+    // connect all allocated clusters into a chain
     for (let j = 0; j < list.length - 1; j++) {
       this.setNextClusNum(list[j], list[j + 1]);
     }
@@ -122,7 +134,7 @@ class FATMathBase {
     assert(offset > 0 && offset % DIR_ENTRY_SIZE === 0);
     // if the offset points to the first byte of the cluster, treat it as 'overflow'
     // in this case, retrieve the next cluster from the first FAT table
-    // note: There is an exception for the root directory, which has a flat structure
+    // note: There is an exception for the root directory, which has a flat structure for FAT12 and FAT16
     if (offset % this.bpb.BytsPerSec !== 0) {
       // the offset is within the sector: no overflow
       return offset;
@@ -130,7 +142,7 @@ class FATMathBase {
     const secNum = offset / this.bpb.BytsPerSec;
     assert(Number.isInteger(secNum));
     if (secNum < this.vars.FirstDataSector) {
-      // the offset is within the root directory: no further FAT table lookups are necessary
+      // the offset is within the root directory on FAT12 or FAT16: no further FAT table lookups are necessary
       return offset;
     }
     if (secNum === this.vars.FirstDataSector) {
@@ -150,6 +162,24 @@ class FATMathBase {
     assert(Number.isInteger(clusNum));
     const nexClusNum = this.getNextClusNum(clusNum);
     return this.getContentOffset(nexClusNum);
+  }
+
+  /**
+   * @override
+   * @param {number} offset
+   * @returns {?number}
+   */
+  getClusNum(offset) {
+    assert(offset >= 0);
+    assert(Number.isInteger(offset));
+    const secNum = Math.floor(offset / this.bpb.BytsPerSec);
+    if (secNum < this.vars.FirstDataSector) {
+      // the offset is within the root directory on FAT12 or FAT16: there is no clusNum
+      return null;
+    }
+    const dataSecNum = secNum - this.vars.FirstDataSector;
+    const clusNum = MIN_CLUS_NUM + Math.floor(dataSecNum / this.bpb.SecPerClus);
+    return clusNum;
   }
 }
 

@@ -1,5 +1,3 @@
-import { Codec } from "libmount/codecs";
-
 /**
  * Declaration file for the npm module "libmount".
  *
@@ -15,35 +13,55 @@ declare module "libmount" {
   /**
    * Mount a raw image.
    *
-   * @param img raw image
-   * @param codec The codec used to decode/encode FAT short names only. Defaults to cp1252 if not specified.
+   * @param img raw image.
+   * @param codepage The codepage used to decode and encode FAT short names. Default codepage is cp1252.
    * @returns A mounted disk.
    */
-  export function mount(img: Uint8Array, codec?: Codec): LmDisk;
+  export function mount(img: Uint8Array, codepage?: Codepage): Disk;
+
+  /**
+   * Represents a codepage.
+   */
+  export interface Codepage {
+    /**
+     * Decodes an array of single-byte characters into a string.
+     */
+    decode(array: Uint8Array): string;
+
+    /**
+     * Encodes a string into an array of single-byte characters.
+     */
+    encode(text: string, defaultCharCode?: number): Uint8Array;
+
+    /**
+     * Convert a wide character code to a single-byte character code if possible.
+     */
+    encodeChar(wcCode: number): number | null;
+  }
 
   /**
    * Represents a disk.
    */
-  export interface LmDisk {
+  export interface Disk {
     /**
      * Retrieves the file system associated with the disk if detected.
      * Returning null may indicate the disk is either empty, partitioned, or lacks a known file system.
      * @returns The file system object if available.
      */
-    getFileSystem(): LmFileSystem | null;
+    getFileSystem(): FileSystem | null;
 
     /**
      * Retrieves an array of MBR partitions on the disk.
      * The array may be empty if the disk has no partitions (e.g., like a floppy disk, or empty disk).
      * @returns An array of MBR partitions.
      */
-    getPartitions(): LmPartition[];
+    getPartitions(): Partition[];
   }
 
   /**
    * Represents a file system.
    */
-  export interface LmFileSystem {
+  export interface FileSystem {
     /**
      * Retrieves the name of the file system.
      * @returns The name of the file system (e.g. FAT12, FAT16, FAT32).
@@ -52,42 +70,49 @@ declare module "libmount" {
 
     /**
      * Retrieves volume information associated with the file system.
-     * @returns Volume information structure
+     * @returns Volume information structure.
      */
-    getVolumeInfo(): LmVolumeInfo;
+    getVolumeInfo(): VolumeInfo;
 
     /**
      * Retrieves the root directory of the file system.
-     * @returns The root directory file object
+     * @returns The root directory file object.
      */
-    getRoot(): LmFile;
+    getRoot(): File;
 
     /**
      * Retrieves a file object given its absolute path.
      * @param absolutePath The absolute path to the file.
      * @returns The File located at the specified absolute path, otherwise null.
      */
-    getFile(absolutePath: string): LmFile | null;
+    getFile(absolutePath: string): File | null;
 
     /**
-     * Make an empty directory
-     * @param path The path for which directories are to be created.
-     * @returns The directory located at the specified path, otherwise null.
+     * Creates a file at the specified path, including any necessary parent directories.
+     * If the file already exists, returns the existing file.
+     *
+     * @param absolutePath Absolute path where the file should be created.
+     * @param isDirectory True to make a regular directory, False to make a regular file.
+     * @returns The file located at the specified path if successfully created or already exists, otherwise null.
      */
-    mkdir(absolutePath: string): LmFile | null;
+    makeFile(absolutePath: string, isDirectory: boolean): File | null;
 
     /**
-     * Make an empty file
-     * @param path The path for which directories are to be created.
-     * @returns The file located at the specified path, otherwise null.
+     * Moves the specified source file to the destination path, creating any necessary parent directories.
+     * - If `dest` points to an existing directory, `src` is moved into that directory.
+     * - If `dest` does not exist, `src` is renamed to `dest`.
+     * Root directory cannot be moved or renamed.
+     * @param src path of the source file to be moved or renamed.
+     * @param dest Absolute or relative to 'src' path where the file should be moved or renamed to.
+     * @returns The new file object at the destination path if successfully moved or renamed, otherwise null.
      */
-    mkfile(absolutePath: string): LmFile | null;
+    moveFile(src: string, dest: string): File | null;
   }
 
   /**
    * Represents a file or directory in a file system.
    */
-  export interface LmFile {
+  export interface File {
     /**
      * Retrieves the name of the file.
      * @returns The name of the file.
@@ -96,7 +121,7 @@ declare module "libmount" {
 
     /**
      * Retrieves the short name (8.3 format) of the file.
-     * @returns The short name of the file
+     * @returns The short name of the file.
      */
     getShortName(): string;
 
@@ -120,7 +145,7 @@ declare module "libmount" {
 
     /**
      * Retrieves the length of the file in bytes.
-     * @returns The length of the file in bytes, or unspecified if not a regular file
+     * @returns The length of the file in bytes, or unspecified if not a regular file.
      */
     length(): number;
 
@@ -147,20 +172,20 @@ declare module "libmount" {
      * @param predicate The predicate function.
      * @returns The first file matching the predicate, or null if not a directory or nothing found.
      */
-    findFirst(predicate: (file: LmFile) => boolean): LmFile | null;
+    findFirst(predicate: (file: File) => boolean): File | null;
 
     /**
      * Finds all files matching the given predicate.
      * @param predicate The predicate function.
      * @returns An array of files matching the predicate or null if not a directory.
      */
-    findAll(predicate: (file: LmFile) => boolean): LmFile[] | null;
+    findAll(predicate: (file: File) => boolean): File[] | null;
 
     /**
      * Lists all files in the directory.
      * @returns An array of files in the directory, or null if not a directory.
      */
-    listFiles(): LmFile[] | null;
+    listFiles(): File[] | null;
 
     /**
      * Retrieves the data content of the file.
@@ -175,38 +200,44 @@ declare module "libmount" {
     delete(): void;
 
     /**
-     * Retrieves a file object given its path relative to the current file
+     * Retrieves a file object given its path relative to the current file.
      * @param path The path to the file.
      * @returns The File located at the specified path, otherwise null.
      */
-    getFile(path: string): LmFile | null;
+    getFile(relativePath: string): File | null;
 
     /**
-     * Make an empty directory relative to the current file
-     * @param path The path for which directories are to be created.
-     * @returns The directory located at the specified path, otherwise null.
+     * Creates a file at the specified path, including any necessary parent directories.
+     * If the file already exists, returns the existing file.
+     *
+     * @param relativePath Relative path where the file should be created.
+     * @param isDirectory True to make a regular directory, False to make a regular file.
+     * @returns The file located at the specified path if successfully created or already exists, otherwise null.
      */
-    mkdir(path: string): LmFile | null;
+    makeFile(relativePath: string, isDirectory: boolean): File | null;
 
     /**
-     * Make an empty file relative to the current file
-     * @param path The path for which directories are to be created.
-     * @returns The file located at the specified path, otherwise null.
+     * Moves the current file to the destination path, creating any necessary parent directories.
+     * - If `dest` points to an existing directory, the current file is moved into that directory.
+     * - If `dest` does not exist, the current file is renamed to `dest`.
+     * Root directory cannot be moved or renamed.
+     * @param dest Absolute or relative to the current file path where the current file should be moved or renamed to.
+     * @returns The new file object at the destination path if successfully moved or renamed, otherwise null.
      */
-    mkfile(path: string): LmFile | null;
+    moveFile(dest: string): File | null;
   }
 
   /**
-   * Represents the disk partition information
+   * Represents the disk partition information.
    */
-  export type LmPartition = {
+  export type Partition = {
     /**
      * Flag indicating whether the partition is active.
      */
     active: boolean;
 
     /**
-     * Partition Type (e.g. 0xE for FAT)
+     * Partition Type (e.g. 0xE for FAT).
      */
     type: number;
 
@@ -224,14 +255,14 @@ declare module "libmount" {
   /**
    * Represents information about a volume.
    */
-  export type LmVolumeInfo = {
+  export type VolumeInfo = {
     /**
      * The label or name assigned to the volume.
      */
     label: string;
 
     /**
-     * OEM Name Identifier. Typically this is some indication of what system formatted the volume
+     * OEM Name Identifier. Typically this is some indication of what system formatted the volume.
      */
     oemName: string;
 

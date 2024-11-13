@@ -1,7 +1,7 @@
 {
   "name": "libmount",
   "description": "Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "license": "MIT",
   "keywords": [
     "filesystem",
@@ -21,32 +21,60 @@
     "test": "vitest run libmount.test.mjs"
   },
   "devDependencies": {
-    "@stylistic/eslint-plugin": "^2.10.1",
-    "@vitest/coverage-istanbul": "^2.1.4",
-    "eslint": "^9.14.0",
-    "eslint-plugin-jsdoc": "^50.4.3",
+    "@stylistic/eslint-plugin": "^2.11.1",
+    "@vitest/coverage-istanbul": "^2.1.5",
+    "eslint": "^9.15.0",
+    "eslint-plugin-jsdoc": "^50.5.0",
     "express": "^4.21.1",
     "google-closure-compiler": "^20240317.0.0",
     "prettier": "^3.3.3",
     "serve-static": "^1.16.2",
-    "vitest": "^2.1.4"
+    "vitest": "^2.1.5"
   },
   "type": "module",
   "exports": {
-    ".": "./dist/libmount.min.mjs",
-    "./codecs": "./dist/codec/codecs.mjs",
-    "./codecs/cp437": "./dist/codec/cp437.mjs",
-    "./codecs/cp850": "./dist/codec/cp850.mjs",
-    "./codecs/cp1251": "./dist/codec/cp1251.mjs",
-    "./codecs/cp1252": "./dist/codec/cp1252.mjs",
-    "./codecs/bestfit1251": "./dist/codec/bestfit1251.mjs",
-    "./codecs/bestfit1252": "./dist/codec/bestfit1252.mjs"
+    ".": {
+      "types": "./types/libmount.d.mts",
+      "default": "./dist/libmount.min.mjs"
+    },
+    "./codepages": {
+      "types": "./types/codepages/codepages.d.mts",
+      "default": "./dist/codepages/codepages.mjs"
+    },
+    "./codepages/cp437": {
+      "types": "./types/codepages/cp437.d.mts",
+      "default": "./dist/codepages/cp437.mjs"
+    },
+    "./codepages/cp850": {
+      "types": "./types/codepages/cp850.d.mts",
+      "default": "./dist/codepages/cp850.mjs"
+    },
+    "./codepages/cp1251": {
+      "types": "./types/codepages/cp1251.d.mts",
+      "default": "./dist/codepages/cp1251.mjs"
+    },
+    "./codepages/cp1252": {
+      "types": "./types/codepages/cp1252.d.mts",
+      "default": "./dist/codepages/cp1252.mjs"
+    },
+    "./codepages/bestfit1251": {
+      "types": "./types/codepages/bestfit1251.d.mts",
+      "default": "./dist/codepages/bestfit1251.mjs"
+    },
+    "./codepages/bestfit1252": {
+      "types": "./types/codepages/bestfit1252.d.mts",
+      "default": "./dist/codepages/bestfit1252.mjs"
+    }
   },
   "files": [
     "dist/**",
+    "types/**",
     "LICENSE",
     "README.md"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vip-delete/libmount.git"

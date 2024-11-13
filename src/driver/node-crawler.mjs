@@ -150,7 +150,7 @@ function getSimpleNode(kind, name, offset, dir) {
 /**
  * @param {!DirEntry} dir
  * @param {number} offset
- * @param {!codec.Codec} decoder
+ * @param {!lm.Codepage} decoder
  * @param {number} flag
  * @param {!Array<!DirEntryLFN>} chain
  * @returns {!FATNode}
@@ -192,7 +192,7 @@ function getNode(dir, offset, decoder, flag, chain) {
     return getInvalidNode(offset, 1);
   }
 
-  // regular dir
+  // regular dirEntry
   const shortName = dir.Name.every(isShortNameValidCode) ? sfnToStr(dir.Name, decoder) : "";
   const shortNameValid = shortName !== "" && !shortName.startsWith(" ");
   if (!shortNameValid) {
@@ -229,7 +229,7 @@ function getFirstByte(device, offset) {
 /**
  * @param {!Device} device
  * @param {!FATMath} math
- * @param {!codec.Codec} decoder
+ * @param {!lm.Codepage} decoder
  * @param  {number} offset
  * @returns {?FATNode}
  */
@@ -297,7 +297,7 @@ class FATNodeCrawler {
   /**
    * @param {!Device} device
    * @param {!FATMath} math
-   * @param {!codec.Codec} decoder
+   * @param {!lm.Codepage} decoder
    */
   constructor(device, math, decoder) {
     /**
@@ -422,7 +422,7 @@ class NodeList {
 /**
  * @param {!Device} device
  * @param {!FATMath} math
- * @param {!codec.Codec} decoder
+ * @param {!lm.Codepage} decoder
  * @returns {!NodeCrawler<!FATNode>}
  */
 export function createNodeCrawler(device, math, decoder) {

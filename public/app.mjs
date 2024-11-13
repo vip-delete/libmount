@@ -1,5 +1,5 @@
 import { mount } from "libmount";
-
+import { cp1251 as cp } from "libmount/codepages";
 const mountFile = "images/freedos722.img";
 
 function createElement(name, classes, text) {
@@ -80,7 +80,7 @@ function createRow(fs, f, name) {
   nameColumn.appendChild(link);
 
   const shortNameColumn = createElement("span", []);
-  shortNameColumn.innerText = f.getShortName();
+  shortNameColumn.innerText = f.getShortName() === name ? "" : f.getShortName();
 
   const sizeColumn = createElement("span", []);
   sizeColumn.innerText = f.isDirectory() ? "" : f.length().toLocaleString("en");
@@ -170,20 +170,43 @@ async function onLoad() {
   }
   document.title = mountFile;
   const buf = await response.arrayBuffer();
-  const fs = mount(new Uint8Array(buf)).getFileSystem();
+  const rawImage = new Uint8Array(buf);
+  const disk = mount(rawImage, cp);
+  let fs = disk.getFileSystem();
   if (!fs) {
-    info.innerText = "Mount failed";
-    return;
+    const partitions = disk.getPartitions();
+    console.log(`Found ${partitions.length} partitions`);
+    if (partitions.length > 0) {
+      console.log(`Take 1st: type=${partitions[0].type}`);
+      const partition = mount(rawImage.subarray(partitions[0].begin, partitions[0].end), cp);
+      fs = partition.getFileSystem();
+    }
+    if (!fs) {
+      info.innerText = "Mount failed";
+      return;
+    }
   }
   fileRow.addEventListener("click", () => {
     download(buf, mountFile);
   });
-  fs.mkfile("fdos/🐀/.TXT");
-  fs.mkfile("fdos/🐀/+.TXT");
-  fs.mkfile("fdos/🐀/++.TXT");
-  fs.mkfile("fdos/🐀/+++.TXT");
-  fs.mkfile("fdos .TXT");
-  fs.mkfile("fdos/🐀/🐀🐀🐀🐀🐀🐀🐀🐀🐀🐀🐀🐀.txt");
+  fs.makeFile("привет.хай", false);
+  fs.makeFile("😀", true);
+  fs.makeFile("😀/+.TXT", false);
+  fs.makeFile("😀/++.TXT", false);
+  fs.makeFile("😀/+++.TXT", false);
+  fs.makeFile("fdos .TXT", false);
+  fs.makeFile("😀/😀🐀😀🐀😀🐀😀🐀😀🐀😀🐀.txt", false);
+  fs.makeFile("😀/𝄞𝄞𝄞𝄞𝄞𝄞𝄞.txt", false);
+  fs.moveFile('hello.asm', 'fdos/hello.asm');
+  fs.moveFile('games', 'foo-games');
+  const dir = fs.makeFile("/newDir", true);
+  for (let i = 0; i < 1000; i++) {
+    dir.makeFile(("" + i).padStart(4, "0"), false);
+  }
+  fs.makeFile("--------.---", false);
+  fs.moveFile("/1/2/3", "/1")
+  fs.moveFile('hello.asm', '😀')
+  const f = fs.moveFile("games/tetris.com", "/games");
   nameRow.innerText = fs.getName();
   info.innerText = JSON.stringify(fs.getVolumeInfo());
   path.innerText = "/";

@@ -1,9 +1,8 @@
+import { cp1251, cp1252 } from "./src/codepages/codepages.mjs";
 import { expect, test } from "vitest";
 import { getChkSum, normalizeLongName, sfnToStr, strToLfn, strToSfn, strToTildeName } from "../src/name-utils.mjs";
-import { cp1251 } from "./src/codec/cp1251.mjs";
-import { cp1252 } from "./src/codec/cp1252.mjs";
 
-export function nameUtils() {
+export function testNameUtils() {
   test("getChkSum", () => {
     expect(getChkSum(cp1252.encode("HELLO   ASM"))).toBe(35);
     expect(getChkSum(cp1252.encode("SIERPI~1COM"))).toBe(174);
@@ -73,7 +72,7 @@ export function nameUtils() {
   });
 }
 
-export function nameUtils2() {
+export function testNameUtils2() {
   test("strToTildeName", () => {
     expect(strToTildeName("sierpinski.com", cp1252, new Set())).toBe("SIERPI~1.COM");
 

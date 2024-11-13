@@ -108,19 +108,20 @@ export function normalizeLongName(longName) {
 
 /**
  * @param {!Uint8Array} sfn
- * @param {!codec.Codec} decoder
+ * @param {!lm.Codepage} decoder
  * @returns {string}
  */
 export function sfnToStr(sfn, decoder) {
   assert(sfn.length === 11);
-  const basename = decoder.decode(sfn.subarray(0, 8)).trimEnd();
-  const ext = decoder.decode(sfn.subarray(8, 11)).trimEnd();
+  const str = decoder.decode(sfn);
+  const basename = str.slice(0, 8).trimEnd();
+  const ext = str.slice(8, 11).trimEnd();
   return ext === "" ? basename : basename + "." + ext;
 }
 
 /**
  * @param {string} str
- * @param {!codec.Codec} encoder
+ * @param {!lm.Codepage} encoder
  * @returns {?Uint8Array}
  */
 export function strToSfn(str, encoder) {
@@ -147,7 +148,7 @@ export function strToSfn(str, encoder) {
  * @param {!Uint8Array} sfn
  * @param {number} offset
  * @param {number} len
- * @param {!codec.Codec} encoder
+ * @param {!lm.Codepage} encoder
  * @param {string} str
  * @returns {boolean}
  */
@@ -215,7 +216,7 @@ export function strToLfn(str) {
 
 /**
  * @param {string} str
- * @param {!codec.Codec} encoder
+ * @param {!lm.Codepage} encoder
  * @param {!Set<string>} fileNames
  * @returns {?string}
  */
@@ -243,14 +244,15 @@ export function strToTildeName(str, encoder, fileNames) {
     num++;
     numLen = num.toString().length;
   }
-  // namespace overflow (very unlikely)
+  // namespace overflow (impossible)
+  assert(false);
   return null;
 }
 
 /**
  * @param {string} str
  * @param {number} max
- * @param {!codec.Codec} encoder
+ * @param {!lm.Codepage} encoder
  * @returns {string}
  */
 function toValidShortNameCharacters(str, max, encoder) {

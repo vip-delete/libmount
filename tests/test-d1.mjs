@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { gunzipSync } from "zlib";
 import { readFileSync } from "fs";
 
-export function d1(mount) {
+export function testD1(mount) {
   const img = new Uint8Array(gunzipSync(readFileSync("./public/images/disk1.img.gz", { flag: "r" })));
   const disk = mount(img);
   const partitions = disk.getPartitions();

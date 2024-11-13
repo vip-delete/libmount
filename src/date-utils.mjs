@@ -31,9 +31,9 @@ export function parseDateTime(date, time, timeTenth) {
  * @returns {number}
  */
 export function toDate(date) {
-  const yearSince1980 = date.getFullYear() - 1980;
-  const monthOfYear = date.getMonth();
-  const dayOfMonth = date.getDate();
+  const yearSince1980 = date.getUTCFullYear() - 1980;
+  const monthOfYear = date.getUTCMonth() + 1;
+  const dayOfMonth = date.getUTCDate();
   return (yearSince1980 << 9) | (monthOfYear << 5) | dayOfMonth;
 }
 
@@ -42,9 +42,9 @@ export function toDate(date) {
  * @returns {number}
  */
 export function toTime(date) {
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const seconds = date.getSeconds();
+  const hours = date.getUTCHours();
+  const minutes = date.getUTCMinutes();
+  const seconds = date.getUTCSeconds();
   return (hours << 11) | (minutes << 5) | (seconds >> 1);
 }
 
@@ -53,7 +53,7 @@ export function toTime(date) {
  * @returns {number}
  */
 export function toTimeTenth(date) {
-  const seconds = date.getSeconds();
-  const millis = date.getMilliseconds();
+  const seconds = date.getUTCSeconds();
+  const millis = date.getUTCMilliseconds();
   return Math.floor(((seconds % 2) * 1000 + Number(millis)) / 10);
 }

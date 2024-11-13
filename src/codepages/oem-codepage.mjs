@@ -1,11 +1,11 @@
 /* eslint-disable jsdoc/check-types */
 
 /**
- * @implements {codec.Codec}
+ * @implements {lm.Codepage}
  */
-export class StandardCodec {
+export class OEMCodepage {
   /**
-   * @param {!Array<number>} charmap
+   * @param {!Uint16Array} charmap
    * @param {!Object<number, number>} [wcTable]
    */
   constructor(charmap, wcTable) {
@@ -19,12 +19,13 @@ export class StandardCodec {
    * @returns {string}
    */
   decode(array) {
-    let text = "";
-    for (let i = 0; i < array.length; i++) {
-      const wcCode = this.charmap[array[i]];
-      text += String.fromCharCode(wcCode);
+    const charmap = this.charmap;
+    const len = array.length;
+    const charCodes = new Uint16Array(len);
+    for (let i = 0; i < len; i++) {
+      charCodes[i] = charmap[array[i]];
     }
-    return text;
+    return String.fromCharCode.apply(null, charCodes);
   }
 
   /**
@@ -59,13 +60,13 @@ export class StandardCodec {
 
 /**
  * @nosideeffects
- * @param {!Array<number>} charmap
+ * @param {!Uint16Array} charmap
  * @returns {!Object<number, number>}
  */
 function createWcTable(charmap) {
   const wcTable = {};
-  charmap.forEach((it, i) => {
-    wcTable[it] = i;
-  });
+  for (let i = 0; i < charmap.length; i++) {
+    wcTable[charmap[i]] = i;
+  }
   return wcTable;
 }

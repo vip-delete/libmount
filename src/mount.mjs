@@ -2,29 +2,29 @@ import { Device } from "./types.mjs";
 import { FATDriver } from "./driver/driver.mjs";
 import { FATFileSystem } from "./filesystem.mjs";
 import { RawDevice } from "./io.mjs";
-import { cp1252 } from "./codec/cp1252.mjs";
+import { cp1252 } from "./codepages/cp1252.mjs";
 import { loadPartitionTable } from "./loaders.mjs";
 
 /**
  * @param {!Uint8Array} img
- * @param {!codec.Codec} [codec]
+ * @param {!lm.Codepage} [codepage]
  * @returns {!lm.Disk}
  */
-export function mount(img, codec) {
-  return new LmDisk(new RawDevice(img), codec ?? cp1252);
+export function mount(img, codepage) {
+  return new DiskImpl(new RawDevice(img), codepage ?? cp1252);
 }
 
 /**
  * @implements {lm.Disk}
  */
-class LmDisk {
+class DiskImpl {
   /**
    * @param {!Device} device
-   * @param {!codec.Codec} codec
+   * @param {!lm.Codepage} codepage
    */
-  constructor(device, codec) {
+  constructor(device, codepage) {
     this.device = device;
-    this.codec = codec;
+    this.codepage = codepage;
   }
 
   /**
@@ -36,7 +36,7 @@ class LmDisk {
       return null;
     }
     try {
-      return new FATFileSystem(new FATDriver(this.device, this.codec));
+      return new FATFileSystem(new FATDriver(this.device, this.codepage));
     } catch {
       return null;
     }

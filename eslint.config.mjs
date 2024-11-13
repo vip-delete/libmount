@@ -20,7 +20,7 @@ export default [
         Iterator: "readonly",
         Iterable: "readonly",
         IIterableResult: "readonly",
-        codec: "readonly",
+        codepage: "readonly",
         lm: "readonly",
       },
     },

@@ -1,14 +1,9 @@
+import { bestfit1251, bestfit1252, cp1251, cp1252, cp437, cp850 } from "./src/codepages/codepages.mjs";
 import { expect, test } from "vitest";
-import { bestfit1251 } from "./src/codec/bestfit1251.mjs";
-import { bestfit1252 } from "./src/codec/bestfit1252.mjs";
-import { cp1251 } from "./src/codec/cp1251.mjs";
-import { cp1252 } from "./src/codec/cp1252.mjs";
-import { cp437 } from "./src/codec/cp437.mjs";
-import { cp850 } from "./src/codec/cp850.mjs";
 
-export function codec() {
+export function testCodepages() {
   test("basic-tests", () => {
-    const codecs = [
+    const codepages = [
       //
       cp437,
       cp850,
@@ -17,8 +12,8 @@ export function codec() {
       bestfit1251,
       bestfit1252,
     ];
-    for (let i = 0; i < codecs.length; i++) {
-      const c = codecs[i];
+    for (let i = 0; i < codepages.length; i++) {
+      const c = codepages[i];
       expect(c.decode(c.encode("HELLO   ASM"))).toBe("HELLO   ASM");
     }
   });

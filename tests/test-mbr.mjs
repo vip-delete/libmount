@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { gunzipSync } from "zlib";
 import { readFileSync } from "fs";
 
-export function mbr(mount) {
+export function testMBR(mount) {
   const partitions = mount(new Uint8Array(gunzipSync(readFileSync("./public/images/mbr.img.gz", { flag: "r" })))).getPartitions();
 
   const M = 1024 * 1024;

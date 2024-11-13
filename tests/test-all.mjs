@@ -1,25 +1,25 @@
 /* eslint-disable sort-imports */
 import { expect, test } from "vitest";
-import { freedos722 } from "./test-freedos722.mjs";
+import { testFreedos722 } from "./test-freedos722.mjs";
 
-import { codec } from "./test-codec.mjs";
-import { io } from "./test-io.mjs";
-import { dateUtils } from "./test-date-utils.mjs";
-import { nameUtils, nameUtils2 } from "./test-name-utils.mjs";
+import { testCodepages } from "./test-codepages.mjs";
+import { testIO } from "./test-io.mjs";
+import { testDateUtils } from "./test-date-utils.mjs";
+import { testNameUtils, testNameUtils2 } from "./test-name-utils.mjs";
 
-import { d1 } from "./test-d1.mjs";
-import { d2 } from "./test-d2.mjs";
-import { f1 } from "./test-f1.mjs";
-import { f2 } from "./test-f2.mjs";
-import { f3 } from "./test-f3.mjs";
-import { mbr } from "./test-mbr.mjs";
+import { testD1 } from "./test-d1.mjs";
+import { testD2 } from "./test-d2.mjs";
+import { testF1 } from "./test-f1.mjs";
+import { testF2 } from "./test-f2.mjs";
+import { testF3 } from "./test-f3.mjs";
+import { testMBR } from "./test-mbr.mjs";
 
 export function unitTests() {
-  codec();
-  io();
-  dateUtils();
-  nameUtils();
-  nameUtils2();
+  testCodepages();
+  testIO();
+  testDateUtils();
+  testNameUtils();
+  testNameUtils2();
 }
 
 export function integrationTests(mount) {
@@ -41,11 +41,11 @@ export function integrationTests(mount) {
     expect(mount(new Uint8Array(), "_".repeat(256))).toBeDefined();
   });
 
-  freedos722(mount);
-  f1(mount);
-  f2(mount);
-  f3(mount);
-  mbr(mount);
-  d1(mount);
-  d2(mount);
+  testFreedos722(mount);
+  testF1(mount);
+  testF2(mount);
+  testF3(mount);
+  testMBR(mount);
+  testD1(mount);
+  testD2(mount);
 }

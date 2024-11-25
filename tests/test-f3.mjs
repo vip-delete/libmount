@@ -7,23 +7,21 @@ export function testF3(mount) {
 
   test("f3-volumeInfo", () => {
     expect(fs.getName()).toBe("FAT16");
-    expect(fs.getVolumeInfo()).toStrictEqual({
-      //
-      "label": "HELLO",
-      "oemName": "mkfs.fat",
-      "serialNumber": 2752861672,
-      "clusterSize": 2048,
-      "totalClusters": 4981,
-      "freeClusters": 4847,
-    });
+    const v = fs.getVolume();
+    expect(v.getLabel()).toBe("HELLO");
+    expect(v.getOEMName()).toBe("mkfs.fat");
+    expect(v.getId()).toBe(2752861672);
+    expect(v.getSizeOfCluster()).toBe(2048);
+    expect(v.getCountOfClusters()).toBe(4981);
+    expect(v.getFreeClusters()).toBe(4847);
   });
 
   test("f3-getFile", () => {
-    const hello = fs.getFile("////\\doc1/\\doc2///\\doc3\\//////hello.txt");
+    const hello = fs.getRoot().getFile("////\\doc1/\\doc2///\\doc3\\//////hello.txt");
     expect(hello.length()).toBe(19);
     expect(new TextDecoder().decode(hello.getData())).toBe("HELLO WORLD OF FAT\n");
 
-    const dir = fs.getFile("L");
+    const dir = fs.getRoot().getFile("L");
     expect(dir.isDirectory()).toBeTruthy();
 
     const list = dir.listFiles();
@@ -34,9 +32,9 @@ export function testF3(mount) {
   });
 
   test("f3-delete", () => {
-    fs.getFile("/doc1").delete();
-    fs.getFile("/L").delete();
-    const info2 = fs.getVolumeInfo();
-    expect(info2.freeClusters).toBe(info2.totalClusters);
+    fs.getRoot().getFile("/doc1").delete();
+    fs.getRoot().getFile("/L").delete();
+    const info2 = fs.getVolume();
+    expect(info2.getFreeClusters()).toBe(info2.getCountOfClusters());
   });
 }

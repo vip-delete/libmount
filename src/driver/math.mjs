@@ -1,8 +1,9 @@
-import { BiosParameterBlock, Device, FATMath, FATVariables, FSInfo } from "../types.mjs";
+import { BiosParameterBlock, DIR_ENTRY_SIZE, Device, FATMath, FATVariables, FSInfo } from "../types.mjs";
+// import { Logger, assert } from "../support.mjs";
 import { assert } from "../support.mjs";
-import { loadAndValidateFSInfo } from "../loaders.mjs";
 
-export const DIR_ENTRY_SIZE = 32;
+// const log = new Logger("MATH");
+
 const MIN_CLUS_NUM = 2;
 const FREE_CLUS = 0;
 
@@ -15,8 +16,10 @@ class FATMathBase {
    * @param {!Device} device
    * @param {!BiosParameterBlock} bpb
    * @param {!FATVariables} vars
+   * @param {number} finalClus
+   * @param {number} multiplier
    */
-  constructor(device, bpb, vars) {
+  constructor(device, bpb, vars, finalClus, multiplier) {
     /**
      * @private
      * @constant
@@ -32,15 +35,55 @@ class FATMathBase {
      * @constant
      */
     this.vars = vars;
+
+    /**
+     * @type {!Array<number>}
+     */
+    const offsetFATs = new Array(bpb.NumFATs);
+    for (let i = 0; i < bpb.NumFATs; i++) {
+      offsetFATs[i] = (bpb.RsvdSecCnt + i * vars.FATSz) * bpb.BytsPerSec;
+    }
+
+    /**
+     * @private
+     * @constant
+     */
+    this.offsetFATs = offsetFATs;
+
+    /**
+     * @private
+     * @constant
+     */
+    this.finalClus = finalClus;
+
+    /**
+     * @private
+     * @constant
+     */
+    this.multiplier = multiplier;
   }
 
+  // Abstract Methods
+
+  /* eslint-disable no-unused-vars, no-empty-function */
+
   /**
-   * @override
+   * @abstract
+   * @param {number} clusNum
    * @returns {number}
    */
-  getClusterSize() {
-    return this.vars.SizeOfCluster;
-  }
+  readNextClusNum(clusNum) {}
+
+  /**
+   * @abstract
+   * @param {number} clusNum
+   * @param {number} value
+   */
+  writeNextClusNum(clusNum, value) {}
+
+  /* eslint-enable no-unused-vars, no-empty-function */
+
+  // FATMath
 
   /**
    * @override
@@ -65,7 +108,45 @@ class FATMathBase {
    * @returns {boolean}
    */
   isAllocated(clusNum) {
+    assert(Number.isInteger(clusNum));
     return clusNum >= MIN_CLUS_NUM && clusNum <= this.vars.MaxClus;
+  }
+
+  /**
+   * @override
+   * @param {number} clusNum
+   * @returns {number}
+   */
+  getNextClusNum(clusNum) {
+    const clusOffset = this.getClusOffset(clusNum);
+    this.device.seek(this.offsetFATs[0] + clusOffset);
+    const next = this.readNextClusNum(clusNum);
+    return next;
+    // let ret = -1;
+    // for (let i = 0; i < this.offsetFATs.length; i++) {
+    //   this.device.seek(this.offsetFATs[i] + clusOffset);
+    //   const nextClus = this.readNextClusNum(clusNum);
+    //   if (ret < 0) {
+    //     ret = nextClus;
+    //   } else if (ret !== nextClus) {
+    //     log.warn(`getNextClusNum: FAT is different for clusNum = ${clusNum}`);
+    //   }
+    // }
+    // return ret;
+  }
+
+  /**
+   * @override
+   * @param {number} clusNum
+   * @param {number} value
+   */
+  setNextClusNum(clusNum, value) {
+    const clusOffset = this.getClusOffset(clusNum);
+    for (let i = 0; i < this.offsetFATs.length; i++) {
+      const offset = this.offsetFATs[i] + clusOffset;
+      this.device.seek(offset);
+      this.writeNextClusNum(clusNum, value);
+    }
   }
 
   /**
@@ -73,11 +154,30 @@ class FATMathBase {
    * @param {number} clusNum
    */
   writeZeros(clusNum) {
-    const off = this.getContentOffset(clusNum);
-    if (off !== null) {
-      this.device.seek(off);
-      this.device.writeArray(new Uint8Array(this.vars.SizeOfCluster));
+    const offset = this.getContentOffset(clusNum);
+    if (offset === null) {
+      // impossible
+      assert(false);
+      return;
     }
+    this.device.seek(offset);
+    this.device.writeArray(new Uint8Array(this.vars.SizeOfCluster));
+  }
+
+  /**
+   * @override
+   * @param {number} clusNum
+   */
+  setFreeClusNum(clusNum) {
+    this.setNextClusNum(clusNum, FREE_CLUS);
+  }
+
+  /**
+   * @override
+   * @param {number} clusNum
+   */
+  setFinalClusNum(clusNum) {
+    this.setNextClusNum(clusNum, this.finalClus);
   }
 
   /**
@@ -121,7 +221,7 @@ class FATMathBase {
     for (let j = 0; j < list.length - 1; j++) {
       this.setNextClusNum(list[j], list[j + 1]);
     }
-    this.setNextClusNum(list.at(-1), this.getFinalClus());
+    this.setNextClusNum(list.at(-1), this.finalClus);
     return list;
   }
 
@@ -181,74 +281,32 @@ class FATMathBase {
     const clusNum = MIN_CLUS_NUM + Math.floor(dataSecNum / this.bpb.SecPerClus);
     return clusNum;
   }
-}
-
-/**
- * @implements {FATMath}
- */
-class FAT12Math extends FATMathBase {
-  /**
-   * @override
-   * @returns {string}
-   */
-  getFileSystemName() {
-    return "FAT12";
-  }
-
-  /**
-   * @override
-   * @param {number} clusNum
-   * @returns {number}
-   */
-  getNextClusNum(clusNum) {
-    this.device.seek(this.getFATClusPos(clusNum));
-    const val = this.device.readWord();
-    return clusNum & 1 ? val >> 4 : val & 0x0fff;
-  }
-
-  /**
-   * @override
-   * @param {number} clusNum
-   * @param {number} value
-   */
-  setNextClusNum(clusNum, value) {
-    assert(value >= 0 && value <= 0xfff);
-    this.device.seek(this.getFATClusPos(clusNum));
-    const val = this.device.readWord();
-    this.device.skip(-2);
-    this.device.writeWord(clusNum & 1 ? (value << 4) | (val & 0xf) : (val & 0xf000) | value);
-  }
-
-  /**
-   * @override
-   * @returns {number}
-   */
-  getFinalClus() {
-    return 0xfff;
-  }
 
   /**
    * @private
    * @param {number} clusNum
    * @returns {number}
    */
-  getFATClusPos(clusNum) {
+  getClusOffset(clusNum) {
     assert(this.isAllocated(clusNum));
-    const offset = clusNum + Math.floor(clusNum / 2);
-    return this.bpb.RsvdSecCnt * this.bpb.BytsPerSec + offset;
+    // FAT12: clusNum + Math.floor(clusNum / 2);
+    // FAT16: clusNum * 2
+    // FAT32: clusNum * 4
+    return Math.floor(clusNum * this.multiplier);
   }
 }
 
 /**
  * @implements {FATMath}
  */
-class FAT16Math extends FATMathBase {
+export class FAT12Math extends FATMathBase {
   /**
-   * @override
-   * @returns {string}
+   * @param {!Device} device
+   * @param {!BiosParameterBlock} bpb
+   * @param {!FATVariables} vars
    */
-  getFileSystemName() {
-    return "FAT16";
+  constructor(device, bpb, vars) {
+    super(device, bpb, vars, 0xfff, 1.5);
   }
 
   /**
@@ -256,8 +314,44 @@ class FAT16Math extends FATMathBase {
    * @param {number} clusNum
    * @returns {number}
    */
-  getNextClusNum(clusNum) {
-    this.device.seek(this.getFATClusPos(clusNum));
+  readNextClusNum(clusNum) {
+    const val = this.device.readWord();
+    return clusNum & 1 ? val >> 4 : val & this.finalClus;
+  }
+
+  /**
+   * @override
+   * @param {number} clusNum
+   * @param {number} nextClusNum
+   */
+  writeNextClusNum(clusNum, nextClusNum) {
+    assert(nextClusNum >= 0 && nextClusNum <= this.finalClus);
+    const val = this.device.readWord();
+    this.device.skip(-2);
+    this.device.writeWord(clusNum & 1 ? (nextClusNum << 4) | (val & 0xf) : (val & 0xf000) | nextClusNum);
+  }
+}
+
+/**
+ * @implements {FATMath}
+ */
+export class FAT16Math extends FATMathBase {
+  /**
+   * @param {!Device} device
+   * @param {!BiosParameterBlock} bpb
+   * @param {!FATVariables} vars
+   */
+  constructor(device, bpb, vars) {
+    super(device, bpb, vars, 0xffff, 2);
+  }
+
+  /**
+   * @override
+   * @param {number} clusNum
+   * @returns {number}
+   */
+  // eslint-disable-next-line no-unused-vars
+  readNextClusNum(clusNum) {
     return this.device.readWord();
   }
 
@@ -266,36 +360,16 @@ class FAT16Math extends FATMathBase {
    * @param {number} clusNum
    * @param {number} value
    */
-  setNextClusNum(clusNum, value) {
-    assert(value >= 0 && value <= 0xffff);
-    this.device.seek(this.getFATClusPos(clusNum));
+  writeNextClusNum(clusNum, value) {
+    assert(value >= 0 && value <= this.finalClus);
     this.device.writeWord(value);
-  }
-
-  /**
-   * @override
-   * @returns {number}
-   */
-  getFinalClus() {
-    return 0xffff;
-  }
-
-  /**
-   * @private
-   * @param {number} clusNum
-   * @returns {number}
-   */
-  getFATClusPos(clusNum) {
-    assert(this.isAllocated(clusNum));
-    const offset = clusNum * 2;
-    return this.bpb.RsvdSecCnt * this.bpb.BytsPerSec + offset;
   }
 }
 
 /**
  * @implements {FATMath}
  */
-class FAT32Math extends FATMathBase {
+export class FAT32Math extends FATMathBase {
   /**
    * @param {!Device} device
    * @param {!BiosParameterBlock} bpb
@@ -303,7 +377,7 @@ class FAT32Math extends FATMathBase {
    * @param {!FSInfo} fsi
    */
   constructor(device, bpb, vars, fsi) {
-    super(device, bpb, vars);
+    super(device, bpb, vars, 0x0fffffff, 4);
     /**
     //  * @private
      * @constant
@@ -313,20 +387,12 @@ class FAT32Math extends FATMathBase {
 
   /**
    * @override
-   * @returns {string}
-   */
-  getFileSystemName() {
-    return "FAT32";
-  }
-
-  /**
-   * @override
    * @param {number} clusNum
    * @returns {number}
    */
-  getNextClusNum(clusNum) {
-    this.device.seek(this.getFATClusPos(clusNum));
-    return this.device.readDoubleWord() & 0x0fffffff;
+  // eslint-disable-next-line no-unused-vars
+  readNextClusNum(clusNum) {
+    return this.device.readDoubleWord() & this.finalClus;
   }
 
   /**
@@ -334,50 +400,10 @@ class FAT32Math extends FATMathBase {
    * @param {number} clusNum
    * @param {number} value
    */
-  setNextClusNum(clusNum, value) {
-    assert(value >= 0 && value <= 0x0fffffff);
-    this.device.seek(this.getFATClusPos(clusNum));
+  writeNextClusNum(clusNum, value) {
+    assert(value >= 0 && value <= this.finalClus);
     const val = this.device.readDoubleWord();
     this.device.skip(-4);
     this.device.writeDoubleWord((val & 0xf0000000) | value);
   }
-
-  /**
-   * @override
-   * @returns {number}
-   */
-  getFinalClus() {
-    return 0x0fffffff;
-  }
-
-  /**
-   * @private
-   * @param {number} clusNum
-   * @returns {number}
-   */
-  getFATClusPos(clusNum) {
-    assert(this.isAllocated(clusNum));
-    const offset = clusNum * 4;
-    return this.bpb.RsvdSecCnt * this.bpb.BytsPerSec + offset;
-  }
-}
-
-/**
- * @param {!Device} device
- * @param {!BiosParameterBlock} bpb
- * @param {!FATVariables} vars
- * @returns {!FATMath}
- */
-export function createFATMath(device, bpb, vars) {
-  if (vars.CountOfClusters < 4085) {
-    // A FAT12 volume cannot contain more than 4084 clusters.
-    return new FAT12Math(device, bpb, vars);
-  }
-  if (vars.CountOfClusters < 65525) {
-    // A FAT16 volume cannot contain less than 4085 clusters or more than 65,524 clusters.
-    return new FAT16Math(device, bpb, vars);
-  }
-  device.seek(bpb.BytsPerSec);
-  const fsi = loadAndValidateFSInfo(device);
-  return new FAT32Math(device, bpb, vars, fsi);
 }

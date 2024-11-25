@@ -3,7 +3,7 @@
 /**
  * @implements {lm.Codepage}
  */
-export class OEMCodepage {
+export class Codepage {
   /**
    * @param {!Uint16Array} charmap
    * @param {!Object<number, number>} [wcTable]

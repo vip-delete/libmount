@@ -13,11 +13,26 @@ declare module "libmount" {
   /**
    * Mount a raw image.
    *
-   * @param img raw image.
-   * @param codepage The codepage used to decode and encode FAT short names. Default codepage is cp1252.
+   * @param img A Raw image.
+   * @param options Mount options.
    * @returns A mounted disk.
    */
-  export function mount(img: Uint8Array, codepage?: Codepage): Disk;
+  export function mount(img: Uint8Array, options?: MountOptions): Disk;
+
+  /**
+   * Represents the mount options.
+   */
+  export type MountOptions = {
+    /**
+     * The codepage used to decode and encode FAT short names. Default codepage is cp1252.
+     */
+    codepage?: Codepage;
+
+    /**
+     * Disk partition to mount.
+     */
+    partition?: Partition;
+  };
 
   /**
    * Represents a codepage.
@@ -70,43 +85,15 @@ declare module "libmount" {
 
     /**
      * Retrieves volume information associated with the file system.
-     * @returns Volume information structure.
+     * @returns Volume.
      */
-    getVolumeInfo(): VolumeInfo;
+    getVolume(): Volume;
 
     /**
      * Retrieves the root directory of the file system.
      * @returns The root directory file object.
      */
     getRoot(): File;
-
-    /**
-     * Retrieves a file object given its absolute path.
-     * @param absolutePath The absolute path to the file.
-     * @returns The File located at the specified absolute path, otherwise null.
-     */
-    getFile(absolutePath: string): File | null;
-
-    /**
-     * Creates a file at the specified path, including any necessary parent directories.
-     * If the file already exists, returns the existing file.
-     *
-     * @param absolutePath Absolute path where the file should be created.
-     * @param isDirectory True to make a regular directory, False to make a regular file.
-     * @returns The file located at the specified path if successfully created or already exists, otherwise null.
-     */
-    makeFile(absolutePath: string, isDirectory: boolean): File | null;
-
-    /**
-     * Moves the specified source file to the destination path, creating any necessary parent directories.
-     * - If `dest` points to an existing directory, `src` is moved into that directory.
-     * - If `dest` does not exist, `src` is renamed to `dest`.
-     * Root directory cannot be moved or renamed.
-     * @param src path of the source file to be moved or renamed.
-     * @param dest Absolute or relative to 'src' path where the file should be moved or renamed to.
-     * @returns The new file object at the destination path if successfully moved or renamed, otherwise null.
-     */
-    moveFile(src: string, dest: string): File | null;
   }
 
   /**
@@ -144,28 +131,34 @@ declare module "libmount" {
     isDirectory(): boolean;
 
     /**
-     * Retrieves the length of the file in bytes.
-     * @returns The length of the file in bytes, or unspecified if not a regular file.
+     * Retrieves the size of the file or the total size of all files in a directory.
+     * @returns The file or directory size in bytes.
      */
     length(): number;
+
+    /**
+     * Retrieves the size on disk of the current file object.
+     * @returns The file object size in bytes.
+     */
+    getSizeOnDisk(): number;
 
     /**
      * Retrieves the last modified timestamp of the file.
      * @returns The last modified timestamp of the file.
      */
-    lastModified(): Date;
+    lastModified(): Date | null;
 
     /**
      * Retrieves the creation timestamp of the file.
      * @returns The creation timestamp of the file.
      */
-    creationTime(): Date;
+    creationTime(): Date | null;
 
     /**
      * Retrieves the last access timestamp of the file.
      * @returns The last access timestamp of the file.
      */
-    lastAccessTime(): Date;
+    lastAccessTime(): Date | null;
 
     /**
      * Finds the first file matching the given predicate.
@@ -194,8 +187,15 @@ declare module "libmount" {
     getData(): Uint8Array | null;
 
     /**
+     * Set the content to the current file.
+     * @param data File content.
+     * @returns This file if success, null otherwise.
+     */
+    setData(data: Uint8Array): File | null;
+
+    /**
      * Deletes the file or directory recursive. After deletion, this file becomes unusable.
-     * The root directory cannot be deleted.
+     * Deleting the root directory deletes all files recursive.
      */
     delete(): void;
 
@@ -211,10 +211,18 @@ declare module "libmount" {
      * If the file already exists, returns the existing file.
      *
      * @param relativePath Relative path where the file should be created.
-     * @param isDirectory True to make a regular directory, False to make a regular file.
      * @returns The file located at the specified path if successfully created or already exists, otherwise null.
      */
-    makeFile(relativePath: string, isDirectory: boolean): File | null;
+    makeFile(relativePath: string): File | null;
+
+    /**
+     * Creates a directory at the specified path, including any necessary parent directories.
+     * If the directory already exists, returns the existing directory.
+     *
+     * @param relativePath Relative path where the directory should be created.
+     * @returns The file located at the specified path if successfully created or already exists, otherwise null.
+     */
+    makeDir(relativePath: string): File | null;
 
     /**
      * Moves the current file to the destination path, creating any necessary parent directories.
@@ -224,7 +232,40 @@ declare module "libmount" {
      * @param dest Absolute or relative to the current file path where the current file should be moved or renamed to.
      * @returns The new file object at the destination path if successfully moved or renamed, otherwise null.
      */
-    moveFile(dest: string): File | null;
+    moveTo(dest: string): File | null;
+  }
+
+  /**
+   * Represents a file system volume
+   */
+  export interface Volume {
+    /**
+     * The volume label.
+     */
+    getLabel(): string | null;
+    setLabel(label: string | null): void;
+    /**
+     * OEM Name Identifier. Typically this is some indication of what system formatted the volume.
+     */
+    getOEMName(): string | null;
+    setOEMName(oemName: string | null): void;
+    /**
+     * The volume serial number.
+     */
+    getId(): number;
+    setId(id: number): void;
+    /**
+     * The size of a cluster on the volume in bytes.
+     */
+    getSizeOfCluster(): number;
+    /**
+     * Total count of clusters on the volume.
+     */
+    getCountOfClusters(): number;
+    /**
+     * Number of free clusters available for allocation.
+     */
+    getFreeClusters(): number;
   }
 
   /**
@@ -250,40 +291,5 @@ declare module "libmount" {
      * Offset (in bytes) from the beginning of the disk to the end of the partition.
      */
     end: number;
-  };
-
-  /**
-   * Represents information about a volume.
-   */
-  export type VolumeInfo = {
-    /**
-     * The label or name assigned to the volume.
-     */
-    label: string;
-
-    /**
-     * OEM Name Identifier. Typically this is some indication of what system formatted the volume.
-     */
-    oemName: string;
-
-    /**
-     * The volume serial number.
-     */
-    serialNumber: number;
-
-    /**
-     * The size of a cluster on the volume in bytes.
-     */
-    clusterSize: number;
-
-    /**
-     * Total number of clusters on the volume.
-     */
-    totalClusters: number;
-
-    /**
-     * Number of free clusters available for allocation.
-     */
-    freeClusters: number;
   };
 }

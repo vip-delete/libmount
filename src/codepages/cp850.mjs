@@ -1,7 +1,7 @@
 /**
  * https://www.unicode.org/Public/MAPPINGS/VENDORS/MICSFT/PC/CP850.TXT
  */
-import { OEMCodepage } from "./oem-codepage.mjs";
+import { Codepage } from "./codepage.mjs";
 
 const charmapCP850 = new Uint16Array([
   0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000a, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f,
@@ -22,4 +22,4 @@ const charmapCP850 = new Uint16Array([
   0x00ad, 0x00b1, 0x2017, 0x00be, 0x00b6, 0x00a7, 0x00f7, 0x00b8, 0x00b0, 0x00a8, 0x00b7, 0x00b9, 0x00b3, 0x00b2, 0x25a0, 0x00a0,
 ]);
 
-export const cp850 = new OEMCodepage(charmapCP850);
+export const cp850 = new Codepage(charmapCP850);

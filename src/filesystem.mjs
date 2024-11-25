@@ -1,14 +1,13 @@
+import { FATDriver, FATNode } from "./types.mjs";
+import { normalizeLongName, split } from "./name-utils.mjs";
 import { parseDate, parseDateTime } from "./date-utils.mjs";
-import { FATNode } from "./driver/node.mjs";
-import { FileSystemDriver } from "./types.mjs";
-import { normalizeLongName } from "./name-utils.mjs";
 
 /**
  * @implements {lm.FileSystem}
  */
 export class FATFileSystem {
   /**
-   * @param {!FileSystemDriver<!FATNode>} driver
+   * @param {!FATDriver} driver
    */
   constructor(driver) {
     /**
@@ -28,10 +27,10 @@ export class FATFileSystem {
 
   /**
    * @override
-   * @returns {!lm.VolumeInfo}
+   * @returns {!lm.Volume}
    */
-  getVolumeInfo() {
-    return this.driver.getVolumeInfo();
+  getVolume() {
+    return this.driver.getVolume();
   }
 
   /**
@@ -40,36 +39,6 @@ export class FATFileSystem {
    */
   getRoot() {
     return new FATFile(this, "/", this.driver.getRoot());
-  }
-
-  /**
-   * @override
-   * @param {string} absolutePath
-   * @returns {?FATFile}
-   */
-  getFile(absolutePath) {
-    return this.getRoot().getFile(absolutePath);
-  }
-
-  /**
-   * @override
-   * @param {string} absolutePath
-   * @param {boolean} isDirectory
-   * @returns {?FATFile}
-   */
-  makeFile(absolutePath, isDirectory) {
-    return this.getRoot().makeFile(absolutePath, isDirectory);
-  }
-
-  /**
-   * @override
-   * @param {string} src
-   * @param {string} dest
-   * @returns {?FATFile}
-   */
-  moveFile(src, dest) {
-    const file = this.getFile(src);
-    return file === null ? null : file.moveFile(dest);
   }
 }
 
@@ -105,7 +74,7 @@ class FATFile {
    * @returns {string}
    */
   getName() {
-    return this.node.longName;
+    return this.node.getLongName();
   }
 
   /**
@@ -113,7 +82,7 @@ class FATFile {
    * @returns {string}
    */
   getShortName() {
-    return this.node.shortName;
+    return this.node.getShortName();
   }
 
   /**
@@ -145,37 +114,53 @@ class FATFile {
    * @returns {number}
    */
   length() {
-    return this.node.dir.FileSize;
+    if (this.isDirectory()) {
+      let length = 0;
+      const ls = this.listFiles();
+      for (let i = 0; i < ls.length; i++) {
+        length += ls[i].length();
+      }
+      return length;
+    }
+    return this.node.getDirEntry().FileSize;
+  }
+
+  /**
+   * @override
+   * @returns {number}
+   */
+  getSizeOnDisk() {
+    return this.fs.driver.getSizeOnDisk(this.node);
   }
 
   /**
    * yyyy.MM.dd HH:mm:ss
    * @override
-   * @returns {!Date}
+   * @returns {?Date}
    */
   lastModified() {
-    const dir = this.node.dir;
-    return new Date(parseDateTime(dir.WrtDate, dir.WrtTime, 0));
+    const dir = this.node.getDirEntry();
+    return parseDateTime(dir.WrtDate, dir.WrtTime, 0);
   }
 
   /**
    * yyyy.MM.dd HH:mm:ss
    * @override
-   * @returns {!Date}
+   * @returns {?Date}
    */
   creationTime() {
-    const dir = this.node.dir;
-    return new Date(parseDateTime(dir.CrtDate, dir.CrtTime, dir.CrtTimeTenth));
+    const dir = this.node.getDirEntry();
+    return parseDateTime(dir.CrtDate, dir.CrtTime, dir.CrtTimeTenth);
   }
 
   /**
    * yyyy.MM.dd
    * @override
-   * @returns {!Date}
+   * @returns {?Date}
    */
   lastAccessTime() {
-    const dir = this.node.dir;
-    return new Date(parseDate(dir.LstAccDate));
+    const dir = this.node.getDirEntry();
+    return parseDate(dir.LstAccDate);
   }
 
   /**
@@ -238,6 +223,16 @@ class FATFile {
 
   /**
    * @override
+   * @param {!Uint8Array} data
+   * @returns {?FATFile}
+   */
+  setData(data) {
+    const node = this.fs.driver.writeNode(this.node, data);
+    return node === null ? null : this;
+  }
+
+  /**
+   * @override
    */
   delete() {
     this.fs.driver.deleteNode(this.node);
@@ -255,14 +250,19 @@ class FATFile {
   /**
    * @override
    * @param {string} relativePath
-   * @param {boolean} isDirectory
    * @returns {?FATFile}
    */
-  makeFile(relativePath, isDirectory) {
-    return traverse(relativePath, this, (file, i, names) => {
-      const node = this.fs.driver.makeNode(file.node, names[i], isDirectory || i < names.length - 1);
-      return node === null ? null : file.getChild(node);
-    });
+  makeFile(relativePath) {
+    return this.makeFileOrDirectory(relativePath, false);
+  }
+
+  /**
+   * @override
+   * @param {string} relativePath
+   * @returns {?FATFile}
+   */
+  makeDir(relativePath) {
+    return this.makeFileOrDirectory(relativePath, true);
   }
 
   /**
@@ -270,23 +270,26 @@ class FATFile {
    * @param {string} dest
    * @returns {?FATFile}
    */
-  moveFile(dest) {
+  moveTo(dest) {
     if (this.node.isRoot()) {
       return null;
     }
     if (!dest.startsWith("/") && !dest.startsWith("\\")) {
-      dest = this.absolutePath.substring(0, this.absolutePath.length - this.node.longName.length) + dest;
+      dest = this.absolutePath.substring(0, this.absolutePath.length - this.node.getLongName().length) + dest;
     }
     if (this.contains(dest)) {
       return null;
     }
-    const destFile = this.fs.getFile(dest);
+    const destFile = this.fs.getRoot().getFile(dest);
     if (destFile !== null && destFile.node.isRegularFile()) {
       // dest is an existing regular file
       return null;
     }
     const isDirectory = this.node.isRegularDir();
-    const target = destFile === null ? this.fs.makeFile(dest, isDirectory) : destFile.makeFile(this.node.longName, isDirectory);
+    const target =
+      destFile === null //
+        ? this.fs.getRoot().makeFileOrDirectory(dest, isDirectory)
+        : destFile.makeFileOrDirectory(this.node.getLongName(), isDirectory);
     if (target === null) {
       return null;
     }
@@ -295,6 +298,20 @@ class FATFile {
   }
 
   /**
+   * @private
+   * @param {string} relativePath
+   * @param {boolean} isDirectory
+   * @returns {?FATFile}
+   */
+  makeFileOrDirectory(relativePath, isDirectory) {
+    return traverse(relativePath, this, (file, i, names) => {
+      const node = this.fs.driver.makeNode(file.node, names[i], isDirectory || i < names.length - 1);
+      return node === null ? null : file.getChild(node);
+    });
+  }
+
+  /**
+   * @private
    * @param {string} absolutePath
    * @returns {boolean}
    */
@@ -302,8 +319,8 @@ class FATFile {
     if (this.isRegularFile()) {
       return false;
     }
-    const srcNames = this.absolutePath.split(/[/\\]/u).filter((it) => it !== "");
-    const destNames = absolutePath.split(/[/\\]/u).filter((it) => it !== "");
+    const srcNames = split(this.absolutePath);
+    const destNames = split(absolutePath);
     let i = this.fs.getRoot();
     let j = this.fs.getRoot();
     let k = 0;
@@ -321,7 +338,7 @@ class FATFile {
       if (destChild === null) {
         return false;
       }
-      if (srcChild.node.firstDirOffset !== destChild.node.firstDirOffset) {
+      if (srcChild.node.getFirstDirOffset() !== destChild.node.getFirstDirOffset()) {
         return false;
       }
       i = srcChild;
@@ -331,20 +348,22 @@ class FATFile {
   }
 
   /**
+   * @private
    * @param {string} name
    * @returns {boolean}
    */
   match(name) {
     const upperCaseName = normalizeLongName(name).toUpperCase();
-    return upperCaseName === this.node.longName.toUpperCase() || upperCaseName === this.node.shortName.toUpperCase();
+    return upperCaseName === this.node.getLongName().toUpperCase() || upperCaseName === this.node.getShortName().toUpperCase();
   }
 
   /**
+   * @private
    * @param {!FATNode} node
    * @returns {!FATFile}
    */
   getChild(node) {
-    const absolutePath = this.node.isRoot() ? "/" + node.longName : this.absolutePath + "/" + node.longName;
+    const absolutePath = this.node.isRoot() ? "/" + node.getLongName() : this.absolutePath + "/" + node.getLongName();
     return new FATFile(this.fs, absolutePath, node);
   }
 }
@@ -357,7 +376,7 @@ class FATFile {
  */
 function traverse(path, current, func) {
   let file = current;
-  const names = path.split(/[/\\]/u).filter((it) => it !== "");
+  const names = split(path);
   let i = 0;
   while (i < names.length && file !== null) {
     file = func(file, i, names);

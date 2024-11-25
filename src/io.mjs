@@ -9,7 +9,14 @@ export class RawDevice {
    * @param {!Uint8Array} img
    */
   constructor(img) {
+    /**
+     * @private
+     * @constant
+     */
     this.img = img;
+    /**
+     * @private
+     */
     this.pos = 0;
   }
 
@@ -56,7 +63,8 @@ export class RawDevice {
    */
   readByte() {
     assert(this.pos + 1 <= this.length());
-    return this.img[this.pos++];
+    const r = this.img[this.pos++];
+    return r;
   }
 
   /**
@@ -65,7 +73,8 @@ export class RawDevice {
    */
   readWord() {
     assert(this.pos + 2 <= this.length());
-    return this.img[this.pos++] | (this.img[this.pos++] << 8);
+    const r = this.img[this.pos++] | (this.img[this.pos++] << 8);
+    return r;
   }
 
   /**
@@ -74,7 +83,8 @@ export class RawDevice {
    */
   readDoubleWord() {
     assert(this.pos + 4 <= this.length());
-    return (this.img[this.pos++] | (this.img[this.pos++] << 8) | (this.img[this.pos++] << 16) | (this.img[this.pos++] << 24)) >>> 0;
+    const r = (this.img[this.pos++] | (this.img[this.pos++] << 8) | (this.img[this.pos++] << 16) | (this.img[this.pos++] << 24)) >>> 0;
+    return r;
   }
 
   /**

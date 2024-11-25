@@ -1,7 +1,7 @@
 {
   "name": "libmount",
   "description": "Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "keywords": [
     "filesystem",
@@ -38,8 +38,8 @@
       "default": "./dist/libmount.min.mjs"
     },
     "./codepages": {
-      "types": "./types/codepages/codepages.d.mts",
-      "default": "./dist/codepages/codepages.mjs"
+      "types": "./types/codepages/index.d.mts",
+      "default": "./dist/codepages/index.mjs"
     },
     "./codepages/cp437": {
       "types": "./types/codepages/cp437.d.mts",
@@ -64,6 +64,10 @@
     "./codepages/bestfit1252": {
       "types": "./types/codepages/bestfit1252.d.mts",
       "default": "./dist/codepages/bestfit1252.mjs"
+    },
+    "./codepages/koi8r": {
+      "types": "./types/codepages/koi8r.d.mts",
+      "default": "./dist/codepages/koi8r.mjs"
     }
   },
   "files": [

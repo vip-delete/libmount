@@ -82,7 +82,8 @@ a {
 }
 
 .row > span:nth-child(6) {
-  width: var(--column-width-datetime);
+  width: var(--column-width-size);
+  text-align: right;
 }
 
 .row > span:nth-child(7) {
@@ -90,6 +91,10 @@ a {
 }
 
 .row > span:nth-child(8) {
+  width: var(--column-width-datetime);
+}
+
+.row > span:nth-child(9) {
   width: var(--column-width-date);
 }
 
@@ -99,6 +104,10 @@ a {
   display: inline-block;
 }
 
+.fs-name {
+  font-weight: bold;
+}
+
 .name {
   text-overflow: ellipsis;
   overflow: hidden;
@@ -106,7 +115,11 @@ a {
   vertical-align: middle;
 }
 
-.name:hover {
+.name > span {
+  padding-left: 0;
+}
+
+.name > span:hover {
   cursor: pointer;
   text-decoration: underline;
 }

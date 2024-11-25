@@ -14,30 +14,28 @@ export function testD1(mount) {
 
   test("d1-volumeInfo", () => {
     expect(fs.getName()).toBe("FAT16");
-    expect(fs.getVolumeInfo()).toStrictEqual({
-      //
-      "label": "P-FAT16",
-      "oemName": "mkfs.fat",
-      "serialNumber": 0xa7100a92,
-      "clusterSize": 2048,
-      "totalClusters": 65399,
-      "freeClusters": 32627,
-    });
+    const v = fs.getVolume();
+    expect(v.getLabel()).toBe("P-FAT16");
+    expect(v.getOEMName()).toBe("mkfs.fat");
+    expect(v.getId()).toBe(0xa7100a92);
+    expect(v.getSizeOfCluster()).toBe(2048);
+    expect(v.getCountOfClusters()).toBe(65399);
+    expect(v.getFreeClusters()).toBe(32627);
   });
 
   test("d1-getFile", () => {
-    expect(fs.getFile("test").isDirectory()).toBeTruthy();
-    expect(fs.getFile("64mb.dat").length()).toBe(64 * 1024 * 1024);
-    expect(fs.getFile("empty.dat").length()).toBe(0);
-    expect(new TextDecoder().decode(fs.getFile("readme.txt").getData()).substring(0, 25)).toBe("This is a FAT16 patition.");
-    expect(fs.getFile("test/test.dat").length()).toBe(3500);
+    expect(fs.getRoot().getFile("test").isDirectory()).toBeTruthy();
+    expect(fs.getRoot().getFile("64mb.dat").length()).toBe(64 * 1024 * 1024);
+    expect(fs.getRoot().getFile("empty.dat").length()).toBe(0);
+    expect(new TextDecoder().decode(fs.getRoot().getFile("readme.txt").getData()).substring(0, 25)).toBe("This is a FAT16 patition.");
+    expect(fs.getRoot().getFile("test/test.dat").length()).toBe(3500);
   });
 
   test("d1-delete", () => {
     fs.getRoot()
       .listFiles()
       .forEach((it) => it.delete());
-    const info = fs.getVolumeInfo();
-    expect(info.freeClusters).toBe(info.totalClusters);
+    const v = fs.getVolume();
+    expect(v.getFreeClusters()).toBe(v.getCountOfClusters());
   });
 }

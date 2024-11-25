@@ -7,27 +7,26 @@ export function testF2(mount) {
 
   test("f2-volumeInfo", () => {
     expect(fs.getName()).toBe("FAT12");
-    expect(fs.getVolumeInfo()).toStrictEqual({
-      //
-      "label": "NO NAME",
-      "oemName": "mkfs.fat",
-      "serialNumber": 215907190,
-      "clusterSize": 32768,
-      "totalClusters": 248,
-      "freeClusters": 247,
-    });
+    const v = fs.getVolume();
+    expect(v.getLabel()).toBe("NO NAME");
+    expect(v.getOEMName()).toBe("mkfs.fat");
+    expect(v.getId()).toBe(215907190);
+    expect(v.getSizeOfCluster()).toBe(32768);
+    expect(v.getCountOfClusters()).toBe(248);
+    expect(v.getFreeClusters()).toBe(247);
   });
 
   test("f2-delete", () => {
-    const f = fs.getFile("/Hello.txt");
+    const f = fs.getRoot().getFile("/Hello.txt");
     expect(f.length()).toBe(44);
     expect(new TextDecoder().decode(f.getData())).toBe("THIS IS A BIG STEP IN MY LIFE\n*************\n");
 
-    const info = fs.getVolumeInfo();
+    const v = fs.getVolume();
+    const before = v.getFreeClusters();
     f.delete();
-    const info2 = fs.getVolumeInfo();
+    const after = v.getFreeClusters();
 
-    expect(info2.freeClusters - info.freeClusters).toBe(Math.ceil(44 / info.clusterSize));
-    expect(info2.freeClusters).toBe(info2.totalClusters);
+    expect(after - before).toBe(Math.ceil(44 / v.getSizeOfCluster()));
+    expect(after).toBe(v.getCountOfClusters());
   });
 }

@@ -9,10 +9,10 @@
 const lm = {
   /**
    * @param {!Uint8Array} img
-   * @param {!lm.Codepage} [codepage]
+   * @param {!lm.MountOptions} [options]
    * @returns {!lm.Disk}
    */
-  mount(img, codepage) {},
+  mount(img, options) {},
 
   /**
    * Encoding and decoding single-byte character sets (e.g. cp1251, cp1252).
@@ -67,34 +67,14 @@ const lm = {
     getName() {}
 
     /**
-     * @returns {!lm.VolumeInfo}
+     * @returns {!lm.Volume}
      */
-    getVolumeInfo() {}
+    getVolume() {}
 
     /**
      * @returns {!lm.File}
      */
     getRoot() {}
-
-    /**
-     * @param {string} absolutePath
-     * @returns {?lm.File}
-     */
-    getFile(absolutePath) {}
-
-    /**
-     * @param {string} absolutePath
-     * @param {boolean} isDirectory
-     * @returns {?lm.File}
-     */
-    makeFile(absolutePath, isDirectory) {}
-
-    /**
-     * @param {string} src
-     * @param {string} dest
-     * @returns {?lm.File}
-     */
-    moveFile(src, dest) {}
   },
 
   /**
@@ -132,20 +112,25 @@ const lm = {
     length() {}
 
     /**
+     * @returns {number}
+     */
+    getSizeOnDisk() {}
+
+    /**
      * yyyy.MM.dd HH:mm:ss
-     * @returns {!Date}
+     * @returns {?Date}
      */
     lastModified() {}
 
     /**
      * yyyy.MM.dd HH:mm:ss
-     * @returns {!Date}
+     * @returns {?Date}
      */
     creationTime() {}
 
     /**
      * yyyy.MM.dd
-     * @returns {!Date}
+     * @returns {?Date}
      */
     lastAccessTime() {}
 
@@ -172,6 +157,12 @@ const lm = {
     getData() {}
 
     /**
+     * @param {!Uint8Array} data
+     * @returns {?lm.File}
+     */
+    setData(data) {}
+
+    /**
      * @returns {undefined}
      */
     delete() {}
@@ -184,18 +175,84 @@ const lm = {
 
     /**
      * @param {string} relativePath
-     * @param {boolean} isDirectory
      * @returns {?lm.File}
      */
-    makeFile(relativePath, isDirectory) {}
+    makeFile(relativePath) {}
+
+    /**
+     * @param {string} relativePath
+     * @returns {?lm.File}
+     */
+    makeDir(relativePath) {}
 
     /**
      * @param {string} dest
      * @returns {?lm.File}
      */
-    moveFile(dest) {}
+    moveTo(dest) {}
+  },
+
+  /**
+   * @interface
+   */
+  Volume: class {
+    /**
+     * @returns {?string}
+     */
+    getLabel() {}
+
+    /**
+     * @param {?string} label
+     * @returns {undefined}
+     */
+    setLabel(label) {}
+
+    /**
+     * @returns {?string}
+     */
+    getOEMName() {}
+
+    /**
+     * @param {?string} oemName
+     * @returns {undefined}
+     */
+    setOEMName(oemName) {}
+
+    /**
+     * @returns {number}
+     */
+    getId() {}
+
+    /**
+     * @param {number} id
+     * @returns {undefined}
+     */
+    setId(id) {}
+
+    /**
+     * @returns {number}
+     */
+    getSizeOfCluster() {}
+
+    /**
+     * @returns {number}
+     */
+    getCountOfClusters() {}
+
+    /**
+     * @returns {number}
+     */
+    getFreeClusters() {}
   },
 };
+
+/**
+ * @typedef {{
+ *            codepage: lm.Codepage,
+ *            partition: lm.Partition,
+ *          }}
+ */
+lm.MountOptions;
 
 /**
  * @typedef {{
@@ -206,15 +263,3 @@ const lm = {
  *          }}
  */
 lm.Partition;
-
-/**
- * @typedef {{
- *            label: string,
- *            oemName: string,
- *            serialNumber: number,
- *            clusterSize: number,
- *            totalClusters: number,
- *            freeClusters: number,
- *          }}
- */
-lm.VolumeInfo;

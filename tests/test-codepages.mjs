@@ -1,4 +1,4 @@
-import { bestfit1251, bestfit1252, cp1251, cp1252, cp437, cp850 } from "./src/codepages/codepages.mjs";
+import { bestfit1251, bestfit1252, cp1251, cp1252, cp437, cp850, koi8r } from "./src/codepages/index.mjs";
 import { expect, test } from "vitest";
 
 export function testCodepages() {
@@ -11,6 +11,7 @@ export function testCodepages() {
       cp1252,
       bestfit1251,
       bestfit1252,
+      koi8r,
     ];
     for (let i = 0; i < codepages.length; i++) {
       const c = codepages[i];

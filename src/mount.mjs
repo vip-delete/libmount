@@ -1,5 +1,5 @@
 import { Device } from "./types.mjs";
-import { FATDriver } from "./driver/driver.mjs";
+import { FATDriverImpl } from "./driver/driver.mjs";
 import { FATFileSystem } from "./filesystem.mjs";
 import { RawDevice } from "./io.mjs";
 import { cp1252 } from "./codepages/cp1252.mjs";
@@ -7,11 +7,18 @@ import { loadPartitionTable } from "./loaders.mjs";
 
 /**
  * @param {!Uint8Array} img
- * @param {!lm.Codepage} [codepage]
+ * @param {!lm.MountOptions} [options]
  * @returns {!lm.Disk}
  */
-export function mount(img, codepage) {
-  return new DiskImpl(new RawDevice(img), codepage ?? cp1252);
+export function mount(img, options) {
+  const codepage = options?.codepage ?? cp1252;
+  const parition = options?.partition ?? {
+    active: false,
+    type: 1,
+    begin: 0,
+    end: img.length,
+  };
+  return new DiskImpl(new RawDevice(img.subarray(parition.begin, parition.end)), codepage);
 }
 
 /**
@@ -32,11 +39,11 @@ class DiskImpl {
    * @returns {?lm.FileSystem}
    */
   getFileSystem() {
-    if (!isSigValid(this.device)) {
+    if (!this.isSigValid()) {
       return null;
     }
     try {
-      return new FATFileSystem(new FATDriver(this.device, this.codepage));
+      return new FATFileSystem(new FATDriverImpl(this.device, this.codepage));
     } catch {
       return null;
     }
@@ -47,7 +54,7 @@ class DiskImpl {
    * @returns {!Array<!lm.Partition>}
    */
   getPartitions() {
-    if (!isSigValid(this.device)) {
+    if (!this.isSigValid()) {
       return [];
     }
     this.device.seek(510 - 4 * 16);
@@ -58,17 +65,16 @@ class DiskImpl {
       end: (it.RelativeSectors + it.TotalSectors) * 512,
     }));
   }
-}
 
-/**
- * @param {!Device} device
- * @returns {boolean}
- */
-function isSigValid(device) {
-  if (device.length() < 512) {
-    return false;
+  /**
+   * @returns {boolean}
+   */
+  isSigValid() {
+    if (this.device.length() < 512) {
+      return false;
+    }
+
+    this.device.seek(510);
+    return this.device.readWord() === 0xaa55;
   }
-
-  device.seek(510);
-  return device.readWord() === 0xaa55;
 }

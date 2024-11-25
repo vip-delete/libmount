@@ -1,7 +1,7 @@
 /**
  * https://www.unicode.org/Public/MAPPINGS/VENDORS/MICSFT/WINDOWS/CP1252.TXT
  */
-import { OEMCodepage } from "./oem-codepage.mjs";
+import { Codepage } from "./codepage.mjs";
 
 export const charmapCP1252 = new Uint16Array([
   0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000a, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f,
@@ -22,4 +22,4 @@ export const charmapCP1252 = new Uint16Array([
   0x00f0, 0x00f1, 0x00f2, 0x00f3, 0x00f4, 0x00f5, 0x00f6, 0x00f7, 0x00f8, 0x00f9, 0x00fa, 0x00fb, 0x00fc, 0x00fd, 0x00fe, 0x00ff,
 ]);
 
-export const cp1252 = new OEMCodepage(charmapCP1252);
+export const cp1252 = new Codepage(charmapCP1252);

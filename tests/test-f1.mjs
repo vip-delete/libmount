@@ -7,41 +7,38 @@ export function testF1(mount) {
 
   test("f1-volumeInfo", () => {
     expect(fs.getName()).toBe("FAT16");
-    expect(fs.getVolumeInfo()).toStrictEqual({
-      //
-      "label": "NO NAME",
-      "oemName": "mkfs.fat",
-      "serialNumber": 939647049,
-      "clusterSize": 2048,
-      "totalClusters": 4301,
-      "freeClusters": 4294,
-    });
+    const v = fs.getVolume();
+    expect(v.getLabel()).toBe("NO NAME");
+    expect(v.getOEMName()).toBe("mkfs.fat");
+    expect(v.getId()).toBe(939647049);
+    expect(v.getSizeOfCluster()).toBe(2048);
+    expect(v.getCountOfClusters()).toBe(4301);
+    expect(v.getFreeClusters()).toBe(4294);
   });
 
   test("f1-getFile", () => {
-    expect(new TextDecoder().decode(fs.getFile("/doc1/p.txt").getData())).toBe("Hello PARHAM\n");
-    expect(new TextDecoder().decode(fs.getFile("/DEL_ME.TXT").getData())).toBe("DEL ME PLEASE\n");
-    expect(new TextDecoder().decode(fs.getFile("/hello.txt").getData())).toBe("Hi the world\n");
-    expect(new TextDecoder().decode(fs.getFile("/test.txt").getData())).toBe("Hello world\n");
+    expect(new TextDecoder().decode(fs.getRoot().getFile("/doc1/p.txt").getData())).toBe("Hello PARHAM\n");
+    expect(new TextDecoder().decode(fs.getRoot().getFile("/DEL_ME.TXT").getData())).toBe("DEL ME PLEASE\n");
+    expect(new TextDecoder().decode(fs.getRoot().getFile("/hello.txt").getData())).toBe("Hi the world\n");
+    expect(new TextDecoder().decode(fs.getRoot().getFile("/test.txt").getData())).toBe("Hello world\n");
 
-    const f = fs.getFile("BIG_DATA.txt");
+    const f = fs.getRoot().getFile("BIG_DATA.txt");
     expect(f.length()).toBe(2560);
   });
 
   test("f1-delete", () => {
-    const big = fs.getFile("BIG_DATA.txt");
+    const big = fs.getRoot().getFile("BIG_DATA.txt");
+    expect(big.isRegularFile()).toBeTruthy();
     expect(big.length()).toBe(2560);
 
-    const info = fs.getVolumeInfo();
+    const v = fs.getVolume();
+    const before = v.getFreeClusters();
     big.delete();
-    const info2 = fs.getVolumeInfo();
+    const after = v.getFreeClusters();
 
-    expect(info2.freeClusters - info.freeClusters).toBe(Math.ceil(2560 / info.clusterSize));
+    expect(after - before).toBe(Math.ceil(2560 / v.getSizeOfCluster()));
 
-    fs.getRoot()
-      .listFiles()
-      .forEach((f) => f.delete());
-    const info3 = fs.getVolumeInfo();
-    expect(info3.freeClusters).toBe(info3.totalClusters);
+    fs.getRoot().delete();
+    expect(v.getFreeClusters()).toBe(v.getCountOfClusters());
   });
 }

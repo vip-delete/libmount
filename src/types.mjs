@@ -97,6 +97,8 @@ export const FSInfo = {};
  */
 export const DirEntry = {};
 
+export const DIR_ENTRY_SIZE = 32;
+
 /**
  * @typedef {{
  *            Ord: number,
@@ -198,11 +200,6 @@ export class FATMath {
   /**
    * @returns {number}
    */
-  getClusterSize() {}
-
-  /**
-   * @returns {number}
-   */
   getRootDirOffset() {}
 
   /**
@@ -219,8 +216,30 @@ export class FATMath {
 
   /**
    * @param {number} clusNum
+   * @returns {number}
+   */
+  getNextClusNum(clusNum) {}
+
+  /**
+   * @param {number} clusNum
+   * @param {number} value
+   */
+  setNextClusNum(clusNum, value) {}
+
+  /**
+   * @param {number} clusNum
    */
   writeZeros(clusNum) {}
+
+  /**
+   * @param {number} clusNum
+   */
+  setFreeClusNum(clusNum) {}
+
+  /**
+   * @param {number} clusNum
+   */
+  setFinalClusNum(clusNum) {}
 
   /**
    * @returns {number}
@@ -244,103 +263,163 @@ export class FATMath {
    * @returns {?number}
    */
   getClusNum(offset) {}
-
-  // specific methods
-
-  /**
-   * @returns {string}
-   */
-  getFileSystemName() {}
-
-  /**
-   * @param {number} clusNum
-   * @returns {number}
-   */
-  getNextClusNum(clusNum) {}
-
-  /**
-   * @param {number} clusNum
-   * @param {number} value
-   */
-  setNextClusNum(clusNum, value) {}
-
-  /**
-   * @returns {number}
-   */
-  getFinalClus() {}
 }
 
 /**
  * @interface
- * @template T
  */
-export class NodeCrawler {
+export class FATNode {
   /**
-   * @param {!T} node
-   * @returns {?T}
+   * @returns {string}
    */
-  getFirst(node) {}
+  getLongName() {}
 
   /**
-   * @param {!T} node
-   * @returns {?T}
+   * @returns {string}
    */
-  getNext(node) {}
+  getShortName() {}
 
   /**
-   * @param {!T} node
-   * @returns {!Iterable<!T>}
+   * @returns {number}
+   */
+  getFirstDirOffset() {}
+
+  /**
+   * @returns {number}
+   */
+  getLastDirOffset() {}
+
+  /**
+   * @returns {number}
+   */
+  getDirCount() {}
+
+  /**
+   * @returns {!DirEntry}
+   */
+  getDirEntry() {}
+
+  /**
+   * @returns {boolean}
+   */
+  isRoot() {}
+
+  /**
+   * @returns {boolean}
+   */
+  isRegularDir() {}
+
+  /**
+   * @returns {boolean}
+   */
+  isRegularFile() {}
+
+  /**
+   * @returns {boolean}
+   */
+  isVolumeId() {}
+
+  /**
+   * @returns {boolean}
+   */
+  isDot() {}
+
+  /**
+   * @returns {boolean}
+   */
+  isDotDot() {}
+
+  /**
+   * @returns {boolean}
+   */
+  isInvalid() {}
+
+  /**
+   * @returns {boolean}
+   */
+  isDeleted() {}
+
+  /**
+   * @returns {boolean}
+   */
+  isDeletedLFN() {}
+
+  /**
+   * @returns {boolean}
+   */
+  isLast() {}
+}
+
+/**
+ * @interface
+ */
+export class FATCrawler {
+  /**
+   * @param {!FATNode} node
+   * @returns {!Iterable<!FATNode>}
    */
   getSubNodes(node) {}
 }
 
 /**
  * @interface
- * @template T
  */
-export class FileSystemDriver {
+export class FATDriver {
   /**
    * @returns {string}
    */
   getFileSystemName() {}
 
   /**
-   * @returns {!lm.VolumeInfo}
+   * @returns {!lm.Volume}
    */
-  getVolumeInfo() {}
+  getVolume() {}
 
   /**
-   * @returns {!T}
+   * @returns {!FATNode}
    */
   getRoot() {}
 
   /**
-   * @returns {!NodeCrawler<!T>}
+   * @returns {!FATCrawler}
    */
   getCrawler() {}
 
   /**
-   * @param {!T} node
+   * @param {!FATNode} node
+   * @returns {number}
+   */
+  getSizeOnDisk(node) {}
+
+  /**
+   * @param {!FATNode} node
    * @returns {?Uint8Array}
    */
   readNode(node) {}
 
   /**
-   * @param {!T} node
+   * @param {!FATNode} node
+   * @param {!Uint8Array} data
+   * @returns {?FATNode}
+   */
+  writeNode(node, data) {}
+
+  /**
+   * @param {!FATNode} node
    */
   deleteNode(node) {}
 
   /**
-   * @param {!T} node
+   * @param {!FATNode} node
    * @param {string} name
    * @param {boolean} isDirectory
-   * @returns {?T}
+   * @returns {?FATNode}
    */
   makeNode(node, name, isDirectory) {}
 
   /**
-   * @param {!T} src
-   * @param {!T} dest
+   * @param {!FATNode} src
+   * @param {!FATNode} dest
    */
   moveNode(src, dest) {}
 }

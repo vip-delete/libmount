@@ -27,8 +27,9 @@ const args = {
   ],
   js_output_file: "./dist/libmount.min.mjs",
   js: [
+    //
     "./src/module.js",
-    "./src/codepages/oem-codepage.mjs",
+    "./src/codepages/codepage.mjs",
     "./src/codepages/cp1252.mjs",
   ].concat(srcJs),
 };

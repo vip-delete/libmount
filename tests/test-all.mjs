@@ -1,6 +1,7 @@
 /* eslint-disable sort-imports */
 import { expect, test } from "vitest";
 import { testFreedos722 } from "./test-freedos722.mjs";
+import { testWindowsMe } from "./test-windowsme.mjs";
 
 import { testCodepages } from "./test-codepages.mjs";
 import { testIO } from "./test-io.mjs";
@@ -42,6 +43,7 @@ export function integrationTests(mount) {
   });
 
   testFreedos722(mount);
+  testWindowsMe(mount);
   testF1(mount);
   testF2(mount);
   testF3(mount);

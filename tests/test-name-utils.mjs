@@ -1,6 +1,6 @@
-import { cp1251, cp1252 } from "./src/codepages/codepages.mjs";
+import { cp1251, cp1252 } from "./src/codepages/index.mjs";
 import { expect, test } from "vitest";
-import { getChkSum, normalizeLongName, sfnToStr, strToLfn, strToSfn, strToTildeName } from "../src/name-utils.mjs";
+import { getChkSum, normalizeLongName, sfnToStr, split, strToLfn, strToSfn, strToTildeName } from "../src/name-utils.mjs";
 
 export function testNameUtils() {
   test("getChkSum", () => {
@@ -31,6 +31,19 @@ export function testNameUtils() {
     ].forEach((name) => {
       expect(normalizeLongName(name)).toBe("abc");
     });
+  });
+
+  test("split", () => {
+    expect(split("a")).toStrictEqual(["a"]);
+    expect(split("a/bc")).toStrictEqual(["a", "bc"]);
+    expect(split("a\\bc")).toStrictEqual(["a", "bc"]);
+    expect(split("a\\bc")).toStrictEqual(["a", "bc"]);
+    expect(split("/a\\bc")).toStrictEqual(["a", "bc"]);
+    expect(split("/a/bc./")).toStrictEqual(["a", "bc"]);
+    expect(split("/a/./b")).toStrictEqual(["a", "b"]);
+    expect(split("/a/../b")).toStrictEqual(["b"]);
+    expect(split("/a/.../b")).toStrictEqual(["a", "b"]);
+    expect(split("/a/../../c/./")).toStrictEqual(["c"]);
   });
 
   test("strToSfn-null", () => {
@@ -74,6 +87,7 @@ export function testNameUtils() {
 
 export function testNameUtils2() {
   test("strToTildeName", () => {
+    expect(strToTildeName("._.Trash", cp1252, new Set())).toBe("__02BD~1.TRA");
     expect(strToTildeName("sierpinski.com", cp1252, new Set())).toBe("SIERPI~1.COM");
 
     expect(strToTildeName("+.TXT", cp1252, new Set())).toBe("_0159~1.TXT");
@@ -104,6 +118,8 @@ export function testNameUtils2() {
     expect(strToTildeName("The quick brown.fox", cp1252, new Set(["THE QU~1.FOX"]))).toBe("THE QU~2.FOX");
     expect(strToTildeName("🐀", cp1252, new Set())).toBe("B43D~1");
     expect(strToTildeName("🐀.🐀", cp1252, new Set())).toBe("68A8~1");
-    expect(strToTildeName("++🐀", cp1252, new Set(["__B493~1", "__B493~2", "__B493~3", "__B493~4", "__B493~5", "__B493~6", "__B493~7", "__B493~8", "__B493~9"]))).toBe("__B49~10");
+    expect(
+      strToTildeName("++🐀", cp1252, new Set(["__B493~1", "__B493~2", "__B493~3", "__B493~4", "__B493~5", "__B493~6", "__B493~7", "__B493~8", "__B493~9"])),
+    ).toBe("__B49~10");
   });
 }

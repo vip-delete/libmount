@@ -1,7 +1,7 @@
 /**
  * https://www.unicode.org/Public/MAPPINGS/VENDORS/MICSFT/PC/CP437.TXT
  */
-import { OEMCodepage } from "./oem-codepage.mjs";
+import { Codepage } from "./codepage.mjs";
 
 const charmapCP437 = new Uint16Array([
   0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000a, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f,
@@ -22,4 +22,4 @@ const charmapCP437 = new Uint16Array([
   0x2261, 0x00b1, 0x2265, 0x2264, 0x2320, 0x2321, 0x00f7, 0x2248, 0x00b0, 0x2219, 0x00b7, 0x221a, 0x207f, 0x00b2, 0x25a0, 0x00a0,
 ]);
 
-export const cp437 = new OEMCodepage(charmapCP437);
+export const cp437 = new Codepage(charmapCP437);

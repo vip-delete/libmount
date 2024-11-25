@@ -1,5 +1,21 @@
-import { BiosParameterBlock, BiosParameterBlockFAT32, BootSector, CHS, Device, DirEntry, DirEntryLFN, FATVariables, FSInfo, PartitionEntry } from "./types.mjs";
+import {
+  BiosParameterBlock,
+  BiosParameterBlockFAT32,
+  BootSector,
+  CHS,
+  DIR_ENTRY_SIZE,
+  Device,
+  DirEntry,
+  DirEntryLFN,
+  FATVariables,
+  FSInfo,
+  PartitionEntry,
+} from "./types.mjs";
 import { assert, validate } from "./support.mjs";
+
+export const OEM_NAME_LENGTH = 8;
+export const VOL_LAB_LENGTH = 11;
+export const DIR_NAME_LENGTH = 11;
 
 /**
  * @param {!Device} device
@@ -35,15 +51,17 @@ function loadPartitionEntry(device) {
  * @param {!PartitionEntry} e
  */
 function validatePartitionEntry(e) {
+  validate(e.SystemID > 0);
   validate([0x00, 0x80].includes(e.BootIndicator));
-  validate(e.Starting.Sector !== 0);
-  validate(e.Ending.Sector !== 0);
-  const TH = 255; // or 16, ...
-  const TS = 63;
-  const StartingLBA = (e.Starting.Cylinder * TH + e.Starting.Head) * TS + (e.Starting.Sector - 1);
-  const EndingLBA = (e.Ending.Cylinder * TH + e.Ending.Head) * TS + (e.Ending.Sector - 1);
-  validate(StartingLBA < EndingLBA);
-  // TH and TS depends on BIOS and the next validations are not always correct
+  validate(e.TotalSectors > 0);
+  // CHS schema may not be correct, just ignore
+  // validate(e.Starting.Sector !== 0);
+  // validate(e.Ending.Sector !== 0);
+  // const TH = 255; // depends on BIOS settings, may be 15, ... etc
+  // const TS = 63;  // depends on BIOS settings
+  // const StartingLBA = (e.Starting.Cylinder * TH + e.Starting.Head) * TS + (e.Starting.Sector - 1);
+  // const EndingLBA = (e.Ending.Cylinder * TH + e.Ending.Head) * TS + (e.Ending.Sector - 1);
+  // validate(StartingLBA < EndingLBA);
   // validate(StartingLBA === e.RelativeSectors);
   // validate(EndingLBA - StartingLBA + 1 === e.TotalSectors);
 }
@@ -98,6 +116,25 @@ function loadBiosParameterBlock(device) {
 }
 
 /**
+ * @param {!Device} device
+ * @param {!BiosParameterBlock} bpb
+ */
+function writeBiosParameterBlock(device, bpb) {
+  device.writeWord(bpb.BytsPerSec);
+  device.writeByte(bpb.SecPerClus);
+  device.writeWord(bpb.RsvdSecCnt);
+  device.writeByte(bpb.NumFATs);
+  device.writeWord(bpb.RootEntCnt);
+  device.writeWord(bpb.TotSec16);
+  device.writeByte(bpb.Media);
+  device.writeWord(bpb.FATSz16);
+  device.writeWord(bpb.SecPerTrk);
+  device.writeWord(bpb.NumHeads);
+  device.writeDoubleWord(bpb.HiddSec);
+  device.writeDoubleWord(bpb.TotSec32);
+}
+
+/**
  * @param {!BiosParameterBlock} bpb
  */
 function validateBiosParameterBlock(bpb) {
@@ -128,6 +165,21 @@ function loadBiosParameterBlockFAT32(device) {
 }
 
 /**
+ * @param {!Device} device
+ * @param {!BiosParameterBlockFAT32} bpbFAT32
+ */
+function writeBiosParameterBlockFAT32(device, bpbFAT32) {
+  assert(bpbFAT32.Reserved.length === 12);
+  device.writeDoubleWord(bpbFAT32.FATSz32);
+  device.writeWord(bpbFAT32.ExtFlags);
+  device.writeWord(bpbFAT32.FSVer);
+  device.writeDoubleWord(bpbFAT32.RootClus);
+  device.writeWord(bpbFAT32.FSInfo);
+  device.writeWord(bpbFAT32.BkBootSec);
+  device.writeArray(bpbFAT32.Reserved);
+}
+
+/**
  * @param {!BiosParameterBlockFAT32} bpbFAT32
  */
 function validateBiosParameterBlockFAT32(bpbFAT32) {
@@ -143,7 +195,7 @@ function validateBiosParameterBlockFAT32(bpbFAT32) {
  */
 function loadBootSector(device) {
   const jmpBoot = device.readArray(3);
-  const oemName = device.readArray(8);
+  const oemName = device.readArray(OEM_NAME_LENGTH);
   const bpb = loadBiosParameterBlock(device);
   const bpbFAT32 = bpb.RootEntCnt === 0 ? loadBiosParameterBlockFAT32(device) : null;
   return {
@@ -155,11 +207,37 @@ function loadBootSector(device) {
     Reserved1: device.readByte(),
     BootSig: device.readByte(),
     VolID: device.readDoubleWord(),
-    VolLab: device.readArray(11),
+    VolLab: device.readArray(VOL_LAB_LENGTH),
     FilSysType: device.readArray(8),
     BootCode: device.readArray(bpbFAT32 ? 420 : 448),
     SignatureWord: device.readWord(),
   };
+}
+
+/**
+ * @param {!Device} device
+ * @param {!BootSector} bs
+ */
+export function writeBootSector(device, bs) {
+  assert(bs.jmpBoot.length === 3);
+  assert(bs.oemName.length === OEM_NAME_LENGTH);
+  assert(bs.VolLab.length === VOL_LAB_LENGTH);
+  assert(bs.FilSysType.length === 8);
+  assert(bs.BootCode.length === (bs.bpbFAT32 === null ? 448 : 420));
+  device.writeArray(bs.jmpBoot);
+  device.writeArray(bs.oemName);
+  writeBiosParameterBlock(device, bs.bpb);
+  if (bs.bpbFAT32 !== null) {
+    writeBiosParameterBlockFAT32(device, bs.bpbFAT32);
+  }
+  device.writeByte(bs.DrvNum);
+  device.writeByte(bs.Reserved1);
+  device.writeByte(bs.BootSig);
+  device.writeDoubleWord(bs.VolID);
+  device.writeArray(bs.VolLab);
+  device.writeArray(bs.FilSysType);
+  device.writeArray(bs.BootCode);
+  device.writeWord(bs.SignatureWord);
 }
 
 /**
@@ -221,7 +299,7 @@ export function loadAndValidateFSInfo(device) {
  */
 export function loadDirEntry(device) {
   return {
-    Name: device.readArray(11),
+    Name: device.readArray(DIR_NAME_LENGTH),
     Attr: device.readByte(),
     NTRes: device.readByte(),
     CrtTimeTenth: device.readByte(),
@@ -241,7 +319,7 @@ export function loadDirEntry(device) {
  * @param {!DirEntry} dir
  */
 export function writeDirEntry(device, dir) {
-  assert(dir.Name.length === 11);
+  assert(dir.Name.length === DIR_NAME_LENGTH);
   device.writeArray(dir.Name);
   device.writeByte(dir.Attr);
   device.writeByte(dir.NTRes);
@@ -305,7 +383,7 @@ export function loadFATVariables(bs) {
   const RsvdSecCnt = bpb.RsvdSecCnt;
   const NumFATs = bpb.NumFATs;
 
-  const RootDirSectors = Math.floor((bpb.RootEntCnt * 32 + (BytsPerSec - 1)) / BytsPerSec);
+  const RootDirSectors = Math.floor((bpb.RootEntCnt * DIR_ENTRY_SIZE + (BytsPerSec - 1)) / BytsPerSec);
   const FATSz = bpbFAT32 === null ? FATSz16 : bpbFAT32.FATSz32;
   const TotSec = TotSec16 === 0 ? bpb.TotSec32 : TotSec16;
   const DataSec = TotSec - (RsvdSecCnt + NumFATs * FATSz + RootDirSectors);

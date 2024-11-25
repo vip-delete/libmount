@@ -1,5 +1,5 @@
 /**
- * LibMount v0.2.0
+ * LibMount v0.3.0
  * (c) 2024-present vip.delete
  * @license MIT
  **/

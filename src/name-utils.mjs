@@ -1,4 +1,4 @@
-import { assert } from "./support.mjs";
+import { assert, impossibleNull } from "./support.mjs";
 
 const SHORT_NAME_SPECIAL_CHARACTERS = [
   " ".charCodeAt(0),
@@ -107,13 +107,38 @@ export function normalizeLongName(longName) {
 }
 
 /**
+ * @param {string} path
+ * @returns {!Array<string>}
+ */
+export function split(path) {
+  const names = [];
+  const parts = path.split(/[/\\]/u);
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i].trim();
+    if (part !== "" && part !== ".") {
+      if (part === "..") {
+        if (names.length > 0) {
+          names.length--;
+        }
+      } else {
+        const name = normalizeLongName(part);
+        if (name !== "") {
+          names.push(name);
+        }
+      }
+    }
+  }
+  return names;
+}
+
+/**
  * @param {!Uint8Array} sfn
- * @param {!lm.Codepage} decoder
+ * @param {!lm.Codepage} codepage
  * @returns {string}
  */
-export function sfnToStr(sfn, decoder) {
+export function sfnToStr(sfn, codepage) {
   assert(sfn.length === 11);
-  const str = decoder.decode(sfn);
+  const str = codepage.decode(sfn);
   const basename = str.slice(0, 8).trimEnd();
   const ext = str.slice(8, 11).trimEnd();
   return ext === "" ? basename : basename + "." + ext;
@@ -121,10 +146,10 @@ export function sfnToStr(sfn, decoder) {
 
 /**
  * @param {string} str
- * @param {!lm.Codepage} encoder
+ * @param {!lm.Codepage} codepage
  * @returns {?Uint8Array}
  */
-export function strToSfn(str, encoder) {
+export function strToSfn(str, codepage) {
   const i = str.lastIndexOf(".");
   const basename = i < 0 ? str : str.substring(0, i);
   const ext = i < 0 ? "" : str.substring(i + 1);
@@ -133,11 +158,11 @@ export function strToSfn(str, encoder) {
     return null;
   }
   const sfn = new Uint8Array(11);
-  if (!appendToSFN(sfn, 0, 8, encoder, basename)) {
+  if (!appendToSFN(sfn, 0, 8, codepage, basename)) {
     // filename is not valid for short name
     return null;
   }
-  if (!appendToSFN(sfn, 8, 3, encoder, ext)) {
+  if (!appendToSFN(sfn, 8, 3, codepage, ext)) {
     // ext is not valid for short name
     return null;
   }
@@ -148,11 +173,11 @@ export function strToSfn(str, encoder) {
  * @param {!Uint8Array} sfn
  * @param {number} offset
  * @param {number} len
- * @param {!lm.Codepage} encoder
+ * @param {!lm.Codepage} codepage
  * @param {string} str
  * @returns {boolean}
  */
-function appendToSFN(sfn, offset, len, encoder, str) {
+function appendToSFN(sfn, offset, len, codepage, str) {
   if (str.length > len) {
     // too long
     return false;
@@ -164,7 +189,7 @@ function appendToSFN(sfn, offset, len, encoder, str) {
   let i = 0;
   while (i < str.length) {
     const wcCode = str.charCodeAt(i);
-    const code = encoder.encodeChar(wcCode);
+    const code = codepage.encodeChar(wcCode);
     if (code === null) {
       // can't encode
       return false;
@@ -216,17 +241,17 @@ export function strToLfn(str) {
 
 /**
  * @param {string} str
- * @param {!lm.Codepage} encoder
+ * @param {!lm.Codepage} codepage
  * @param {!Set<string>} fileNames
  * @returns {?string}
  */
-export function strToTildeName(str, encoder, fileNames) {
+export function strToTildeName(str, codepage, fileNames) {
   const i = str.lastIndexOf(".");
   const basename = i < 0 ? str : str.substring(0, i);
   const ext = i < 0 ? "" : str.substring(i + 1);
 
-  const basename6 = toValidShortNameCharacters(basename.toUpperCase(), 6, encoder);
-  const ext3 = toValidShortNameCharacters(ext.toUpperCase(), 3, encoder);
+  const basename6 = toValidShortNameCharacters(basename.toUpperCase(), 6, codepage);
+  const ext3 = toValidShortNameCharacters(ext.toUpperCase(), 3, codepage);
 
   assert(!basename6.startsWith(" ") && basename6.length <= 6);
   assert(!ext3.startsWith(" ") && ext3.length <= 3);
@@ -244,24 +269,22 @@ export function strToTildeName(str, encoder, fileNames) {
     num++;
     numLen = num.toString().length;
   }
-  // namespace overflow (impossible)
-  assert(false);
-  return null;
+  return impossibleNull();
 }
 
 /**
  * @param {string} str
  * @param {number} max
- * @param {!lm.Codepage} encoder
+ * @param {!lm.Codepage} codepage
  * @returns {string}
  */
-function toValidShortNameCharacters(str, max, encoder) {
+function toValidShortNameCharacters(str, max, codepage) {
   let ret = "";
   let i = 0;
   while (i < str.length && ret.length < max) {
     const ch = str.charAt(i);
     const wcCode = ch.charCodeAt(0);
-    const code = encoder.encodeChar(wcCode);
+    const code = codepage.encodeChar(wcCode);
     if (code !== null) {
       if (isShortNameValidCode(code)) {
         const firstSpace = ch === " " && ret === "";
@@ -284,7 +307,7 @@ function toValidShortNameCharacters(str, max, encoder) {
 function strToHash(str) {
   let sum = 0;
   for (let i = 0; i < str.length; i++) {
-    sum = (sum + str.charCodeAt(i)) & 0xFFFF;
+    sum = (sum + str.charCodeAt(i)) & 0xffff;
   }
   return sum.toString(16).padStart(4, "0").toUpperCase();
 }

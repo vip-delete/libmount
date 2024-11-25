@@ -1,7 +1,7 @@
 /**
  * https://www.unicode.org/Public/MAPPINGS/VENDORS/MICSFT/WindowsBestFit/bestfit1252.txt
  */
-import { OEMCodepage } from "./oem-codepage.mjs";
+import { Codepage } from "./codepage.mjs";
 import { charmapCP1252 } from "./cp1252.mjs";
 
 const wcTableBestfit1252 = {
@@ -705,4 +705,4 @@ const wcTableBestfit1252 = {
   0xff5e: 0x7e,
 };
 
-export const bestfit1252 = new OEMCodepage(charmapCP1252, wcTableBestfit1252);
+export const bestfit1252 = new Codepage(charmapCP1252, wcTableBestfit1252);

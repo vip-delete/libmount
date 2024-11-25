@@ -13,6 +13,14 @@ export function assert(expression, msg) {
   }
 }
 
+/**
+ * @returns {null}
+ */
+export function impossibleNull() {
+  assert(false);
+  return null;
+}
+
 export class Logger {
   /**
    * @param {string} name
@@ -44,7 +52,7 @@ export class Logger {
  * @returns {string}
  */
 function timestamp() {
-  return new Date().toISOString().replace(/(?<date>.*)T(?<time>.*)Z/u, "$<date> $<time>");
+  return new Date().toLocaleString();
 }
 
 /**

@@ -7,6 +7,7 @@ import fs from "fs";
 import srcFiles from "../src/index.mjs";
 const Compiler = Main.compiler;
 
+fs.rmSync("./dist", { recursive: true });
 fs.cpSync("./src/codepages", "./dist/codepages", { recursive: true });
 
 const srcJs = srcFiles.map((it) => "./src/" + it);

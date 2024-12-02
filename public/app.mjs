@@ -1,7 +1,322 @@
 import { mount } from "libmount";
-import { koi8r as cp } from "libmount/codepages/koi8r";
-const mountFile = "images/freedos722.IMG";
+import { CP1251 as CP } from "./iconv-tiny.bundle.mjs";
 
+addEventListener("load", onLoad);
+
+async function onLoad() {
+  await onMount("images/freedos722.img");
+}
+
+/**
+ * @param {string} imgFile
+ */
+async function onMount(imgFile) {
+  document.title = imgFile;
+
+  const app = $Id("app");
+  const status = $("div").cls("row").el;
+  app.appendChild(status);
+  let img;
+  try {
+    img = await fetchWithProgress(imgFile, (loaded, total) => {
+      status.innerText = `${imgFile} - loaded ${Math.round(loaded / 1024)} KB` + (total === 0 ? "" : ` (${Math.round((loaded * 100) / total)}%)`);
+    });
+  } catch (e) {
+    status.classList.add("error");
+    status.innerText = /** @type {Error} */ (e).message;
+    return;
+  }
+  app.removeChild(status);
+
+  app.appendChild(
+    $("div")
+      .cls("row file")
+      .children([
+        $("div")
+          .text(imgFile)
+          .on("click", () => download(img, imgFile)),
+        $("div").html(`&nbsp;- ${img.length / 1024} KB`),
+      ]).el,
+  );
+
+  const encoding = CP.create();
+  const disk = mount(img, { encoding });
+  let fs = disk.getFileSystem();
+  if (!fs) {
+    const partitions = disk.getPartitions();
+    if (partitions.length > 0) {
+      const partition = mount(img, { encoding, partition: partitions[0] });
+      fs = partition.getFileSystem();
+    }
+    if (!fs) {
+      app.appendChild($("div").cls("error").text("Mount failed").el);
+      return;
+    }
+  }
+
+  const tmp = fs.getRoot().makeFile("еПривет.TXT");
+  tmp?.setData(encoding.encode("еПривет".repeat(1000)));
+
+  const info = $("div").cls("row info").el;
+  app.appendChild(info);
+  app.appendChild(
+    $("div")
+      .cls(["row", "header"])
+      .children([
+        $("span").html("&nbsp;"),
+        $("span").html("&nbsp;"),
+        $("span").text("Name"),
+        $("span").text("Short Name"),
+        $("span").text("Size"),
+        $("span").text("Size On Disk"),
+        $("span").text("Created"),
+        $("span").text("Modified"),
+        $("span").text("Accessed"),
+      ]).el,
+  );
+
+  const panel = $("div").el;
+  app.appendChild(panel);
+
+  showDir(info, panel, fs, null);
+}
+
+/**
+ * @param {HTMLElement} info
+ * @param {HTMLElement} root
+ * @param {import("libmount").FileSystem} fs
+ * @param {Ctx|null} ctx
+ */
+function showDir(info, root, fs, ctx) {
+  ctx ||= { f: fs.getRoot(), parent: null };
+  const files = ctx.f.listFiles() || [];
+  files.sort((a, b) => {
+    const c1 = a.isDirectory() ? 0 : 1;
+    const c2 = b.isDirectory() ? 0 : 1;
+    let r = c1 - c2;
+    if (r === 0) {
+      const d1 = a.getName().toUpperCase();
+      const d2 = b.getName().toUpperCase();
+      r = d1 === d2 ? 0 : d1 < d2 ? -1 : 1;
+    }
+    return r;
+  });
+  const list = [];
+  const showParent = () => showDir(info, root, fs, ctx.parent);
+  list.push(createRow(ctx.f, ctx.f.getAbsolutePath(), showParent, null));
+  if (ctx.parent) {
+    list.push(createRow(ctx.parent.f, ". .", null, showParent));
+  }
+  files.forEach((f) => {
+    const onDeleteCtx = ctx;
+    const onClickCtx = { f, parent: ctx };
+    list.push(
+      createRow(
+        f,
+        f.getName(),
+        () => showDir(info, root, fs, onDeleteCtx),
+        () => showDir(info, root, fs, onClickCtx),
+      ),
+    );
+  });
+  root.innerHTML = "";
+  for (const el of list) {
+    root.appendChild(el);
+  }
+
+  const v = fs.getVolume();
+  const str = `Label: ${v.getLabel()}, OEMName: ${v.getOEMName()}, SerialNumber: 0x${v.getId().toString(16).toUpperCase()}, SizeOfCluster: ${v.getSizeOfCluster()}, CountOfClusters: ${v.getCountOfClusters()}, FreeClusters: ${v.getFreeClusters()}`;
+  info.innerText = str.replaceAll("\n", " ");
+}
+
+/**
+ * @param {import("libmount").File} f
+ * @param {string} name
+ * @param {?function():void} onDelete
+ * @param {?function():void} onClick
+ * @returns {HTMLElement}
+ */
+function createRow(f, name, onDelete, onClick) {
+  return $("span")
+    .cls("row")
+    .children([
+      name === ". ."
+        ? $("span")
+        : $("span")
+            .cls("action icon-delete")
+            .attrs({ title: "Delete" })
+            .on("click", () => {
+              f.delete();
+              onDelete?.();
+            }),
+      name === ". ." ? $("span").cls("action icon-up") : $("span").cls("action").cls(f.isDirectory() ? "icon-dir" : "icon-file"),
+      $("span").children([
+        name.startsWith("/")
+          ? $("span").text(name)
+          : $("span")
+              .text(name)
+              .cls("name")
+              .on("click", () => (f.isDirectory() ? onClick?.() : download(f.getData(), name))),
+      ]),
+      $("span").text(f.getShortName() === name ? "" : f.getShortName()),
+      $("span").text(f.length().toLocaleString()),
+      $("span").text(f.getSizeOnDisk().toLocaleString()),
+      $("span").text(formatDateTime(f.creationTime())),
+      $("span").text(formatDateTime(f.lastModified())),
+      $("span").text(formatDate(f.lastAccessTime())),
+    ]).el;
+}
+
+// Support
+
+/**
+ * @param {string} url
+ * @param {function(number,number):void} onProgress
+ * @returns {Promise<Uint8Array>}
+ */
+async function fetchWithProgress(url, onProgress) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  const body = response.body;
+  if (!body) {
+    return new Uint8Array(await response.arrayBuffer());
+  }
+
+  const total = Number(response.headers.get("Content-Length"));
+  const reader = body.getReader();
+  let loaded = 0;
+  const chunks = [];
+  let chunk;
+
+  while (!(chunk = await reader.read()).done) {
+    loaded += chunk.value.length;
+    chunks.push(chunk.value);
+    onProgress?.(loaded, total);
+  }
+
+  const result = new Uint8Array(loaded);
+  chunks.reduce((pos, chunk) => (result.set(chunk, pos), pos + chunk.length), 0);
+  return result;
+}
+
+/**
+ * @param {?Uint8Array} data
+ * @param {string} name
+ */
+function download(data, name) {
+  if (data) {
+    const url = URL.createObjectURL(new Blob([data], { type: "application/octet-stream" }));
+    $("a").attrs({ "href": url, "download": name }).el.click();
+    URL.revokeObjectURL(url);
+  }
+}
+
+// EL*
+
+/**
+ * @param {string} name
+ * @returns {El}
+ */
+function $(name) {
+  return new El(name);
+}
+
+/**
+ * @param {string} name
+ * @returns {HTMLElement}
+ */
+function $Id(name) {
+  const el = document.getElementById(name);
+  if (el === null) {
+    throw new Error();
+  }
+  return el;
+}
+
+class El {
+  /**
+   *
+   * @param {string} name
+   */
+  constructor(name) {
+    this.el = document.createElement(name);
+  }
+
+  /**
+   * @param {!{[key:string]:any}} attrs
+   * @returns {El}
+   */
+  attrs(attrs) {
+    for (const [key, value] of Object.entries(attrs)) {
+      this.el.setAttribute(key, value);
+    }
+    return this;
+  }
+
+  /**
+   * @param {string} event
+   * @param {EventListener} listener
+   * @returns {El}
+   */
+  on(event, listener) {
+    this.el.addEventListener(event, listener);
+    return this;
+  }
+
+  /**
+   * @param {!Array<string>|string} cls
+   * @returns {El}
+   */
+  cls(cls) {
+    if (Array.isArray(cls)) {
+      for (const cl of cls) {
+        this.el.classList.add(cl);
+      }
+    } else {
+      for (const cl of cls.split(" ")) {
+        this.el.classList.add(cl);
+      }
+    }
+    return this;
+  }
+
+  /**
+   * @param {!Array<HTMLElement|El>} children
+   * @returns {El}
+   */
+  children(children) {
+    for (const child of children) {
+      this.el.appendChild(child instanceof El ? child.el : child);
+    }
+    return this;
+  }
+
+  /**
+   * @param {string} text
+   * @returns {El}
+   */
+  text(text) {
+    this.el.innerText = text;
+    return this;
+  }
+
+  /**
+   * @param {string} html
+   * @returns {El}
+   */
+  html(html) {
+    this.el.innerHTML = html;
+    return this;
+  }
+}
+
+/**
+ * @param {?Date} date
+ * @returns {string}
+ */
 function formatDate(date) {
   if (date === null) {
     return "";
@@ -12,6 +327,10 @@ function formatDate(date) {
   return `${yyyy}-${MM}-${dd}`;
 }
 
+/**
+ * @param {?Date} date
+ * @returns {string}
+ */
 function formatDateTime(date) {
   if (date === null) {
     return "";
@@ -22,213 +341,9 @@ function formatDateTime(date) {
   return `${formatDate(date)} ${hh}:${mm}:${ss}`;
 }
 
-function createElement(name, classes, text) {
-  const element = document.createElement(name);
-  classes.forEach((it) => element.classList.add(it));
-  if (text) {
-    element.innerText = text;
-  }
-  return element;
-}
-
-function getVolumeData(v) {
-  return (
-    "Label: " +
-    v.getLabel() +
-    ", OEMName: " +
-    v.getOEMName() +
-    ", SerialNumber: " +
-    "0x" +
-    v.getId().toString(16).toUpperCase() +
-    ", SizeOfCluster: " +
-    v.getSizeOfCluster() +
-    ", CountOfClusters: " +
-    v.getCountOfClusters() +
-    ", FreeClusters: " +
-    v.getFreeClusters()
-  );
-}
-
-const app = document.getElementById("app");
-
-const fileRow = createElement("div", ["row", "name"]);
-const fileElem = createElement("span", []);
-fileElem.innerText = mountFile;
-fileRow.appendChild(fileElem);
-app.appendChild(fileRow);
-
-const nameRow = createElement("div", ["row", "fs-name"]);
-app.appendChild(nameRow);
-
-const info = createElement("div", ["row"]);
-info.innerText = "Loading...";
-app.appendChild(info);
-
-const header = createElement("div", ["row"]);
-header.innerHTML =
-  '<div class="row header">' +
-  "<span>&nbsp;</span>" +
-  "<span>&nbsp;</span>" +
-  "<span>Name</span>" +
-  "<span>Short Name</span>" +
-  "<span>Size</span>" +
-  "<span>Size On Disk</span>" +
-  "<span>Created</span>" +
-  "<span>Modified</span>" +
-  "<span>Accessed</span>" +
-  "</div>";
-app.appendChild(header);
-
-const container = createElement("div", []);
-app.appendChild(container);
-
-function createRow(fs, f, name) {
-  const directory = f.isDirectory();
-  const up = name === ". .";
-  const icon = up ? "up" : directory ? "dir" : "file";
-
-  const iconColumn = createElement("span", ["icon", icon]);
-  const link = createElement("span", ["name"], name);
-  let deleteColumn;
-  if (up) {
-    deleteColumn = createElement("span", ["icon"]);
-  } else {
-    deleteColumn = createElement("span", ["icon", "del"]);
-    deleteColumn.title = "Delete";
-    deleteColumn.addEventListener("click", () => {
-      f.delete();
-      const v = fs.getVolume();
-      info.innerText = getVolumeData(fs.getVolume());
-      showDir(fs, f.parent);
-    });
-  }
-  if (directory) {
-    link.addEventListener("click", () => {
-      showDir(fs, f);
-    });
-  } else {
-    link.addEventListener("click", () => {
-      const buf = f.getData();
-      // if (buf) {
-      download(buf, name);
-      // }
-    });
-  }
-
-  const nameColumn = createElement("span", []);
-  nameColumn.appendChild(link);
-
-  const shortNameColumn = createElement("span", []);
-  shortNameColumn.innerText = f.getShortName() === name ? "" : f.getShortName();
-
-  const sizeColumn = createElement("span", []);
-  sizeColumn.innerText = f.length().toLocaleString();
-
-  const sizeOnDiskColumn = createElement("span", []);
-  sizeOnDiskColumn.innerText = f.getSizeOnDisk().toLocaleString();
-
-  const createdColumn = createElement("span", []);
-  createdColumn.innerText = formatDateTime(f.creationTime());
-
-  const modifiedColumn = createElement("span", []);
-  modifiedColumn.innerText = formatDateTime(f.lastModified());
-
-  const accessedColumn = createElement("span", []);
-  accessedColumn.innerText = formatDate(f.lastAccessTime());
-
-  const row = createElement("span", ["row"]);
-  row.appendChild(deleteColumn);
-  row.appendChild(iconColumn);
-  row.appendChild(nameColumn);
-  row.appendChild(shortNameColumn);
-  row.appendChild(sizeColumn);
-  row.appendChild(sizeOnDiskColumn);
-  row.appendChild(createdColumn);
-  row.appendChild(modifiedColumn);
-  row.appendChild(accessedColumn);
-  return row;
-}
-
-function cmp1(a, b) {
-  const c1 = a.isDirectory() ? 0 : 1;
-  const c2 = b.isDirectory() ? 0 : 1;
-  return c1 - c2;
-}
-
-function cmp2(a, b) {
-  return a === b ? 0 : a < b ? -1 : 1;
-}
-
-function sortByName(a, b) {
-  let r = cmp1(a, b);
-  if (r === 0) {
-    r = cmp2(a.getName().toUpperCase(), b.getName().toUpperCase());
-  }
-  return r;
-}
-
-const sortFunction = sortByName;
-
-function showDir(fs, dir) {
-  if (!dir) {
-    dir = fs.getRoot();
-  }
-  container.innerHTML = "";
-  const files = dir.listFiles();
-  files.sort(sortFunction);
-  container.appendChild(createRow(fs, dir, dir.getAbsolutePath()));
-  if (dir.parent) {
-    container.appendChild(createRow(fs, dir.parent, ". ."));
-  }
-  files.forEach((f) => {
-    f.parent = dir;
-    container.appendChild(createRow(fs, f, f.getName()));
-  });
-}
-
-function download(buf, name) {
-  const blob = new Blob([buf]);
-  const url = URL.createObjectURL(blob);
-  const a = createElement("a", []);
-  a.href = url;
-  a.download = name;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-async function onLoad() {
-  const response = await fetch(mountFile);
-  if (response.status !== 200) {
-    document.title = response.status + " " + response.statusText;
-    info.style.color = "red";
-    info.innerText = await response.text();
-    return;
-  }
-  document.title = mountFile;
-  const buf = await response.arrayBuffer();
-  const rawImage = new Uint8Array(buf);
-  const disk = mount(rawImage, { codepage: cp });
-  let fs = disk.getFileSystem();
-  if (!fs) {
-    const partitions = disk.getPartitions();
-    console.log(`Found ${partitions.length} partitions`);
-    if (partitions.length > 0) {
-      console.log(`Take 1st: type=${partitions[0].type}`);
-      const partition = mount(rawImage, { codepage: cp, partition: partitions[0] });
-      fs = partition.getFileSystem();
-    }
-    if (!fs) {
-      info.innerText = "Mount failed";
-      return;
-    }
-  }
-  fileElem.addEventListener("click", () => {
-    download(buf, mountFile);
-  });
-  nameRow.innerText = fs.getName();
-  info.innerText = getVolumeData(fs.getVolume());
-  const root = fs.getRoot();
-  showDir(fs, root);
-}
-
-addEventListener("load", onLoad);
+/**
+ * @typedef {{
+ *            f:import("libmount").File,
+ *            parent:Ctx | null,
+ *          }} Ctx
+ */

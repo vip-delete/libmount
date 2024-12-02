@@ -7,7 +7,9 @@ Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript
 
 ## Installation
 
-`npm install libmount`
+```
+npm install libmount
+```
 
 ## API
 
@@ -23,21 +25,20 @@ See more details in [libmount.d.mts](types/libmount.d.mts)
 
 🏆 The **libmount** supports almost everything from the FAT specification: long filenames (LFNs), OEM charsets (codepages), and file manipulations such as listing, creating, renaming, moving, reading, writing, and deleting files. In addition, the library supports partitioned disk images and provides type definitions for TypeScript.
 
-💡 The FAT specification requires an OEM charset to encode and decode short filenames (SFNs), also known as 8.3 names. SFNs can include uppercase letters, digits, characters with code point values greater than 127, and certain special characters. Code points above 127 are used for national symbols, such as Cyrillic (CP1251), Japanese (Shift JIS), Arabic (ISO 8859-6), and others. If the FAT image contains SFNs with code points above 127, it is crucial to specify the correct codepage to decode the filenames accurately, rather than seeing garbled text like ïðèâåò. By default, libmount uses **cp1252**, the default encoding for Latin-based languages in Windows.
+💡 The FAT specification requires an OEM charset to encode and decode short filenames (SFNs), also known as 8.3 names. SFNs can include uppercase letters, digits, characters with code point values greater than 127, and certain special characters. Code points above 127 are used for national symbols, such as Cyrillic (CP1251), Japanese (CP932), Arabic (ISO 8859-6), and others. If the FAT image contains SFNs with code points above 127, it is crucial to specify the correct codepage to decode the filenames accurately, rather than seeing garbled text like ïðèâåò. By default, libmount uses **cp1252**, the default encoding for Latin-based languages in Windows.
 
 🌟 The long filenames (LFNs) are designed to bypass 8.3 SFNs and OEM charset limitations. LFNs always use 16 bits per character (UTF-16) instead of 8 bits for SFNs. LFNs also support Unicode surrogate pairs. For example, the filename '😀' consists of two UTF-16 code units and is encoded in 4 bytes [3D, D8, 00, DE]. By the way, JavaScript also uses UTF-16, which makes translation from JavaScript strings to LFN bytes easy. The funny thing is that `'😀'.length` returns `2` for just one visible character. Please give a star to this project if you are surprised.
 
 ## Example
 
 ```javascript
-import { mount } from "libmount";
 import { readFileSync } from "fs";
-import { cp1251 as codepage } from "libmount/codepages";
+import { mount } from "libmount";
 
-const imgFilename = "./images/freedos722.img"
+const imgFilename = "../public/images/freedos722.img";
 const imgFile = readFileSync(imgFilename, { flag: "r" });
 const img = new Uint8Array(imgFile);
-const disk = mount(img, { codepage });
+const disk = mount(img);
 let fs = disk.getFileSystem();
 
 if (fs === null) {
@@ -46,7 +47,7 @@ if (fs === null) {
   if (partitions.length > 0) {
     const partition = partitions[0];
     console.log(`Found partition of type: ${partition.type}`);
-    fs = mount(img, { codepage, partition }).getFileSystem();
+    fs = mount(img, { partition }).getFileSystem();
   }
   if (fs === null) {
     console.error("FileSystem is not detected");
@@ -73,15 +74,17 @@ fs.getRoot().getFile("/test")?.moveTo("/tmp");
 // file writing and reading example
 const helloFile = fs.getRoot().makeFile(".Hello[World]..txt");
 if (helloFile === null) {
-  console.error("Can't create a file");
-  process.exit(2);
+  throw new Error("Can't create a file");
 }
 helloFile.setData(new TextEncoder().encode("😀😀😀"));
-const content = new TextDecoder().decode(helloFile.getData());
-console.log(`    FileSize: ${helloFile.length()}`)
-console.log(`        Name: ${helloFile.getName()}`)
-console.log(`   ShortName: ${helloFile.getShortName()}`)
-console.log(`     Content: ${content}`)
+const data = helloFile.getData();
+if (!data) {
+  throw new Error("Impossible");
+}
+console.log(`    FileSize: ${helloFile.length()}`);
+console.log(`        Name: ${helloFile.getName()}`);
+console.log(`   ShortName: ${helloFile.getShortName()}`);
+console.log(`     Content: ${new TextDecoder().decode(data)}`);
 console.log("CreationTime: " + helloFile.creationTime()?.toLocaleString());
 
 // list all files recursive example:

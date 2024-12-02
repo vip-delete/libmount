@@ -1,7 +1,10 @@
+import { readFileSync } from "fs";
 import { expect, test } from "vitest";
 import { gunzipSync } from "zlib";
-import { readFileSync } from "fs";
 
+/**
+ * @param {function(Uint8Array):lmNS.Disk} mount
+ */
 export function testD1(mount) {
   const img = new Uint8Array(gunzipSync(readFileSync("./public/images/disk1.img.gz", { flag: "r" })));
   const disk = mount(img);
@@ -11,6 +14,9 @@ export function testD1(mount) {
   expect(partitions.length).toBe(2);
 
   const fs = mount(img.subarray(partitions[0].begin, partitions[0].end)).getFileSystem();
+  if (fs === null) {
+    throw new Error();
+  }
 
   test("d1-volumeInfo", () => {
     expect(fs.getName()).toBe("FAT16");
@@ -24,17 +30,17 @@ export function testD1(mount) {
   });
 
   test("d1-getFile", () => {
-    expect(fs.getRoot().getFile("test").isDirectory()).toBeTruthy();
-    expect(fs.getRoot().getFile("64mb.dat").length()).toBe(64 * 1024 * 1024);
-    expect(fs.getRoot().getFile("empty.dat").length()).toBe(0);
-    expect(new TextDecoder().decode(fs.getRoot().getFile("readme.txt").getData()).substring(0, 25)).toBe("This is a FAT16 patition.");
-    expect(fs.getRoot().getFile("test/test.dat").length()).toBe(3500);
+    expect(fs.getRoot().getFile("test")?.isDirectory()).toBeTruthy();
+    expect(fs.getRoot().getFile("64mb.dat")?.length()).toBe(64 * 1024 * 1024);
+    expect(fs.getRoot().getFile("empty.dat")?.length()).toBe(0);
+    expect(new TextDecoder().decode(fs.getRoot().getFile("readme.txt")?.getData() ?? new Uint8Array([0])).substring(0, 25)).toBe("This is a FAT16 patition.");
+    expect(fs.getRoot().getFile("test/test.dat")?.length()).toBe(3500);
   });
 
   test("d1-delete", () => {
     fs.getRoot()
       .listFiles()
-      .forEach((it) => it.delete());
+      ?.forEach((it) => it.delete());
     const v = fs.getVolume();
     expect(v.getFreeClusters()).toBe(v.getCountOfClusters());
   });

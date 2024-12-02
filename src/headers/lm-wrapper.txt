@@ -1,0 +1,4 @@
+// @ts-nocheck
+const lmNS = {};
+(function(){%output%})();
+export const { mount } = lmNS;

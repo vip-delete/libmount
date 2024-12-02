@@ -2,8 +2,14 @@ import { expect, test } from "vitest";
 import { gunzipSync } from "zlib";
 import { readFileSync } from "fs";
 
+/**
+ * @param {function(Uint8Array):lmNS.Disk} mount
+ */
 export function testF3(mount) {
   const fs = mount(new Uint8Array(gunzipSync(readFileSync("./public/images/f3.img.gz", { flag: "r" })))).getFileSystem();
+  if (fs === null) {
+    throw new Error();
+  }
 
   test("f3-volumeInfo", () => {
     expect(fs.getName()).toBe("FAT16");
@@ -18,22 +24,22 @@ export function testF3(mount) {
 
   test("f3-getFile", () => {
     const hello = fs.getRoot().getFile("////\\doc1/\\doc2///\\doc3\\//////hello.txt");
-    expect(hello.length()).toBe(19);
-    expect(new TextDecoder().decode(hello.getData())).toBe("HELLO WORLD OF FAT\n");
+    expect(hello?.length()).toBe(19);
+    expect(new TextDecoder().decode(hello?.getData() ?? new Uint8Array([0]))).toBe("HELLO WORLD OF FAT\n");
 
     const dir = fs.getRoot().getFile("L");
-    expect(dir.isDirectory()).toBeTruthy();
+    expect(dir?.isDirectory()).toBeTruthy();
 
-    const list = dir.listFiles();
-    expect(list.length).toBe(2080);
-    list.forEach((f) => {
+    const list = dir?.listFiles();
+    expect(list?.length).toBe(2080);
+    list?.forEach((f) => {
       expect(f.length()).toBe(0);
     });
   });
 
   test("f3-delete", () => {
-    fs.getRoot().getFile("/doc1").delete();
-    fs.getRoot().getFile("/L").delete();
+    fs.getRoot().getFile("/doc1")?.delete();
+    fs.getRoot().getFile("/L")?.delete();
     const info2 = fs.getVolume();
     expect(info2.getFreeClusters()).toBe(info2.getCountOfClusters());
   });

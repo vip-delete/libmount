@@ -1,8 +1,6 @@
-import { DIR_ENTRY_SIZE, Device, DirEntry, DirEntryLFN, FATCrawler, FATDriver, FATMath, FATNode } from "../types.mjs";
-import { DirEntryAttr, DirEntryFlag, FATCrawlerImpl, FATNodeKind, ROOT_NODE, createFATNode } from "./crawler.mjs";
-import { FAT12Math, FAT16Math, FAT32Math } from "./math.mjs";
-import { Logger, assert, impossibleNull } from "../support.mjs";
+import { getChkSum, normalizeLongName, strToLfn, strToSfn, strToTildeName, toDate, toTime, toTimeTenth } from "./utils.mjs";
 import {
+  DirEntryFlag,
   OEM_NAME_LENGTH,
   VOL_LAB_LENGTH,
   loadAndValidateBootSector,
@@ -11,55 +9,26 @@ import {
   writeBootSector,
   writeDirEntry,
   writeDirEntryLFN,
-} from "../loaders.mjs";
-import { getChkSum, normalizeLongName, strToLfn, strToSfn, strToTildeName } from "../name-utils.mjs";
-import { toDate, toTime, toTimeTenth } from "../date-utils.mjs";
+} from "./loaders.mjs";
+import { Logger, assert, impossibleNull } from "./support.mjs";
+import { DIR_ENTRY_SIZE, Device, DirEntry, DirEntryLFN, FATCrawler, FATDriver, FATMath, FATNode } from "./types.mjs";
+import { DirEntryAttr, FATCrawlerImpl, FATNodeKind, ROOT_NODE, createFATNode } from "./crawler.mjs";
+import { FAT12Math, FAT16Math, FAT32Math } from "./math.mjs";
 
 const log = new Logger("DRIVER");
 
-const DOT_SFN = new Uint8Array([
-  //
-  ".".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-]);
+/**
+ * @param {string} str
+ * @returns {!Uint8Array}
+ */
+function toSFN(str) {
+  assert(str.length <= 11);
+  return new Uint8Array(str.padEnd(11, " ").split("").map((c) => c.charCodeAt(0)));
+}
 
-const DOT_DOT_SFN = new Uint8Array([
-  //
-  ".".charCodeAt(0),
-  ".".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-]);
-
-const NO_NAME_SFN = new Uint8Array([
-  "N".charCodeAt(0),
-  "O".charCodeAt(0),
-  " ".charCodeAt(0),
-  "N".charCodeAt(0),
-  "A".charCodeAt(0),
-  "M".charCodeAt(0),
-  "E".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-  " ".charCodeAt(0),
-]);
+const DOT_SFN = toSFN(".");
+const DOT_DOT_SFN = toSFN("..");
+const NO_NAME_SFN = toSFN("NO NAME");
 
 /**
  * @param {!FATNode} node
@@ -76,6 +45,9 @@ function getFirstClusNum(node) {
  */
 function getLastDirOffset(node, math) {
   const skip = node.getDirCount() - 1;
+  /**
+   * @type {?number}
+   */
   let offset = node.getFirstDirOffset();
   let i = 0;
   while (offset !== null && i < skip) {
@@ -94,32 +66,27 @@ function getLastDirOffset(node, math) {
 export class FATDriverImpl {
   /**
    * @param {!Device} device
-   * @param {!lm.Codepage} codepage
+   * @param {!lmNS.Encoding} encoding
    */
-  constructor(device, codepage) {
+  constructor(device, encoding) {
     /**
-     * @private
      * @constant
      */
     this.device = device;
     /**
-     * @private
      * @constant
      */
-    this.codepage = codepage;
+    this.encoding = encoding;
     device.seek(0);
     /**
-     * @private
      * @constant
      */
     this.bs = loadAndValidateBootSector(device);
     /**
-     * @private
      * @constant
      */
     this.vars = loadFATVariables(this.bs);
     /**
-     * @private
      * @constant
      */
     this.math = this.createFATMath();
@@ -127,7 +94,7 @@ export class FATDriverImpl {
      * @private
      * @constant
      */
-    this.crawler = new FATCrawlerImpl(device, this.math, codepage);
+    this.crawler = new FATCrawlerImpl(device, this.math, encoding);
 
     /**
      * @private
@@ -158,6 +125,7 @@ export class FATDriverImpl {
    * @override
    * @returns {string}
    */
+  // @ts-ignore
   getFileSystemName() {
     if (this.vars.CountOfClusters < 4085) {
       return "FAT12";
@@ -170,8 +138,9 @@ export class FATDriverImpl {
 
   /**
    * @override
-   * @returns {!lm.Volume}
+   * @returns {!lmNS.Volume}
    */
+  // @ts-ignore
   getVolume() {
     return this.volume;
   }
@@ -180,6 +149,7 @@ export class FATDriverImpl {
    * @override
    * @returns {!FATNode}
    */
+  // @ts-ignore
   getRoot() {
     return ROOT_NODE;
   }
@@ -188,6 +158,7 @@ export class FATDriverImpl {
    * @override
    * @returns {!FATCrawler}
    */
+  // @ts-ignore
   getCrawler() {
     return this.crawler;
   }
@@ -197,6 +168,7 @@ export class FATDriverImpl {
    * @param {!FATNode} node
    * @returns {number}
    */
+  // @ts-ignore
   getSizeOnDisk(node) {
     if (node.isRoot()) {
       const clusNum = this.math.getClusNum(this.math.getRootDirOffset());
@@ -244,6 +216,7 @@ export class FATDriverImpl {
    * @param {!FATNode} node
    * @returns {?Uint8Array}
    */
+  // @ts-ignore
   readNode(node) {
     if (!node.isRegularFile()) {
       return null;
@@ -274,6 +247,7 @@ export class FATDriverImpl {
    * @param {!Uint8Array} data
    * @returns {?FATNode}
    */
+  // @ts-ignore
   writeNode(node, data) {
     if (!node.isRegularFile()) {
       return null;
@@ -320,6 +294,7 @@ export class FATDriverImpl {
    * @param {!FATNode} node
    * @returns {undefined}
    */
+  // @ts-ignore
   deleteNode(node) {
     if (node.isRoot() || node.isRegularDir()) {
       // recursively delete directory content.
@@ -361,6 +336,7 @@ export class FATDriverImpl {
    * @param {boolean} isDirectory
    * @returns {?FATNode}
    */
+  // @ts-ignore
   makeNode(node, name, isDirectory) {
     if (!node.isRoot() && !node.isRegularDir()) {
       log.warn(`'${node.getLongName()}' is not a directory`);
@@ -422,6 +398,7 @@ export class FATDriverImpl {
    * @param {!FATNode} src
    * @param {!FATNode} dest
    */
+  // @ts-ignore
   moveNode(src, dest) {
     if (src.getFirstDirOffset() === dest.getFirstDirOffset()) {
       // nothing to move
@@ -482,6 +459,9 @@ export class FATDriverImpl {
    * @param {!FATNode} node
    */
   markNodeDeleted(node) {
+    /**
+     * @type {?number}
+     */
     let offset = node.getFirstDirOffset();
     // mark all elements in the chain by setting 0xE5 to the first byte
     // it is possible that the chain spans across multiple non-contiguous clusters
@@ -593,7 +573,7 @@ export class FATDriverImpl {
     // fileNames contains long- and short- names in upper case
     assert(!fileNames.has(filename.toUpperCase()));
     // try to create a single node chain
-    const sfn = strToSfn(filename, this.codepage);
+    const sfn = strToSfn(filename, this.encoding);
     if (sfn !== null) {
       // filename is a correct short name: not need LFN
       return { longName: filename, shortName: filename, dirLFNs: [], dir: createDirEntry(sfn) };
@@ -605,19 +585,19 @@ export class FATDriverImpl {
       return null;
     }
     // try to not use a tilde-like name
-    const simpleSfn = strToSfn(filename.toUpperCase(), this.codepage);
+    const simpleSfn = strToSfn(filename.toUpperCase(), this.encoding);
     if (simpleSfn !== null) {
       // uppercase filename is a correct short name and it is not used
       const chkSum = getChkSum(simpleSfn);
       return { longName: filename, shortName: filename.toUpperCase(), dirLFNs: createDirEntryLFNs(lfn, chkSum), dir: createDirEntry(simpleSfn) };
     }
     // we have to use tilde-like name
-    const tildeName = strToTildeName(filename, this.codepage, fileNames);
+    const tildeName = strToTildeName(filename, this.encoding, fileNames);
     if (tildeName === null) {
       // namespace overflow
       return impossibleNull();
     }
-    const tildeSfn = strToSfn(tildeName, this.codepage);
+    const tildeSfn = strToSfn(tildeName, this.encoding);
     if (tildeSfn === null) {
       // impossible, strToTildeName has to create a correct short name
       return impossibleNull();
@@ -633,6 +613,9 @@ export class FATDriverImpl {
    * @returns {?FATNode}
    */
   writeDirChain(kind, firstDirOffset, chain) {
+    /**
+     * @type {?number}
+     */
     let offset = firstDirOffset;
     let i = chain.dirLFNs.length - 1;
     while (offset !== null && i >= 0) {
@@ -651,7 +634,7 @@ export class FATDriverImpl {
 }
 
 /**
- * @implements {lm.Volume}
+ * @implements {lmNS.Volume}
  */
 class FATVolumeImpl {
   /**
@@ -669,9 +652,10 @@ class FATVolumeImpl {
    * @override
    * @returns {?string}
    */
+  // @ts-ignore
   getLabel() {
     const node = this.getVolumeLabelNode();
-    return node === null ? this.driver.codepage.decode(this.driver.bs.VolLab).trimEnd() : node.getLongName();
+    return node === null ? this.driver.encoding.decode(this.driver.bs.VolLab).trimEnd() : node.getLongName();
   }
 
   /**
@@ -679,6 +663,7 @@ class FATVolumeImpl {
    * @param {?string} label
    * @returns {undefined}
    */
+  // @ts-ignore
   setLabel(label) {
     const node = this.getVolumeLabelNode();
     if (label === null) {
@@ -711,8 +696,9 @@ class FATVolumeImpl {
    * @override
    * @returns {?string}
    */
+  // @ts-ignore
   getOEMName() {
-    return this.driver.codepage.decode(this.driver.bs.oemName).trimEnd();
+    return this.driver.encoding.decode(this.driver.bs.oemName).trimEnd();
   }
 
   /**
@@ -720,6 +706,7 @@ class FATVolumeImpl {
    * @param {?string} oemName
    * @returns {undefined}
    */
+  // @ts-ignore
   setOEMName(oemName) {
     this.driver.bs.oemName = this.getShortName(oemName, OEM_NAME_LENGTH);
     this.writeBootSector();
@@ -729,6 +716,7 @@ class FATVolumeImpl {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   getId() {
     return this.driver.bs.VolID;
   }
@@ -738,6 +726,7 @@ class FATVolumeImpl {
    * @param {number} id
    * @returns {undefined}
    */
+  // @ts-ignore
   setId(id) {
     this.driver.bs.VolID = id >>> 0;
     this.writeBootSector();
@@ -747,6 +736,7 @@ class FATVolumeImpl {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   getSizeOfCluster() {
     return this.driver.vars.SizeOfCluster;
   }
@@ -755,6 +745,7 @@ class FATVolumeImpl {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   getCountOfClusters() {
     return this.driver.vars.CountOfClusters;
   }
@@ -763,6 +754,7 @@ class FATVolumeImpl {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   getFreeClusters() {
     return this.driver.math.getFreeClusters();
   }
@@ -792,15 +784,16 @@ class FATVolumeImpl {
    * @returns {!Uint8Array}
    */
   getShortName(name, length) {
-    const sfn = new Uint8Array(Array(length).fill(32));
+    const sfn = new Uint8Array(new Array(length).fill(" ".charCodeAt(0)));
     if (name !== null) {
-      const encoded = this.driver.codepage.encode(name.substring(0, 11).trimEnd()).subarray(0, length);
+      const encoded = this.driver.encoding.encode(name.substring(0, 11).trimEnd()).subarray(0, length);
       sfn.set(encoded);
     }
     return sfn;
   }
 
   /**
+   * @private
    * @returns {undefined}
    */
   writeBootSector() {
@@ -815,6 +808,7 @@ class FATVolumeImpl {
  * @returns {!Array<!DirEntryLFN>}
  */
 function createDirEntryLFNs(lfn, Chksum) {
+  assert(lfn.length > 0);
   /**
    * @type {!Array<!DirEntryLFN>}
    */
@@ -858,7 +852,7 @@ function createDirEntryLFNs(lfn, Chksum) {
     });
     i += 26;
   }
-  dirLFNs.at(-1).Ord |= 0x40;
+  dirLFNs[dirLFNs.length - 1].Ord |= 0x40;
   return dirLFNs;
 }
 

@@ -24,6 +24,7 @@ export class RawDevice {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   length() {
     return this.img.length;
   }
@@ -32,6 +33,7 @@ export class RawDevice {
    * @override
    * @param {number} offset
    */
+  // @ts-ignore
   seek(offset) {
     this.pos = offset;
   }
@@ -40,6 +42,7 @@ export class RawDevice {
    * @override
    * @param {number} bytes
    */
+  // @ts-ignore
   skip(bytes) {
     this.pos += bytes;
   }
@@ -49,6 +52,7 @@ export class RawDevice {
    * @param {number} len
    * @returns {!Uint8Array}
    */
+  // @ts-ignore
   readArray(len) {
     assert(this.pos + len <= this.length());
     const r = new Uint8Array(this.img.subarray(this.pos, this.pos + len));
@@ -61,6 +65,7 @@ export class RawDevice {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   readByte() {
     assert(this.pos + 1 <= this.length());
     const r = this.img[this.pos++];
@@ -71,6 +76,7 @@ export class RawDevice {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   readWord() {
     assert(this.pos + 2 <= this.length());
     const r = this.img[this.pos++] | (this.img[this.pos++] << 8);
@@ -81,6 +87,7 @@ export class RawDevice {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   readDoubleWord() {
     assert(this.pos + 4 <= this.length());
     const r = (this.img[this.pos++] | (this.img[this.pos++] << 8) | (this.img[this.pos++] << 16) | (this.img[this.pos++] << 24)) >>> 0;
@@ -91,6 +98,7 @@ export class RawDevice {
    * @override
    * @param {!Uint8Array} array
    */
+  // @ts-ignore
   writeArray(array) {
     assert(this.pos + array.length <= this.length());
     this.img.set(array, this.pos);
@@ -101,6 +109,7 @@ export class RawDevice {
    * @override
    * @param {number} val
    */
+  // @ts-ignore
   writeByte(val) {
     assert(this.pos + 1 <= this.length());
     assert(val >= 0 && val <= 0xff);
@@ -111,6 +120,7 @@ export class RawDevice {
    * @override
    * @param {number} val
    */
+  // @ts-ignore
   writeWord(val) {
     assert(this.pos + 2 <= this.length());
     assert(val >= 0 && val <= 0xffff);
@@ -122,6 +132,7 @@ export class RawDevice {
    * @override
    * @param {number} val
    */
+  // @ts-ignore
   writeDoubleWord(val) {
     assert(this.pos + 4 <= this.length());
     assert(val >= 0 && val <= 0xffffffff);

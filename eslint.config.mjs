@@ -1,4 +1,3 @@
-import globals from "globals";
 import js from "@eslint/js";
 import jsdoc from "eslint-plugin-jsdoc";
 import stylistic from "@stylistic/eslint-plugin";
@@ -11,16 +10,17 @@ export default [
     semi: true,
   }),
   {
-    ignores: ["dist", "public"],
+    ignores: ["dist", "public", "examples"],
   },
   {
     languageOptions: {
       globals: {
-        ...globals.browser,
+        TextDecoder: "readonly",
         Iterator: "readonly",
         Iterable: "readonly",
         IIterableResult: "readonly",
-        lm: "readonly",
+        console: "readonly",
+        lmNS: "readonly",
       },
     },
     plugins: {
@@ -62,6 +62,8 @@ export default [
       "prefer-destructuring": 0,
       "prefer-template": 0,
       "sort-keys": 0,
+      "sort-imports": 0,
+      "no-console": 0,
     },
   },
 ];

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /* global ENABLE_LOGGER, ENABLE_ASSERTIONS */
 
 /**
@@ -6,9 +5,10 @@
  * @param {string} [msg]
  */
 export function assert(expression, msg) {
+  // @ts-ignore
   if (ENABLE_ASSERTIONS) {
     if (!expression) {
-      throw msg ?? "AssertionError";
+      throw new Error(msg ?? "AssertionError");
     }
   }
 }
@@ -19,6 +19,14 @@ export function assert(expression, msg) {
 export function impossibleNull() {
   assert(false);
   return null;
+}
+
+/**
+ * @returns {number}
+ */
+export function impossibleZero() {
+  assert(false);
+  return 0;
 }
 
 export class Logger {
@@ -33,6 +41,7 @@ export class Logger {
    * @param {string} msg
    */
   debug(msg) {
+    // @ts-ignore
     if (ENABLE_LOGGER) {
       console.debug(`${timestamp()} DEBUG [${this.name}] ${msg}`);
     }
@@ -42,6 +51,7 @@ export class Logger {
    * @param {string} msg
    */
   warn(msg) {
+    // @ts-ignore
     if (ENABLE_LOGGER) {
       console.warn(`${timestamp()} WARN  [${this.name}] ${msg}`);
     }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @typedef {{
  *            Cylinder: number,
@@ -228,6 +229,7 @@ export class FATMath {
 
   /**
    * @param {number} clusNum
+   * @returns {null}
    */
   writeZeros(clusNum) {}
 
@@ -371,7 +373,7 @@ export class FATDriver {
   getFileSystemName() {}
 
   /**
-   * @returns {!lm.Volume}
+   * @returns {!lmNS.Volume}
    */
   getVolume() {}
 

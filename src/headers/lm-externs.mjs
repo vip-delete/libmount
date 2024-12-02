@@ -6,11 +6,11 @@
  * @file Public API of "libmount" for Closure Compiler (not used in production)
  * @externs
  */
-const lm = {
+const lmNS = {
   /**
    * @param {!Uint8Array} img
-   * @param {!lm.MountOptions} [options]
-   * @returns {!lm.Disk}
+   * @param {!lmNS.MountOptions} [options]
+   * @returns {!lmNS.Disk}
    */
   mount(img, options) {},
 
@@ -18,7 +18,7 @@ const lm = {
    * Encoding and decoding single-byte character sets (e.g. cp1251, cp1252).
    * @interface
    */
-  Codepage: class {
+  Encoding: class {
     /**
      * Decodes an array of single-byte characters into a string.
      * @param {!Uint8Array} array
@@ -29,17 +29,9 @@ const lm = {
     /**
      * Encodes a string into an array of single-byte characters.
      * @param {string} text
-     * @param {number} [defaultCharCode]
      * @returns {!Uint8Array}
      */
-    encode(text, defaultCharCode) {}
-
-    /**
-     * Convert a wide character code to a single-byte character code if possible.
-     * @param {number} wcCode
-     * @returns {?number}
-     */
-    encodeChar(wcCode) {}
+    encode(text) {}
   },
 
   /**
@@ -47,12 +39,12 @@ const lm = {
    */
   Disk: class {
     /**
-     * @returns {?lm.FileSystem}
+     * @returns {?lmNS.FileSystem}
      */
     getFileSystem() {}
 
     /**
-     * @returns {!Array<!lm.Partition>}
+     * @returns {!Array<!lmNS.Partition>}
      */
     getPartitions() {}
   },
@@ -67,12 +59,12 @@ const lm = {
     getName() {}
 
     /**
-     * @returns {!lm.Volume}
+     * @returns {!lmNS.Volume}
      */
     getVolume() {}
 
     /**
-     * @returns {!lm.File}
+     * @returns {!lmNS.File}
      */
     getRoot() {}
   },
@@ -135,19 +127,19 @@ const lm = {
     lastAccessTime() {}
 
     /**
-     * @param {function(!lm.File):boolean} predicate
-     * @returns {?lm.File}
+     * @param {function(!lmNS.File):boolean} predicate
+     * @returns {?lmNS.File}
      */
     findFirst(predicate) {}
 
     /**
-     * @param {function(!lm.File):boolean} predicate
-     * @returns {?Array<!lm.File>}
+     * @param {function(!lmNS.File):boolean} predicate
+     * @returns {?Array<!lmNS.File>}
      */
     findAll(predicate) {}
 
     /**
-     * @returns {?Array<!lm.File>}
+     * @returns {?Array<!lmNS.File>}
      */
     listFiles() {}
 
@@ -158,7 +150,7 @@ const lm = {
 
     /**
      * @param {!Uint8Array} data
-     * @returns {?lm.File}
+     * @returns {?lmNS.File}
      */
     setData(data) {}
 
@@ -169,25 +161,25 @@ const lm = {
 
     /**
      * @param {string} relativePath
-     * @returns {?lm.File}
+     * @returns {?lmNS.File}
      */
     getFile(relativePath) {}
 
     /**
      * @param {string} relativePath
-     * @returns {?lm.File}
+     * @returns {?lmNS.File}
      */
     makeFile(relativePath) {}
 
     /**
      * @param {string} relativePath
-     * @returns {?lm.File}
+     * @returns {?lmNS.File}
      */
     makeDir(relativePath) {}
 
     /**
      * @param {string} dest
-     * @returns {?lm.File}
+     * @returns {?lmNS.File}
      */
     moveTo(dest) {}
   },
@@ -248,11 +240,11 @@ const lm = {
 
 /**
  * @typedef {{
- *            codepage: lm.Codepage,
- *            partition: lm.Partition,
+ *            encoding: lmNS.Encoding,
+ *            partition: lmNS.Partition,
  *          }}
  */
-lm.MountOptions;
+lmNS.MountOptions;
 
 /**
  * @typedef {{
@@ -262,4 +254,4 @@ lm.MountOptions;
  *            end: number,
  *          }}
  */
-lm.Partition;
+lmNS.Partition;

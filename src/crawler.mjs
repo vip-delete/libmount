@@ -1,12 +1,12 @@
-import { DIR_ENTRY_SIZE, Device, DirEntry, DirEntryLFN, FATCrawler, FATMath, FATNode } from "../types.mjs";
-import { assert, impossibleNull } from "../support.mjs";
-import { getChkSum, isLongNameValidCode, isShortNameValidCode, normalizeLongName, sfnToStr } from "../name-utils.mjs";
-import { loadDirEntry, loadDirEntryLFN } from "../loaders.mjs";
+import { DirEntryFlag, loadDirEntry, loadDirEntryDeleted, loadDirEntryLFN, pickDirEntryAttr, pickDirEntryFlag } from "./loaders.mjs";
+import { assert, impossibleNull } from "./support.mjs";
+import { DIR_ENTRY_SIZE, Device, DirEntry, DirEntryLFN, FATCrawler, FATMath, FATNode } from "./types.mjs";
+import { getChkSum, isLongNameValidCode, isShortNameValidCode, normalizeLongName, sfnToStr } from "./utils.mjs";
 
 const DIR_LN_LAST_LONG_ENTRY = 0x40;
 
 /**
- * @enum
+ * @enum {number}
  */
 export const FATNodeKind = {
   ROOT: 0,
@@ -95,6 +95,7 @@ class FATNodeImpl {
    * @override
    * @returns {string}
    */
+  // @ts-ignore
   getLongName() {
     return this.longName;
   }
@@ -103,6 +104,7 @@ class FATNodeImpl {
    * @override
    * @returns {string}
    */
+  // @ts-ignore
   getShortName() {
     return this.shortName;
   }
@@ -111,6 +113,7 @@ class FATNodeImpl {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   getFirstDirOffset() {
     return this.firstDirOffset;
   }
@@ -119,6 +122,7 @@ class FATNodeImpl {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   getLastDirOffset() {
     return this.lastDirOffset;
   }
@@ -127,6 +131,7 @@ class FATNodeImpl {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   getDirCount() {
     return this.dirCount;
   }
@@ -135,6 +140,7 @@ class FATNodeImpl {
    * @override
    * @returns {!DirEntry}
    */
+  // @ts-ignore
   getDirEntry() {
     return this.dir;
   }
@@ -143,6 +149,7 @@ class FATNodeImpl {
    * @override
    * @returns {boolean}
    */
+  // @ts-ignore
   isRoot() {
     return this.kind === FATNodeKind.ROOT;
   }
@@ -151,6 +158,7 @@ class FATNodeImpl {
    * @override
    * @returns {boolean}
    */
+  // @ts-ignore
   isRegularDir() {
     return this.kind === FATNodeKind.REGULAR_DIR;
   }
@@ -159,6 +167,7 @@ class FATNodeImpl {
    * @override
    * @returns {boolean}
    */
+  // @ts-ignore
   isRegularFile() {
     return this.kind === FATNodeKind.REGULAR_FILE;
   }
@@ -167,6 +176,7 @@ class FATNodeImpl {
    * @override
    * @returns {boolean}
    */
+  // @ts-ignore
   isVolumeId() {
     return this.kind === FATNodeKind.VOLUME_ID;
   }
@@ -175,6 +185,7 @@ class FATNodeImpl {
    * @override
    * @returns {boolean}
    */
+  // @ts-ignore
   isDot() {
     return this.kind === FATNodeKind.DOT_DIR;
   }
@@ -183,6 +194,7 @@ class FATNodeImpl {
    * @override
    * @returns {boolean}
    */
+  // @ts-ignore
   isDotDot() {
     return this.kind === FATNodeKind.DOTDOT_DIR;
   }
@@ -191,6 +203,7 @@ class FATNodeImpl {
    * @override
    * @returns {boolean}
    */
+  // @ts-ignore
   isInvalid() {
     return this.kind === FATNodeKind.INVALID;
   }
@@ -199,6 +212,7 @@ class FATNodeImpl {
    * @override
    * @returns {boolean}
    */
+  // @ts-ignore
   isDeleted() {
     return this.kind === FATNodeKind.DELETED;
   }
@@ -207,6 +221,7 @@ class FATNodeImpl {
    * @override
    * @returns {boolean}
    */
+  // @ts-ignore
   isDeletedLFN() {
     return this.kind === FATNodeKind.DELETED_LFN;
   }
@@ -215,6 +230,7 @@ class FATNodeImpl {
    * @override
    * @returns {boolean}
    */
+  // @ts-ignore
   isLast() {
     return this.kind === FATNodeKind.LAST;
   }
@@ -237,15 +253,7 @@ export function createFATNode(kind, longName, shortName, firstDirOffset, lastDir
 export const ROOT_NODE = createFATNode(FATNodeKind.ROOT, "", "", -1, -1, -1, ROOT_DIR_ENTRY);
 
 /**
- * @enum
- */
-export const DirEntryFlag = {
-  LAST_ENTRY: 0x00,
-  FREE_ENTRY: 0xe5,
-};
-
-/**
- * @enum
+ * @enum {number}
  */
 export const DirEntryAttr = {
   READ_ONLY: 0x01,
@@ -307,7 +315,7 @@ function isChkSumMatch(chain, chksum) {
  * @returns {boolean}
  */
 function isConnected(chain, dir) {
-  return chain.length > 0 && getOrdDirEntryLFN(chain.at(-1)) === 1 && isChkSumMatch(chain, getChkSum(dir.Name));
+  return chain.length > 0 && getOrdDirEntryLFN(chain[chain.length - 1]) === 1 && isChkSumMatch(chain, getChkSum(dir.Name));
 }
 
 /**
@@ -381,30 +389,17 @@ function getSimpleNode(kind, name, firstDirOffset, dir) {
  * @param {!DirEntry} dir
  * @param {number} firstDirOffset
  * @param {number} lastDirOffset
- * @param {!lm.Codepage} codepage
- * @param {number} flag
+ * @param {!lmNS.Encoding} encoding
  * @param {!Array<!DirEntryLFN>} chain
  * @returns {!FATNode}
  */
-function getNode(dir, firstDirOffset, lastDirOffset, codepage, flag, chain) {
-  if (flag === DirEntryFlag.FREE_ENTRY) {
-    // deleted entry
-    if (chain.length > 0) {
-      return getInvalidNode(firstDirOffset, lastDirOffset, chain.length);
-    }
-    if (dir.Attr === DirEntryAttr.LONG_NAME) {
-      return getSimpleNode(FATNodeKind.DELETED_LFN, "", firstDirOffset, DUMMY_DIR);
-    }
-    const name = sfnToStr(dir.Name, codepage);
-    return getSimpleNode(FATNodeKind.DELETED, name, firstDirOffset, dir);
-  }
-
+function getNode(dir, firstDirOffset, lastDirOffset, encoding, chain) {
   if ((dir.Attr & DirEntryAttr.VOLUME_ID) > 0) {
     // volume entry
     if (chain.length > 0) {
       return getInvalidNode(firstDirOffset, lastDirOffset, chain.length);
     }
-    const name = codepage.decode(dir.Name).trimEnd();
+    const name = encoding.decode(dir.Name).trimEnd();
     return getSimpleNode(FATNodeKind.VOLUME_ID, name, firstDirOffset, dir);
   }
 
@@ -413,7 +408,7 @@ function getNode(dir, firstDirOffset, lastDirOffset, codepage, flag, chain) {
     if (chain.length > 0) {
       return getInvalidNode(firstDirOffset, lastDirOffset, chain.length);
     }
-    const name = codepage.decode(dir.Name).trimEnd();
+    const name = encoding.decode(dir.Name).trimEnd();
     if (name === ".") {
       return getSimpleNode(FATNodeKind.DOT_DIR, name, firstDirOffset, dir);
     } else if (name === "..") {
@@ -424,7 +419,7 @@ function getNode(dir, firstDirOffset, lastDirOffset, codepage, flag, chain) {
   }
 
   // regular dirEntry
-  const shortName = dir.Name.every(isShortNameValidCode) ? sfnToStr(dir.Name, codepage) : "";
+  const shortName = dir.Name.every(isShortNameValidCode) ? sfnToStr(dir.Name, encoding) : "";
   const shortNameValid = shortName !== "" && !shortName.startsWith(" ");
   if (!shortNameValid) {
     // chain and current entry is invalid
@@ -447,50 +442,53 @@ function getNode(dir, firstDirOffset, lastDirOffset, codepage, flag, chain) {
 
 /**
  * @param {!Device} device
- * @param  {number} offset
- * @returns {number}
- */
-function getFirstByte(device, offset) {
-  assert(offset > 0 && offset % DIR_ENTRY_SIZE === 0, `Offset ${offset} is not ${DIR_ENTRY_SIZE} bytes aligned`);
-  device.seek(offset);
-
-  const flag = device.readByte();
-  device.skip(-1);
-  return flag;
-}
-
-/**
- * @param {!Device} device
  * @param {!FATMath} math
- * @param {!lm.Codepage} codepage
+ * @param {!lmNS.Encoding} encoding
  * @param  {number} firstDirOffset
  * @returns {?FATNode}
  */
-function getNextNode(device, math, codepage, firstDirOffset) {
+function getNextNode(device, math, encoding, firstDirOffset) {
   /**
    * @type {!Array<!DirEntryLFN>}
    */
   const chain = [];
+  /**
+   * @type {?number}
+   */
   let offset = firstDirOffset;
   let lastDirOffset = firstDirOffset;
   while (offset !== null) {
     lastDirOffset = offset;
-    const flag = getFirstByte(device, offset);
+    assert(offset > 0 && offset % DIR_ENTRY_SIZE === 0);
+    device.seek(offset);
+
+    const flag = pickDirEntryFlag(device);
     if (flag === DirEntryFlag.LAST_ENTRY) {
-      // if there was a chain, then it is invalid
       if (chain.length > 0) {
         return getInvalidNode(firstDirOffset, lastDirOffset, chain.length);
       }
       return getLastNode(firstDirOffset);
     }
-    const dir = loadDirEntry(device);
-    const lfn = dir.Attr === DirEntryAttr.LONG_NAME && flag !== DirEntryFlag.FREE_ENTRY;
-    if (!lfn) {
-      return getNode(dir, firstDirOffset, lastDirOffset, codepage, flag, chain);
+
+    if (flag === DirEntryFlag.FREE_ENTRY) {
+      if (chain.length > 0) {
+        return getInvalidNode(firstDirOffset, lastDirOffset, chain.length);
+      }
+      const dir = loadDirEntryDeleted(device);
+      if (dir.Attr === DirEntryAttr.LONG_NAME) {
+        return getSimpleNode(FATNodeKind.DELETED_LFN, "", firstDirOffset, DUMMY_DIR);
+      }
+      const name = sfnToStr(dir.Name, encoding);
+      return getSimpleNode(FATNodeKind.DELETED, name, firstDirOffset, dir);
+    }
+
+    const attr = pickDirEntryAttr(device);
+    if (attr !== DirEntryAttr.LONG_NAME) {
+      const dir = loadDirEntry(device);
+      return getNode(dir, firstDirOffset, lastDirOffset, encoding, chain);
     }
 
     // LFN
-    device.skip(-DIR_ENTRY_SIZE);
     const dirLFN = loadDirEntryLFN(device);
     if (isLastDirEntryLFN(dirLFN)) {
       // a chain just started
@@ -503,7 +501,7 @@ function getNextNode(device, math, codepage, firstDirOffset) {
         // a chain is empty and current item is not 'last', so it is invalid
         return getInvalidNode(firstDirOffset, lastDirOffset, 1);
       }
-      const prev = getOrdDirEntryLFN(chain.at(-1));
+      const prev = getOrdDirEntryLFN(chain[chain.length - 1]);
       const curr = getOrdDirEntryLFN(dirLFN);
       if (prev !== curr + 1) {
         // ord mismatch: the whole chain plus current dirLFN is invalid
@@ -539,9 +537,9 @@ export class FATCrawlerImpl {
   /**
    * @param {!Device} device
    * @param {!FATMath} math
-   * @param {!lm.Codepage} codepage
+   * @param {!lmNS.Encoding} encoding
    */
-  constructor(device, math, codepage) {
+  constructor(device, math, encoding) {
     /**
      * @private
      * @constant
@@ -556,7 +554,7 @@ export class FATCrawlerImpl {
      * @private
      * @constant
      */
-    this.codepage = codepage;
+    this.encoding = encoding;
   }
 
   /**
@@ -564,12 +562,12 @@ export class FATCrawlerImpl {
    * @param {!FATNode} node
    * @returns {!Iterable<!FATNode>}
    */
+  // @ts-ignore
   getSubNodes(node) {
     return new NodeList(this, this.getFirst(node));
   }
 
   /**
-   * @private
    * @param {!FATNode} node
    * @returns {?FATNode}
    */
@@ -589,7 +587,6 @@ export class FATCrawlerImpl {
   }
 
   /**
-   * @private
    * @param {!FATNode} node
    * @returns {?FATNode}
    */
@@ -610,7 +607,7 @@ export class FATCrawlerImpl {
    * @returns {?FATNode}
    */
   loadFromOffset(offset) {
-    const node = getNextNode(this.device, this.math, this.codepage, offset);
+    const node = getNextNode(this.device, this.math, this.encoding, offset);
     assert(node === null || node.getFirstDirOffset() === offset);
     assert(node === null || node.getDirCount() > 0);
     return node;
@@ -642,6 +639,7 @@ class NodeList {
    * @override
    * @returns {!IIterableResult}
    */
+  // @ts-ignore
   next() {
     const value = this.value;
     const ret = {

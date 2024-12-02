@@ -16,6 +16,18 @@ import { assert, validate } from "./support.mjs";
 export const OEM_NAME_LENGTH = 8;
 export const VOL_LAB_LENGTH = 11;
 export const DIR_NAME_LENGTH = 11;
+const DIR_NAME0_FOR_DELETED_ENTRY = "?".charCodeAt(0);
+
+/**
+ * @enum {number}
+ */
+export const DirEntryFlag = {
+  LAST_ENTRY: 0x00,
+  FREE_ENTRY: 0xe5,
+};
+
+// the value 0x05 is stored in DIR_Name[0] to represent 0xE5 (FREE_ENTRY).
+const DIR_NAME0_LIKE_FREE_ENTRY = 0x05;
 
 /**
  * @param {!Device} device
@@ -295,9 +307,54 @@ export function loadAndValidateFSInfo(device) {
 
 /**
  * @param {!Device} device
+ * @returns {number}
+ */
+export function pickDirEntryFlag(device) {
+  const flag = device.readByte();
+  device.skip(-1);
+  return flag;
+}
+
+/**
+ * @param {!Device} device
+ * @returns {number}
+ */
+export function pickDirEntryAttr(device) {
+  device.skip(DIR_NAME_LENGTH);
+  const attr = device.readByte();
+  device.skip(-DIR_NAME_LENGTH - 1);
+  return attr;
+}
+
+/**
+ * @param {!Device} device
  * @returns {!DirEntry}
  */
 export function loadDirEntry(device) {
+  const dir = readDirEntry(device);
+  assert(dir.Name[0] !== DirEntryFlag.FREE_ENTRY);
+  if (dir.Name[0] === DIR_NAME0_LIKE_FREE_ENTRY) {
+    dir.Name[0] = DirEntryFlag.FREE_ENTRY;
+  }
+  return dir;
+}
+
+/**
+ * @param {!Device} device
+ * @returns {!DirEntry}
+ */
+export function loadDirEntryDeleted(device) {
+  const dir = readDirEntry(device);
+  assert(dir.Name[0] === DirEntryFlag.FREE_ENTRY);
+  dir.Name[0] = DIR_NAME0_FOR_DELETED_ENTRY;
+  return dir;
+}
+
+/**
+ * @param {!Device} device
+ * @returns {!DirEntry}
+ */
+function readDirEntry(device) {
   return {
     Name: device.readArray(DIR_NAME_LENGTH),
     Attr: device.readByte(),
@@ -320,6 +377,9 @@ export function loadDirEntry(device) {
  */
 export function writeDirEntry(device, dir) {
   assert(dir.Name.length === DIR_NAME_LENGTH);
+  if (dir.Name[0] === DirEntryFlag.FREE_ENTRY) {
+    dir.Name[0] = DIR_NAME0_LIKE_FREE_ENTRY;
+  }
   device.writeArray(dir.Name);
   device.writeByte(dir.Attr);
   device.writeByte(dir.NTRes);

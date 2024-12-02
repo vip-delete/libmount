@@ -13,13 +13,12 @@ body {
 }
 
 :root {
-  --row-height: 24px;
-  --column-width-action: 32px;
-  --column-width-name: 350px;
-  --column-width-short-name: 150px;
-  --column-width-size: 100px;
-  --column-width-datetime: 150px;
-  --column-width-date: 90px;
+  --col-action: 24px;
+  --col-name: 350px;
+  --col-short-name: 150px;
+  --col-size: 100px;
+  --col-datetime: 155px;
+  --col-date: 95px;
 }
 
 a {
@@ -38,115 +37,74 @@ a {
   background-color: #00c0ff;
 }
 
-#app {
+.error {
+  color: red;
 }
 
-.row {
-  display: block;
-  margin: 2px 0;
+.file > div {
+  float: left;
 }
 
-.row.header > span {
+.file > div:nth-child(1) {
+  cursor: pointer;
+  color: blue;
+}
+
+.file > div:nth-child(1):hover {
+  text-decoration: underline;
+}
+
+.info {
+  color: green;
+}
+
+.header > span {
   background-color: lightgray;
 }
 
-.row > span {
-  display: inline-block;
-  vertical-align: middle;
-  text-wrap: nowrap;
-  margin-right: 5px;
-  padding: 0 5px;
+.action {
+  padding: 0 !important;
 }
 
-.row > span:nth-child(1) {
-  width: calc(var(--row-height) - 5px);
+.icon-delete::after {
+  content: "❌";
+  cursor: pointer;
 }
 
-.row > span:nth-child(2) {
-  width: calc(var(--row-height) - 5px);
+.icon-dir::after {
+  content: "📁";
 }
 
-.row > span:nth-child(3) {
-  width: var(--column-width-name);
-  overflow: hidden;
-  text-overflow: ellipsis;
+.icon-file::after {
+  content: "📄";
 }
 
-.row > span:nth-child(4) {
-  width: var(--column-width-short-name);
+.icon-up::after {
+  content: "⮤";
 }
 
-.row > span:nth-child(5) {
-  width: var(--column-width-size);
-  text-align: right;
-}
-
-.row > span:nth-child(6) {
-  width: var(--column-width-size);
-  text-align: right;
-}
-
-.row > span:nth-child(7) {
-  width: var(--column-width-datetime);
-}
-
-.row > span:nth-child(8) {
-  width: var(--column-width-datetime);
-}
-
-.row > span:nth-child(9) {
-  width: var(--column-width-date);
-}
-
-.icon {
-  height: calc(var(--row-height) - 5px);
-  width: calc(var(--row-height) - 5px);
-  display: inline-block;
-}
-
-.fs-name {
-  font-weight: bold;
-}
+.row { display: block; margin: 2px 0; height: var(--col-action); }
+.row > span { display: inline-block; margin-right: 5px; padding: 0 5px; }
+.row > span:nth-child(1) { width: calc(var(--col-action) - 5px); text-align: center; }
+.row > span:nth-child(2) { width: calc(var(--col-action) - 5px); text-align: center; }
+.row > span:nth-child(3) { width: var(--col-name); overflow-x: clip; text-overflow: ellipsis; }
+.row > span:nth-child(4) { width: var(--col-short-name); }
+.row > span:nth-child(5) { width: var(--col-size); text-align: right; }
+.row > span:nth-child(6) { width: var(--col-size); text-align: right; }
+.row > span:nth-child(7) { width: var(--col-datetime); }
+.row > span:nth-child(8) { width: var(--col-datetime); }
+.row > span:nth-child(9) { width: var(--col-date); }
 
 .name {
-  text-overflow: ellipsis;
-  overflow: hidden;
   text-wrap: nowrap;
-  vertical-align: middle;
+  color: blue;
 }
 
 .name > span {
   padding-left: 0;
 }
 
-.name > span:hover {
+.name:hover {
   cursor: pointer;
   text-decoration: underline;
-}
-
-.status {
-  border: solid 1px black;
-  border-radius: 10px;
-  width: fit-content;
-  height: 48px;
-}
-
-.up {
-  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="none" stroke="black" stroke-width="3" d="M20,27H8V17"/><path fill="black" d="M8,8L1,18H15Z"/></g></svg>')
-    no-repeat;
-}
-
-.file {
-  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="white" stroke="gray" stroke-width="2" d="M15,1H1V31H25V9Z"/></g></svg>')
-    no-repeat;
-}
-
-.dir {
-  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="%23FFE791" stroke="%23EBC748" stroke-width="2" d="M15,1H1V31H25V9Z M20,9V30"/></g></svg>')
-    no-repeat;
-}
-
-.del {
-  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><g><path fill="none" stroke="%23FF6666" stroke-linecap="round" stroke-width="6" d="M3,3L29,29 M29,3L3,29"/></g></svg>')
-    no-repeat;
 }

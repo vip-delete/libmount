@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
-import { parseDate, parseDateTime, toDate, toTime, toTimeTenth } from "./src/date-utils.mjs";
+import { parseDate, parseDateTime, toDate, toTime, toTimeTenth } from "../src/utils.mjs";
 
-export function testDateUtils() {
+export function testDates() {
   test("parseDate", () => {
     expect(parseDate(0)).toBeNull();
     expect(parseDate(0b100000_1010_11001)).toStrictEqual(new Date(1980 + 0b100000, 0b1010 - 1, 0b11001));
@@ -19,12 +19,12 @@ export function testDateUtils() {
     const time = toTime(now);
     const timeTenth = toTimeTenth(now);
 
-    const parsedDate = new Date(parseDate(date));
+    const parsedDate = new Date(parseDate(date) ?? 0);
     expect(parsedDate.getFullYear()).toBe(now.getFullYear());
     expect(parsedDate.getMonth()).toBe(now.getMonth());
     expect(parsedDate.getDate()).toBe(now.getDate());
 
-    const parsedDateTime = new Date(parseDateTime(date, time, timeTenth));
+    const parsedDateTime = new Date(parseDateTime(date, time, timeTenth) ?? 0);
     expect(parsedDateTime.getFullYear()).toBe(now.getFullYear());
     expect(parsedDateTime.getMonth()).toBe(now.getMonth());
     expect(parsedDateTime.getDate()).toBe(now.getDate());

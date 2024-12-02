@@ -1,8 +1,6 @@
-import { BiosParameterBlock, DIR_ENTRY_SIZE, Device, FATMath, FATVariables, FSInfo } from "../types.mjs";
-// import { Logger, assert } from "../support.mjs";
-import { assert } from "../support.mjs";
-
-// const log = new Logger("MATH");
+// @ts-nocheck
+import { assert, impossibleNull } from "./support.mjs";
+import { BiosParameterBlock, DIR_ENTRY_SIZE, Device, FATMath, FATVariables, FSInfo } from "./types.mjs";
 
 const MIN_CLUS_NUM = 2;
 const FREE_CLUS = 0;
@@ -21,7 +19,6 @@ class FATMathBase {
    */
   constructor(device, bpb, vars, finalClus, multiplier) {
     /**
-     * @private
      * @constant
      */
     this.device = device;
@@ -51,7 +48,6 @@ class FATMathBase {
     this.offsetFATs = offsetFATs;
 
     /**
-     * @private
      * @constant
      */
     this.finalClus = finalClus;
@@ -89,6 +85,7 @@ class FATMathBase {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   getRootDirOffset() {
     return this.vars.RootDirOffset;
   }
@@ -98,6 +95,7 @@ class FATMathBase {
    * @param {number} clusNum
    * @returns {?number}
    */
+  // @ts-ignore
   getContentOffset(clusNum) {
     return this.isAllocated(clusNum) ? this.bpb.BytsPerSec * (this.vars.FirstDataSector + (clusNum - 2) * this.bpb.SecPerClus) : null;
   }
@@ -107,6 +105,7 @@ class FATMathBase {
    * @param {number} clusNum
    * @returns {boolean}
    */
+  // @ts-ignore
   isAllocated(clusNum) {
     assert(Number.isInteger(clusNum));
     return clusNum >= MIN_CLUS_NUM && clusNum <= this.vars.MaxClus;
@@ -117,6 +116,7 @@ class FATMathBase {
    * @param {number} clusNum
    * @returns {number}
    */
+  // @ts-ignore
   getNextClusNum(clusNum) {
     const clusOffset = this.getClusOffset(clusNum);
     this.device.seek(this.offsetFATs[0] + clusOffset);
@@ -140,6 +140,7 @@ class FATMathBase {
    * @param {number} clusNum
    * @param {number} value
    */
+  // @ts-ignore
   setNextClusNum(clusNum, value) {
     const clusOffset = this.getClusOffset(clusNum);
     for (let i = 0; i < this.offsetFATs.length; i++) {
@@ -152,22 +153,24 @@ class FATMathBase {
   /**
    * @override
    * @param {number} clusNum
+   * @returns {null}
    */
+  // @ts-ignore
   writeZeros(clusNum) {
     const offset = this.getContentOffset(clusNum);
     if (offset === null) {
-      // impossible
-      assert(false);
-      return;
+      return impossibleNull();
     }
     this.device.seek(offset);
     this.device.writeArray(new Uint8Array(this.vars.SizeOfCluster));
+    return null;
   }
 
   /**
    * @override
    * @param {number} clusNum
    */
+  // @ts-ignore
   setFreeClusNum(clusNum) {
     this.setNextClusNum(clusNum, FREE_CLUS);
   }
@@ -176,6 +179,7 @@ class FATMathBase {
    * @override
    * @param {number} clusNum
    */
+  // @ts-ignore
   setFinalClusNum(clusNum) {
     this.setNextClusNum(clusNum, this.finalClus);
   }
@@ -184,6 +188,7 @@ class FATMathBase {
    * @override
    * @returns {number}
    */
+  // @ts-ignore
   getFreeClusters() {
     let count = 0;
     for (let i = MIN_CLUS_NUM; i <= this.vars.MaxClus; i++) {
@@ -199,6 +204,7 @@ class FATMathBase {
    * @param {number} count
    * @returns {?Array<number>}
    */
+  // @ts-ignore
   allocateClusters(count) {
     assert(Number.isInteger(count));
     assert(count > 0);
@@ -218,10 +224,11 @@ class FATMathBase {
       return null;
     }
     // connect all allocated clusters into a chain
-    for (let j = 0; j < list.length - 1; j++) {
+    const last = list.length - 1;
+    for (let j = 0; j < last; j++) {
       this.setNextClusNum(list[j], list[j + 1]);
     }
-    this.setNextClusNum(list.at(-1), this.finalClus);
+    this.setNextClusNum(list[last], this.finalClus);
     return list;
   }
 
@@ -230,6 +237,7 @@ class FATMathBase {
    * @param {number} offset
    * @returns {?number}
    */
+  // @ts-ignore
   getNextDirEntryOffset(offset) {
     assert(offset > 0 && offset % DIR_ENTRY_SIZE === 0);
     // if the offset points to the first byte of the cluster, treat it as 'overflow'
@@ -269,6 +277,7 @@ class FATMathBase {
    * @param {number} offset
    * @returns {?number}
    */
+  // @ts-ignore
   getClusNum(offset) {
     assert(offset >= 0);
     assert(Number.isInteger(offset));

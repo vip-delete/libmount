@@ -1,8 +1,8 @@
 {
+  "type": "module",
   "name": "libmount",
+  "version": "0.4.0",
   "description": "Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript",
-  "version": "0.3.0",
-  "license": "MIT",
   "keywords": [
     "filesystem",
     "mount",
@@ -12,16 +12,43 @@
     "fat32",
     "vfat"
   ],
+  "homepage": "https://github.com/vip-delete/libmount#readme",
+  "bugs": {
+    "url": "https://github.com/vip-delete/libmount/issues"
+  },
+  "license": "MIT",
+  "author": "vip.delete",
+  "files": [
+    "dist/**",
+    "types/**",
+    "LICENSE",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./types/libmount.d.mts",
+      "import": "./dist/libmount.min.mjs"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vip-delete/libmount.git"
+  },
   "scripts": {
-    "build": "npm run lint && npm run coverage && npm run compile && npm run test",
-    "compile": "node scripts/compile.js",
-    "coverage": "vitest run --coverage coverage.test.mjs",
-    "dev": "node scripts/server.js",
     "lint": "eslint",
-    "test": "vitest run libmount.test.mjs"
+    "clean": "node scripts/clean.mjs",
+    "compile": "node scripts/compile.mjs",
+    "coverage": "vitest run --coverage coverage.test.mjs",
+    "test": "vitest run libmount.test.mjs",
+    "build": "npm run lint && npm run clean && npm run compile && npm run coverage && npm run test",
+    "dev": "node scripts/server.mjs"
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^2.11.0",
+    "@types/express": "^5.0.0",
+    "@types/google-closure-compiler": "^20231112.0.0",
+    "@types/node": "^22.10.2",
+    "@types/serve-static": "^1.15.7",
     "@vitest/coverage-istanbul": "^2.1.6",
     "eslint": "^9.16.0",
     "eslint-plugin-jsdoc": "^50.6.0",
@@ -30,61 +57,5 @@
     "prettier": "^3.4.1",
     "serve-static": "^1.16.2",
     "vitest": "^2.1.6"
-  },
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./types/libmount.d.mts",
-      "default": "./dist/libmount.min.mjs"
-    },
-    "./codepages": {
-      "types": "./types/codepages/index.d.mts",
-      "default": "./dist/codepages/index.mjs"
-    },
-    "./codepages/cp437": {
-      "types": "./types/codepages/cp437.d.mts",
-      "default": "./dist/codepages/cp437.mjs"
-    },
-    "./codepages/cp850": {
-      "types": "./types/codepages/cp850.d.mts",
-      "default": "./dist/codepages/cp850.mjs"
-    },
-    "./codepages/cp1251": {
-      "types": "./types/codepages/cp1251.d.mts",
-      "default": "./dist/codepages/cp1251.mjs"
-    },
-    "./codepages/cp1252": {
-      "types": "./types/codepages/cp1252.d.mts",
-      "default": "./dist/codepages/cp1252.mjs"
-    },
-    "./codepages/bestfit1251": {
-      "types": "./types/codepages/bestfit1251.d.mts",
-      "default": "./dist/codepages/bestfit1251.mjs"
-    },
-    "./codepages/bestfit1252": {
-      "types": "./types/codepages/bestfit1252.d.mts",
-      "default": "./dist/codepages/bestfit1252.mjs"
-    },
-    "./codepages/koi8r": {
-      "types": "./types/codepages/koi8r.d.mts",
-      "default": "./dist/codepages/koi8r.mjs"
-    }
-  },
-  "files": [
-    "dist/**",
-    "types/**",
-    "LICENSE",
-    "README.md"
-  ],
-  "engines": {
-    "node": ">=20"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/vip-delete/libmount.git"
-  },
-  "bugs": {
-    "url": "https://github.com/vip-delete/libmount/issues"
-  },
-  "homepage": "https://github.com/vip-delete/libmount#readme"
+  }
 }

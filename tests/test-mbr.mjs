@@ -2,6 +2,9 @@ import { expect, test } from "vitest";
 import { gunzipSync } from "zlib";
 import { readFileSync } from "fs";
 
+/**
+ * @param {function(Uint8Array):lmNS.Disk} mount
+ */
 export function testMBR(mount) {
   const partitions = mount(new Uint8Array(gunzipSync(readFileSync("./public/images/mbr.img.gz", { flag: "r" })))).getPartitions();
 

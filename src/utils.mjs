@@ -133,12 +133,12 @@ export function split(path) {
 
 /**
  * @param {!Uint8Array} sfn
- * @param {!lm.Codepage} codepage
+ * @param {!lmNS.Encoding} encoding
  * @returns {string}
  */
-export function sfnToStr(sfn, codepage) {
+export function sfnToStr(sfn, encoding) {
   assert(sfn.length === 11);
-  const str = codepage.decode(sfn);
+  const str = encoding.decode(sfn);
   const basename = str.slice(0, 8).trimEnd();
   const ext = str.slice(8, 11).trimEnd();
   return ext === "" ? basename : basename + "." + ext;
@@ -146,10 +146,10 @@ export function sfnToStr(sfn, codepage) {
 
 /**
  * @param {string} str
- * @param {!lm.Codepage} codepage
+ * @param {!lmNS.Encoding} encoding
  * @returns {?Uint8Array}
  */
-export function strToSfn(str, codepage) {
+export function strToSfn(str, encoding) {
   const i = str.lastIndexOf(".");
   const basename = i < 0 ? str : str.substring(0, i);
   const ext = i < 0 ? "" : str.substring(i + 1);
@@ -158,11 +158,11 @@ export function strToSfn(str, codepage) {
     return null;
   }
   const sfn = new Uint8Array(11);
-  if (!appendToSFN(sfn, 0, 8, codepage, basename)) {
+  if (!appendToSFN(sfn, 0, 8, encoding, basename)) {
     // filename is not valid for short name
     return null;
   }
-  if (!appendToSFN(sfn, 8, 3, codepage, ext)) {
+  if (!appendToSFN(sfn, 8, 3, encoding, ext)) {
     // ext is not valid for short name
     return null;
   }
@@ -173,27 +173,23 @@ export function strToSfn(str, codepage) {
  * @param {!Uint8Array} sfn
  * @param {number} offset
  * @param {number} len
- * @param {!lm.Codepage} codepage
+ * @param {!lmNS.Encoding} encoding
  * @param {string} str
  * @returns {boolean}
  */
-function appendToSFN(sfn, offset, len, codepage, str) {
-  if (str.length > len) {
-    // too long
-    return false;
-  }
+function appendToSFN(sfn, offset, len, encoding, str) {
   if (str.startsWith(" ") || str.endsWith(" ")) {
     // invalid
     return false;
   }
   let i = 0;
-  while (i < str.length) {
-    const wcCode = str.charCodeAt(i);
-    const code = codepage.encodeChar(wcCode);
-    if (code === null) {
-      // can't encode
-      return false;
-    }
+  const buf = encoding.encode(str);
+  if (buf.length > len) {
+    // too long
+    return false;
+  }
+  while (i < buf.length) {
+    const code = buf[i];
     if (!isShortNameValidCode(code)) {
       // invalid char
       return false;
@@ -241,17 +237,17 @@ export function strToLfn(str) {
 
 /**
  * @param {string} str
- * @param {!lm.Codepage} codepage
+ * @param {!lmNS.Encoding} encoding
  * @param {!Set<string>} fileNames
  * @returns {?string}
  */
-export function strToTildeName(str, codepage, fileNames) {
+export function strToTildeName(str, encoding, fileNames) {
   const i = str.lastIndexOf(".");
   const basename = i < 0 ? str : str.substring(0, i);
   const ext = i < 0 ? "" : str.substring(i + 1);
 
-  const basename6 = toValidShortNameCharacters(basename.toUpperCase(), 6, codepage);
-  const ext3 = toValidShortNameCharacters(ext.toUpperCase(), 3, codepage);
+  const basename6 = toValidShortNameCharacters(basename.toUpperCase(), 6, encoding);
+  const ext3 = toValidShortNameCharacters(ext.toUpperCase(), 3, encoding);
 
   assert(!basename6.startsWith(" ") && basename6.length <= 6);
   assert(!ext3.startsWith(" ") && ext3.length <= 3);
@@ -275,23 +271,26 @@ export function strToTildeName(str, codepage, fileNames) {
 /**
  * @param {string} str
  * @param {number} max
- * @param {!lm.Codepage} codepage
+ * @param {!lmNS.Encoding} encoding
  * @returns {string}
  */
-function toValidShortNameCharacters(str, max, codepage) {
+function toValidShortNameCharacters(str, max, encoding) {
   let ret = "";
   let i = 0;
+  const buf = encoding.encode(str);
   while (i < str.length && ret.length < max) {
     const ch = str.charAt(i);
-    const wcCode = ch.charCodeAt(0);
-    const code = codepage.encodeChar(wcCode);
-    if (code !== null) {
+    const code = buf[i];
+    // ignore all characters encoded as "?": they are "unmapped"
+    if (code !== "?".charCodeAt(0)) {
       if (isShortNameValidCode(code)) {
-        const firstSpace = ch === " " && ret === "";
-        if (!firstSpace) {
+        // character is "mapped" and valid for SFN, append to ret but skip leading spaces
+        const leadingSpace = ch === " " && ret === "";
+        if (!leadingSpace) {
           ret += ch;
         }
       } else {
+        // replace all "mapped" but invalid for SFN characters by "_"
         ret += "_";
       }
     }
@@ -310,4 +309,72 @@ function strToHash(str) {
     sum = (sum + str.charCodeAt(i)) & 0xffff;
   }
   return sum.toString(16).padStart(4, "0").toUpperCase();
+}
+
+// Dates
+
+/**
+ * @param {number} date
+ * @returns {?Date}
+ */
+export function parseDate(date) {
+  if (date === 0) {
+    return null;
+  }
+  const dayOfMonth = date & 0b11111;
+  const monthOfYear = (date >> 5) & 0b1111;
+  const yearSince1980 = (date >> 9) & 0b1111111;
+  return new Date(1980 + yearSince1980, Math.max(0, monthOfYear - 1), Math.max(1, dayOfMonth));
+}
+
+/**
+ * @param {number} date
+ * @param {number} time
+ * @param {number} timeTenth
+ * @returns {?Date}
+ */
+export function parseDateTime(date, time, timeTenth) {
+  if (date === 0) {
+    return null;
+  }
+  const dayOfMonth = date & 0b11111;
+  const monthOfYear = (date >> 5) & 0b1111;
+  const yearSince1980 = (date >> 9) & 0b1111111;
+  const millis = (timeTenth % 100) * 10;
+  const seconds = Math.floor(timeTenth / 100) + ((time & 0b11111) << 1);
+  const minutes = (time >> 5) & 0b111111;
+  const hours = (time >> 11) & 0b11111;
+  return new Date(1980 + yearSince1980, Math.max(0, monthOfYear - 1), Math.max(1, dayOfMonth), hours, minutes, seconds, millis);
+}
+
+/**
+ * @param {!Date} date
+ * @returns {number}
+ */
+export function toDate(date) {
+  const yearSince1980 = date.getFullYear() - 1980;
+  const monthOfYear = date.getMonth() + 1;
+  const dayOfMonth = date.getDate();
+  return (yearSince1980 << 9) | (monthOfYear << 5) | dayOfMonth;
+}
+
+/**
+ * @param {!Date} date
+ * @returns {number}
+ */
+export function toTime(date) {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const seconds = date.getSeconds();
+  return (hours << 11) | (minutes << 5) | (seconds >> 1);
+}
+
+/**
+ * @param {!Date} date
+ * @returns {number}
+ */
+export function toTimeTenth(date) {
+  const seconds = date.getSeconds();
+  const millis = date.getMilliseconds();
+  return Math.floor(((seconds % 2) * 1000 + Number(millis)) / 10);
 }

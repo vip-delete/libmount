@@ -1,11 +1,9 @@
-/* eslint-disable sort-imports */
 import { expect, test } from "vitest";
 import { testFreedos722 } from "./test-freedos722.mjs";
 import { testWindowsMe } from "./test-windowsme.mjs";
 
-import { testCodepages } from "./test-codepages.mjs";
+import { testDates } from "./test-date-utils.mjs";
 import { testIO } from "./test-io.mjs";
-import { testDateUtils } from "./test-date-utils.mjs";
 import { testNameUtils, testNameUtils2 } from "./test-name-utils.mjs";
 
 import { testD1 } from "./test-d1.mjs";
@@ -16,13 +14,15 @@ import { testF3 } from "./test-f3.mjs";
 import { testMBR } from "./test-mbr.mjs";
 
 export function unitTests() {
-  testCodepages();
   testIO();
-  testDateUtils();
+  testDates();
   testNameUtils();
   testNameUtils2();
 }
 
+/**
+ * @param {function(Uint8Array):lmNS.Disk} mount
+ */
 export function integrationTests(mount) {
   test("general-checks", () => {
     const buf = [
@@ -36,10 +36,6 @@ export function integrationTests(mount) {
       expect(disk.getFileSystem()).toBeNull();
       expect(disk.getPartitions().length).toBe(0);
     }
-
-    expect(mount(new Uint8Array(), "_".repeat(0))).toBeDefined();
-    expect(mount(new Uint8Array(), "_".repeat(128))).toBeDefined();
-    expect(mount(new Uint8Array(), "_".repeat(256))).toBeDefined();
   });
 
   testFreedos722(mount);

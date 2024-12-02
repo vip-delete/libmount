@@ -1,11 +1,10 @@
-import { mount } from "../dist/libmount.min.mjs";
 import { readFileSync } from "fs";
-import { cp1251 as codepage } from "../dist/codepages/index.mjs";
+import { mount } from "libmount";
 
-const imgFilename = "./images/freedos722.img"
+const imgFilename = "../public/images/freedos722.img";
 const imgFile = readFileSync(imgFilename, { flag: "r" });
 const img = new Uint8Array(imgFile);
-const disk = mount(img, { codepage });
+const disk = mount(img);
 let fs = disk.getFileSystem();
 
 if (fs === null) {
@@ -14,7 +13,7 @@ if (fs === null) {
   if (partitions.length > 0) {
     const partition = partitions[0];
     console.log(`Found partition of type: ${partition.type}`);
-    fs = mount(img, { codepage, partition }).getFileSystem();
+    fs = mount(img, { partition }).getFileSystem();
   }
   if (fs === null) {
     console.error("FileSystem is not detected");
@@ -41,20 +40,22 @@ fs.getRoot().getFile("/test")?.moveTo("/tmp");
 // file writing and reading example
 const helloFile = fs.getRoot().makeFile(".Hello[World]..txt");
 if (helloFile === null) {
-  console.error("Can't create a file");
-  process.exit(2);
+  throw new Error("Can't create a file");
 }
 helloFile.setData(new TextEncoder().encode("😀😀😀"));
-const content = new TextDecoder().decode(helloFile.getData());
-console.log(`    FileSize: ${helloFile.length()}`)
-console.log(`        Name: ${helloFile.getName()}`)
-console.log(`   ShortName: ${helloFile.getShortName()}`)
-console.log(`     Content: ${content}`)
+const data = helloFile.getData();
+if (!data) {
+  throw new Error("Impossible");
+}
+console.log(`    FileSize: ${helloFile.length()}`);
+console.log(`        Name: ${helloFile.getName()}`);
+console.log(`   ShortName: ${helloFile.getShortName()}`);
+console.log(`     Content: ${new TextDecoder().decode(data)}`);
 console.log("CreationTime: " + helloFile.creationTime()?.toLocaleString());
 
 // list all files recursive example:
 print(fs.getRoot());
-function print(f) {
+function print(/** @type {import("libmount").File} */ f) {
   console.log(f.getAbsolutePath());
   f.listFiles()?.forEach(print);
 }

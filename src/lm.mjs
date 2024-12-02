@@ -1,49 +1,50 @@
-import { Device } from "./types.mjs";
-import { FATDriverImpl } from "./driver/driver.mjs";
-import { FATFileSystem } from "./filesystem.mjs";
+import { FATDriverImpl } from "./driver.mjs";
+import { FATFileSystem } from "./fs.mjs";
 import { RawDevice } from "./io.mjs";
-import { cp1252 } from "./codepages/cp1252.mjs";
+import { LATIN1 } from "./latin1.mjs";
 import { loadPartitionTable } from "./loaders.mjs";
+import { Device } from "./types.mjs";
 
 /**
  * @param {!Uint8Array} img
- * @param {!lm.MountOptions} [options]
- * @returns {!lm.Disk}
+ * @param {!lmNS.MountOptions} [options]
+ * @returns {!lmNS.Disk}
  */
 export function mount(img, options) {
-  const codepage = options?.codepage ?? cp1252;
+  const encoding = options?.encoding ?? LATIN1;
   const parition = options?.partition ?? {
     active: false,
     type: 1,
     begin: 0,
     end: img.length,
   };
-  return new DiskImpl(new RawDevice(img.subarray(parition.begin, parition.end)), codepage);
+  return new DiskImpl(new RawDevice(img.subarray(parition.begin, parition.end)), encoding);
 }
 
 /**
- * @implements {lm.Disk}
+ * @implements {lmNS.Disk}
  */
 class DiskImpl {
   /**
    * @param {!Device} device
-   * @param {!lm.Codepage} codepage
+   * @param {!lmNS.Encoding} encoding
    */
-  constructor(device, codepage) {
+  constructor(device, encoding) {
     this.device = device;
-    this.codepage = codepage;
+    this.encoding = encoding;
   }
 
   /**
    * @override
-   * @returns {?lm.FileSystem}
+   * @returns {?lmNS.FileSystem}
    */
+  // @ts-ignore
   getFileSystem() {
     if (!this.isSigValid()) {
       return null;
     }
     try {
-      return new FATFileSystem(new FATDriverImpl(this.device, this.codepage));
+      return new FATFileSystem(new FATDriverImpl(this.device, this.encoding));
     } catch {
       return null;
     }
@@ -51,8 +52,9 @@ class DiskImpl {
 
   /**
    * @override
-   * @returns {!Array<!lm.Partition>}
+   * @returns {!Array<!lmNS.Partition>}
    */
+  // @ts-ignore
   getPartitions() {
     if (!this.isSigValid()) {
       return [];

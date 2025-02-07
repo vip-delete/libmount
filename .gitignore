@@ -1,4 +1,6 @@
 .idea
 coverage
-dist
 node_modules
+temp
+images
+package-lock.json

@@ -1,70 +1,103 @@
+import { spawn } from "child_process";
 import fs from "fs";
-import Main from "google-closure-compiler";
+import { compiler as Compiler } from "google-closure-compiler";
 import Path from "path";
 import { fileURLToPath } from "url";
+import pkg from "../package.json" with { type: "json" };
 
-export function getHeader() {
-  const json = JSON.parse(readFileSync("package.json"));
-  return `/**
-* This file is part of LibMount v${json.version}
-* (c) 2025-present ${json.author}
-* @license ${json.license}
-**/
+export const getBanner = () =>
+  `/**
+ * iconv-tiny v${pkg.version}
+ * (c) 2025-present ${pkg.author}
+ * @license ${pkg.license}
+ **/
 `;
-}
 
 /**
  * @param {string} rel
  * @returns {string}
  */
-export function abs(rel) {
-  return Path.resolve(Path.dirname(fileURLToPath(import.meta.url)), "../" + rel);
-}
+export const abs = (rel) => Path.resolve(Path.dirname(fileURLToPath(import.meta.url)), "../" + rel);
 
 /**
- * @param {string} dir
+ * @param {string} filename
+ * @returns {!Uint8Array}
  */
-export function rmSync(dir) {
-  if (fs.existsSync(abs(dir))) {
-    console.log(`DELETE: ${dir}`);
-    fs.rmSync(abs(dir), { recursive: true });
-  }
-}
-
-/**
- * @param {string} src
- * @param {string} dest
- */
-export function copyFileSync(src, dest) {
-  fs.copyFileSync(abs(src), abs(dest));
-}
+export const readBinaryFileSync = (filename) => new Uint8Array(fs.readFileSync(abs(filename), { flag: "r" }));
 
 /**
  * @param {string} filename
  * @returns {string}
  */
-export function readFileSync(filename) {
-  return fs.readFileSync(abs(filename), "utf-8");
-}
+export const readFileSync = (filename) => fs.readFileSync(abs(filename), "utf-8");
+
+/**
+ * @param {string} path
+ * @returns {!string}
+ */
+export const getExports = (path) => {
+  const exports = readFileSync(path)
+    .split("\n")
+    .filter((it) => it.startsWith("export"))
+    .flatMap((it) => {
+      const i = it.indexOf("{");
+      const j = it.indexOf("}", i + 1);
+      if (i !== -1 && j !== -1) {
+        return it
+          .slice(i + 1, j)
+          .split(",")
+          .map((item) => item.trim());
+      }
+      return [];
+    });
+
+  return "{" + exports.join(",") + "}";
+};
+
+/**
+ * @param {string} path
+ * @returns {boolean}
+ */
+export const existsSync = (path) => fs.existsSync(abs(path));
+
+/**
+ * @param {string} dir
+ * @returns {undefined}
+ */
+export const mkdirSync = (dir) => {
+  if (!fs.existsSync(abs(dir))) {
+    console.log(`MKDIR:  ${dir}`);
+    fs.mkdirSync(abs(dir), { recursive: true });
+  }
+};
+
+/**
+ * @param {string} filename
+ * @param {string|Uint8Array} content
+ * @returns {undefined}
+ */
+export const writeFileSync = (filename, content) => {
+  console.log(`WRITE:  ${filename}`);
+  fs.writeFileSync(abs(filename), content);
+};
 
 /**
  * @param {string} name
- * @param {string} wrapperFile
+ * @param {string} outputWrapper
  * @param {string} outputFile
- * @param {string[]} files
- * @param {string} target
+ * @param {!Array<string>} files
  * @param {!Array<string>} defines
  */
-export async function compile(name, wrapperFile, outputFile, files, target, defines) {
+export const compile = async (name, outputWrapper, outputFile, files, defines) => {
   const args = {
     /* eslint-disable camelcase */
-    module_resolution: target ?? "BROWSER",
+    module_resolution: "BROWSER",
     compilation_level: "ADVANCED",
     warning_level: "VERBOSE",
     jscomp_error: "*",
     jscomp_warning: "reportUnknownTypes",
     assume_function_wrapper: true,
-    output_wrapper: getHeader() + readFileSync(wrapperFile),
+    output_wrapper: outputWrapper,
     summary_detail_level: String(3),
     use_types_for_optimization: true,
     define: defines,
@@ -74,12 +107,12 @@ export async function compile(name, wrapperFile, outputFile, files, target, defi
     /* eslint-enable camelcase */
   };
 
-  const Compiler = Main.compiler;
   await new Promise((resolve, reject) => {
     new Compiler(args).run((exitCode, stdout, stderr) => {
       if (stdout) {
         console.log(stdout);
       }
+
       if (stderr) {
         console.log(stderr);
       }
@@ -95,5 +128,33 @@ export async function compile(name, wrapperFile, outputFile, files, target, defi
       }
     });
   });
+
   console.log(`\x1b[33m${name.toUpperCase()}\x1b[0m: \x1b[92mBUILD SUCCESSFUL\x1b[0m: ${outputFile}\n`);
-}
+};
+
+/**
+ *
+ * @param {string} name
+ * @param {string} src
+ * @param {string} dest
+ * @param {!Array<string>} args
+ */
+export const nasm = async (name, src, dest, args) => {
+  await new Promise((resolve, reject) => {
+    const child = spawn("nasm", [abs(src), "-o", abs(dest)].concat(args), {
+      stdio: "inherit",
+    });
+    child.on("error", (err) => {
+      reject(err);
+    });
+    child.on("close", (exitCode) => {
+      if (exitCode === 0) {
+        resolve(null);
+      } else {
+        reject(new Error(`Exit code ${exitCode}`));
+      }
+    });
+  });
+
+  console.log(`\x1b[33m${name}\x1b[0m: \x1b[92mCOMPILED\x1b[0m: ${dest}\n`);
+};

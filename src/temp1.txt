@@ -1,0 +1,145 @@
+
+// driver.mjs
+
+/**
+ * @implements {ns.UnrefClusChain}
+ */
+class UnrefClusChainImpl {
+  /**
+   *
+   * @param {!Array<number>} clusChain
+   * @param {!Uint8Array} data
+   */
+  constructor(clusChain, data) {
+    this.clusChain = clusChain;
+    this.data = data;
+  }
+
+  /**
+   * @override
+   * @return {number}
+   */
+  length() {
+    return this.clusChain.length;
+  }
+
+  /**
+   * @override
+   * @return {!Uint8Array}
+   */
+  getData() {
+    return this.data;
+  }
+
+  /**
+   * @override
+   */
+  delete() {
+    //
+  }
+}
+
+
+  /**
+   * @override
+   * @return {!Array<!UnrefClusChainImpl>}
+   */
+  getUnrefClusChains() {
+    const queue = [this.getRoot()];
+    const used = new Set();
+    while (queue.length > 0) {
+      const node = queue.shift();
+      for (const subNode of this.crawler.getSubNodes(node)) {
+        const dirClusNum = this.math.getClusNum(subNode.getFirstDirOffset());
+        if (dirClusNum !== null) {
+          used.add(dirClusNum);
+        }
+        if (subNode.isRegularDir()) {
+          queue.push(subNode);
+        } else if (subNode.isRegularFile()) {
+          let clusNum = getFirstClusNum(subNode);
+          while (this.math.isAllocated(clusNum)) {
+            used.add(clusNum);
+            clusNum = this.math.getNextClusNum(clusNum);
+          }
+        }
+      }
+    }
+    const unrefClusNums = [];
+    for (let i = MIN_CLUS_NUM; i <= this.vars.MaxClus; i++) {
+      if (this.math.getNextClusNum(i) !== FREE_CLUS && !used.has(i)) {
+        unrefClusNums.push(i);
+      }
+    }
+    const ret = [];
+    while (unrefClusNums.length > 0) {
+      let clusNum = unrefClusNums[0];
+      const clusChain = [];
+      while (true) {
+        const i = unrefClusNums.indexOf(clusNum);
+        if (i >= 0) {
+          clusChain.push(clusNum);
+          unrefClusNums.splice(i, 1);
+          clusNum = this.math.getNextClusNum(clusNum);
+        } else {
+          // if (clusChain.length > 10) {
+          ret.push(new UnrefClusChainImpl(clusChain, null));
+          // }
+          break;
+        }
+      }
+    }
+
+    const chain = ret[0];
+    const len = chain.clusChain.length;
+    const arr = new Uint8Array(len * this.vars.SizeOfCluster);
+    for (let i = 0; i < len; i++) {
+      const offset = this.math.getContentOffset(chain.clusChain[i]);
+      if (offset === null) {
+        assert(false);
+        break;
+      }
+      this.device.seek(offset);
+      const chunk = this.device.readArray(this.vars.SizeOfCluster);
+      arr.set(chunk, i * this.vars.SizeOfCluster);
+    }
+    ret[0].data = arr;
+    return ret;
+  }
+
+
+// module.mjs
+
+
+  /**
+   * @interface
+   */
+  UnrefClusChain: class {
+    /**
+     * @return {number}
+     */
+    length() {}
+
+    /**
+     * @return {Uint8Array}
+     */
+    getData() {}
+
+    /**
+     * @return {undefined}
+     */
+    delete() {}
+  },
+
+
+//libmount.d.mts
+
+
+  /**
+   * Represents a chain of unreferences clusters.
+   */
+  class UnrefClusChain {
+    length(): number;
+    getData(): Uint8Array;
+    delete(): void;
+  }

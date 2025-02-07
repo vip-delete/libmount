@@ -1,0 +1,13 @@
+import "./test-d1.mjs";
+import "./test-d2.mjs";
+import "./test-f1.mjs";
+import "./test-f2.mjs";
+import "./test-f3.mjs";
+import "./test-freedos722.mjs";
+import "./test-io.mjs";
+import "./test-latin1.mjs";
+import "./test-loader.mjs";
+import "./test-mbr.mjs";
+import "./test-mkfsvfat.mjs";
+import "./test-utils.mjs";
+import "./test-windowsme.mjs";

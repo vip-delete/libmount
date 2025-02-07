@@ -1,4 +1,5 @@
 // @ts-nocheck
+
 /**
  * @typedef {{
  *            Cylinder: number,
@@ -34,29 +35,21 @@ export const PartitionEntry = {};
  *            NumHeads: number,
  *            HiddSec: number,
  *            TotSec32: number,
- *          }}
- */
-export const BiosParameterBlock = {};
-
-/**
- * @typedef {{
  *            FATSz32: number,
  *            ExtFlags: number,
  *            FSVer: number,
  *            RootClus: number,
  *            FSInfo: number,
  *            BkBootSec: number,
- *            Reserved: !Uint8Array,
  *          }}
  */
-export const BiosParameterBlockFAT32 = {};
+export const BiosParameterBlock = {};
 
 /**
  * @typedef {{
  *            jmpBoot: !Uint8Array,
- *            oemName: !Uint8Array,
+ *            OEMName: !Uint8Array,
  *            bpb: !BiosParameterBlock,
- *            bpbFAT32: ?BiosParameterBlockFAT32,
  *            DrvNum: number,
  *            Reserved1: number,
  *            BootSig: number,
@@ -64,26 +57,22 @@ export const BiosParameterBlockFAT32 = {};
  *            VolLab: !Uint8Array,
  *            FilSysType: !Uint8Array,
  *            BootCode: !Uint8Array,
- *            SignatureWord: number,
  *          }}
  */
 export const BootSector = {};
 
 /**
  * @typedef {{
- *            LeadSig: number,
- *            StrucSig: number,
  *            FreeCount: number,
  *            NxtFree: number,
- *            TrailSig: number,
  *          }}
  */
-export const FSInfo = {};
+export const FSI = {};
 
 /**
  * @typedef {{
  *            Name: !Uint8Array,
- *            Attr: number,
+ *            Attributes: number,
  *            NTRes: number,
  *            CrtTimeTenth: number,
  *            CrtTime: number,
@@ -98,13 +87,11 @@ export const FSInfo = {};
  */
 export const DirEntry = {};
 
-export const DIR_ENTRY_SIZE = 32;
-
 /**
  * @typedef {{
  *            Ord: number,
  *            Name1: !Uint8Array,
- *            Attr: number,
+ *            Attributes: number,
  *            Type: number,
  *            Chksum: number,
  *            Name2: !Uint8Array,
@@ -116,80 +103,144 @@ export const DirEntryLFN = {};
 
 /**
  * @typedef {{
- *             RootDirSectors: number,
  *             FATSz: number,
  *             TotSec: number,
  *             DataSec: number,
  *             SizeOfCluster: number,
  *             CountOfClusters: number,
+ *             IndexBits: number,
  *             MaxClus: number,
- *             FirstRootDirSecNum: number,
- *             FirstDataSector: number,
+ *             FirstDataSec: number,
  *             RootDirOffset: number,
+ *             FinalClus: number,
  *          }}
  */
 export const FATVariables = {};
 
+/**
+ * @typedef {{
+ *            IndexBits: number,
+ *            BytsPerSecBits: number,
+ *            SecPerClusBits: number,
+ *            RsvdSecCnt: number,
+ *            NumFATs: number,
+ *            RootDirSectors: number,
+ *            FATSz: number,
+ *            TotSec: number,
+ *            CountOfClusters: number,
+ *            Media: number,
+ *            NumHeads: number,
+ *            SecPerTrk: number,
+ *          }}
+ */
+export const DiskLayout = {};
+
+/**
+ * @typedef {{
+ *            shortName: string,
+ *            dirOffset: number,
+ *            dirEntry: !DirEntry,
+ *            fstClus: number,
+ *            isRoot: boolean,
+ *            isLabel: boolean,
+ *            isRegDir: boolean,
+ *            isRegFile: boolean,
+ *            isDir: boolean,
+ *            isReg: boolean,
+ *            isLast: boolean,
+ *            isDeleted: boolean,
+ *            longName: string,
+ *            firstDirOffset: number,
+ *            dirCount: number,
+ *          }}
+ */
+export const FATNode = {};
+
 /* eslint-disable no-empty-function */
 /* eslint-disable no-unused-vars */
+/* eslint-disable class-methods-use-this */
 
 /**
  * @interface
  */
-export class Device {
+export class IO {
+  /**
+   * @return {number}
+   */
+  pos() {}
+
+  /**
+   * @return {number}
+   */
+  len() {}
+
   /**
    * @param {number} offset
+   * @return {!IO}
    */
   seek(offset) {}
 
   /**
    * @param {number} bytes
+   * @return {!IO}
    */
   skip(bytes) {}
 
   /**
-   * @returns {number}
+   * @param {number} len
+   * @return {!Uint8Array}
    */
-  length() {}
+  peekUint8Array(len) {}
 
   /**
    * @param {number} len
-   * @returns {!Uint8Array}
+   * @return {!Uint8Array}
    */
-  readArray(len) {}
+  readUint8Array(len) {}
 
   /**
-   * @returns {number}
+   * @return {number}
    */
   readByte() {}
 
   /**
-   * @returns {number}
+   * @return {number}
    */
   readWord() {}
 
   /**
-   * @returns {number}
+   * @return {number}
    */
   readDoubleWord() {}
 
   /**
    * @param {!Uint8Array} array
+   * @return {!IO}
    */
-  writeArray(array) {}
+  writeUint8Array(array) {}
 
   /**
    * @param {number} byte
+   * @return {!IO}
    */
   writeByte(byte) {}
 
   /**
+   * @param {number} byte
+   * @param {number} count
+   * @return {!IO}
+   */
+  writeBytes(byte, count) {}
+
+  /**
    * @param {number} word
+   * @return {!IO}
    */
   writeWord(word) {}
 
   /**
    * @param {number} doubleWord
+   * @return {!IO}
    */
   writeDoubleWord(doubleWord) {}
 }
@@ -197,27 +248,21 @@ export class Device {
 /**
  * @interface
  */
-export class FATMath {
+export class Logger {
   /**
-   * @returns {number}
+   * @param {string} msg
+   * @param {!*} [e]
    */
-  getRootDirOffset() {}
+  warn(msg, e) {}
+}
 
+/**
+ * @interface
+ */
+export class FAT {
   /**
    * @param {number} clusNum
-   * @returns {?number}
-   */
-  getContentOffset(clusNum) {}
-
-  /**
-   * @param {number} clusNum
-   * @returns {boolean}
-   */
-  isAllocated(clusNum) {}
-
-  /**
-   * @param {number} clusNum
-   * @returns {number}
+   * @return {number}
    */
   getNextClusNum(clusNum) {}
 
@@ -228,200 +273,12 @@ export class FATMath {
   setNextClusNum(clusNum, value) {}
 
   /**
-   * @param {number} clusNum
-   * @returns {null}
+   * @return  {number}
    */
-  writeZeros(clusNum) {}
+  getNextFreeClus() {}
 
   /**
    * @param {number} clusNum
    */
-  setFreeClusNum(clusNum) {}
-
-  /**
-   * @param {number} clusNum
-   */
-  setFinalClusNum(clusNum) {}
-
-  /**
-   * @returns {number}
-   */
-  getFreeClusters() {}
-
-  /**
-   * @param {number} count
-   * @returns {?Array<number>}
-   */
-  allocateClusters(count) {}
-
-  /**
-   * @param {number} offset
-   * @returns {?number}
-   */
-  getNextDirEntryOffset(offset) {}
-
-  /**
-   * @param {number} offset
-   * @returns {?number}
-   */
-  getClusNum(offset) {}
-}
-
-/**
- * @interface
- */
-export class FATNode {
-  /**
-   * @returns {string}
-   */
-  getLongName() {}
-
-  /**
-   * @returns {string}
-   */
-  getShortName() {}
-
-  /**
-   * @returns {number}
-   */
-  getFirstDirOffset() {}
-
-  /**
-   * @returns {number}
-   */
-  getLastDirOffset() {}
-
-  /**
-   * @returns {number}
-   */
-  getDirCount() {}
-
-  /**
-   * @returns {!DirEntry}
-   */
-  getDirEntry() {}
-
-  /**
-   * @returns {boolean}
-   */
-  isRoot() {}
-
-  /**
-   * @returns {boolean}
-   */
-  isRegularDir() {}
-
-  /**
-   * @returns {boolean}
-   */
-  isRegularFile() {}
-
-  /**
-   * @returns {boolean}
-   */
-  isVolumeId() {}
-
-  /**
-   * @returns {boolean}
-   */
-  isDot() {}
-
-  /**
-   * @returns {boolean}
-   */
-  isDotDot() {}
-
-  /**
-   * @returns {boolean}
-   */
-  isInvalid() {}
-
-  /**
-   * @returns {boolean}
-   */
-  isDeleted() {}
-
-  /**
-   * @returns {boolean}
-   */
-  isDeletedLFN() {}
-
-  /**
-   * @returns {boolean}
-   */
-  isLast() {}
-}
-
-/**
- * @interface
- */
-export class FATCrawler {
-  /**
-   * @param {!FATNode} node
-   * @returns {!Iterable<!FATNode>}
-   */
-  getSubNodes(node) {}
-}
-
-/**
- * @interface
- */
-export class FATDriver {
-  /**
-   * @returns {string}
-   */
-  getFileSystemName() {}
-
-  /**
-   * @returns {!lmNS.Volume}
-   */
-  getVolume() {}
-
-  /**
-   * @returns {!FATNode}
-   */
-  getRoot() {}
-
-  /**
-   * @returns {!FATCrawler}
-   */
-  getCrawler() {}
-
-  /**
-   * @param {!FATNode} node
-   * @returns {number}
-   */
-  getSizeOnDisk(node) {}
-
-  /**
-   * @param {!FATNode} node
-   * @returns {?Uint8Array}
-   */
-  readNode(node) {}
-
-  /**
-   * @param {!FATNode} node
-   * @param {!Uint8Array} data
-   * @returns {?FATNode}
-   */
-  writeNode(node, data) {}
-
-  /**
-   * @param {!FATNode} node
-   */
-  deleteNode(node) {}
-
-  /**
-   * @param {!FATNode} node
-   * @param {string} name
-   * @param {boolean} isDirectory
-   * @returns {?FATNode}
-   */
-  makeNode(node, name, isDirectory) {}
-
-  /**
-   * @param {!FATNode} src
-   * @param {!FATNode} dest
-   */
-  moveNode(src, dest) {}
+  setNextFreeClus(clusNum) {}
 }

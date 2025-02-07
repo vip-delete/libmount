@@ -1,10 +1,11 @@
-import { Device } from "./types.mjs";
-import { assert } from "./support.mjs";
+import { MAX_BYTE, MAX_DOUBLE_WORD, MAX_WORD } from "./const.mjs";
+import { IO } from "./types.mjs";
+import { assert } from "./utils.mjs";
 
 /**
- * @implements {Device}
+ * @implements {IO}
  */
-export class RawDevice {
+class SyncIO {
   /**
    * @param {!Uint8Array} img
    */
@@ -17,128 +18,190 @@ export class RawDevice {
     /**
      * @private
      */
-    this.pos = 0;
+    this.i = 0;
+  }
+
+  // IO
+
+  /**
+   * @override
+   * @return {number}
+   */
+  // @ts-expect-error
+  pos() {
+    return this.i;
   }
 
   /**
    * @override
-   * @returns {number}
+   * @return {number}
    */
-  // @ts-ignore
-  length() {
+  // @ts-expect-error
+  len() {
     return this.img.length;
   }
 
   /**
    * @override
    * @param {number} offset
+   * @return {!IO}
    */
-  // @ts-ignore
+  // @ts-expect-error
   seek(offset) {
-    this.pos = offset;
+    this.i = offset;
+    return this;
   }
 
   /**
    * @override
    * @param {number} bytes
+   * @return {!IO}
    */
-  // @ts-ignore
+  // @ts-expect-error
   skip(bytes) {
-    this.pos += bytes;
+    this.i += bytes;
+    return this;
   }
 
   /**
    * @override
    * @param {number} len
-   * @returns {!Uint8Array}
+   * @return {!Uint8Array}
    */
-  // @ts-ignore
-  readArray(len) {
-    assert(this.pos + len <= this.length());
-    const r = new Uint8Array(this.img.subarray(this.pos, this.pos + len));
-    this.pos += len;
-    assert(r.length === len);
-    return r;
+  // @ts-expect-error
+  peekUint8Array(len) {
+    assert(this.i + len <= this.img.length);
+    return this.img.subarray(this.i, this.i + len);
   }
 
   /**
    * @override
-   * @returns {number}
+   * @param {number} len
+   * @return {!Uint8Array}
    */
-  // @ts-ignore
+  // @ts-expect-error
+  readUint8Array(len) {
+    assert(this.i + len <= this.img.length);
+    const k = new Uint8Array(this.img.subarray(this.i, (this.i += len)));
+    return k;
+  }
+
+  /**
+   * @override
+   * @return {number}
+   */
+  // @ts-expect-error
   readByte() {
-    assert(this.pos + 1 <= this.length());
-    const r = this.img[this.pos++];
-    return r;
+    assert(this.i < this.img.length);
+    return this.img[this.i++];
   }
 
   /**
    * @override
-   * @returns {number}
+   * @return {number}
    */
-  // @ts-ignore
+  // @ts-expect-error
   readWord() {
-    assert(this.pos + 2 <= this.length());
-    const r = this.img[this.pos++] | (this.img[this.pos++] << 8);
-    return r;
+    const { img } = this;
+    assert(this.i + 2 <= img.length);
+    const k = img[this.i++] | (img[this.i++] << 8);
+    return k;
   }
 
   /**
    * @override
-   * @returns {number}
+   * @return {number}
    */
-  // @ts-ignore
+  // @ts-expect-error
   readDoubleWord() {
-    assert(this.pos + 4 <= this.length());
-    const r = (this.img[this.pos++] | (this.img[this.pos++] << 8) | (this.img[this.pos++] << 16) | (this.img[this.pos++] << 24)) >>> 0;
-    return r;
+    const { img } = this;
+    assert(this.i + 4 <= img.length);
+    const k = (img[this.i++] | (img[this.i++] << 8) | (img[this.i++] << 16) | (img[this.i++] << 24)) >>> 0;
+    return k;
   }
 
   /**
    * @override
    * @param {!Uint8Array} array
+   * @return {!IO}
    */
-  // @ts-ignore
-  writeArray(array) {
-    assert(this.pos + array.length <= this.length());
-    this.img.set(array, this.pos);
-    this.pos += array.length;
+  // @ts-expect-error
+  writeUint8Array(array) {
+    assert(this.i + array.length <= this.img.length);
+    this.img.set(array, this.i);
+    this.i += array.length;
+    return this;
   }
 
   /**
    * @override
-   * @param {number} val
+   * @param {number} data
+   * @return {!IO}
    */
-  // @ts-ignore
-  writeByte(val) {
-    assert(this.pos + 1 <= this.length());
-    assert(val >= 0 && val <= 0xff);
-    this.img[this.pos++] = val;
+  // @ts-expect-error
+  writeByte(data) {
+    assert(this.i + 1 <= this.img.length);
+    assert(data >= 0 && data <= MAX_BYTE);
+    this.img[this.i++] = data; // & 0xff;
+    return this;
   }
 
   /**
    * @override
-   * @param {number} val
+   * @param {number} data
+   * @param {number} count
+   * @return {!IO}
    */
-  // @ts-ignore
-  writeWord(val) {
-    assert(this.pos + 2 <= this.length());
-    assert(val >= 0 && val <= 0xffff);
-    this.img[this.pos++] = val & 0xff;
-    this.img[this.pos++] = val >>> 8;
+  // @ts-expect-error
+  writeBytes(data, count) {
+    assert(count >= 0);
+    assert(this.i + count <= this.img.length);
+    assert(data >= 0 && data <= MAX_BYTE);
+    this.img.fill(data, this.i, (this.i += count));
+    return this;
   }
 
   /**
    * @override
-   * @param {number} val
+   * @param {number} data
+   * @return {!IO}
    */
-  // @ts-ignore
-  writeDoubleWord(val) {
-    assert(this.pos + 4 <= this.length());
-    assert(val >= 0 && val <= 0xffffffff);
-    this.img[this.pos++] = val & 0xff;
-    this.img[this.pos++] = (val >>> 8) & 0xff;
-    this.img[this.pos++] = (val >>> 16) & 0xff;
-    this.img[this.pos++] = val >>> 24;
+  // @ts-expect-error
+  writeWord(data) {
+    const { img } = this;
+    assert(this.i + 2 <= img.length);
+    assert(data >= 0 && data <= MAX_WORD);
+    img[this.i++] = data; // & 0xff;
+    data >>>= 8;
+    img[this.i++] = data; // & 0xff;
+    return this;
+  }
+
+  /**
+   * @override
+   * @param {number} data
+   * @return {!IO}
+   */
+  // @ts-expect-error
+  writeDoubleWord(data) {
+    const { img } = this;
+    assert(this.i + 4 <= img.length);
+    assert(data >= 0 && data <= MAX_DOUBLE_WORD);
+    img[this.i++] = data; // & 0xff;
+    data >>>= 8;
+    img[this.i++] = data; // & 0xff;
+    data >>>= 8;
+    img[this.i++] = data; // & 0xff;
+    data >>>= 8;
+    img[this.i++] = data; // & 0xff;
+    return this;
   }
 }
+
+// Export
+
+/**
+ * @param {!Uint8Array} img
+ * @return {!IO}
+ */
+export const createIO = (img) => new SyncIO(img);

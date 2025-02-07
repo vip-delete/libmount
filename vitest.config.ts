@@ -1,22 +1,12 @@
-import { coverageConfigDefaults, defineConfig } from "vitest/config";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  define: {
-    ENABLE_LOGGER: true,
-    ENABLE_ASSERTIONS: true,
-  },
   test: {
     coverage: {
       provider: "istanbul",
-      reporter: ["text", "html"],
-      exclude: [
-        "examples",
-        "public",
-        "scripts",
-        "types",
-        "src/headers",
-        ...coverageConfigDefaults.exclude,
-      ],
+      reporter: ["text"],
+      include: ["src/**/*"],
+      exclude: ["src/externs.mjs", "src/log.mjs", "src/types.mjs"],
     },
   },
 });

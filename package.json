@@ -19,16 +19,14 @@
   "license": "MIT",
   "author": "vip.delete",
   "files": [
-    "dist/**",
-    "types/**",
+    "dist/libmount.d.mts",
+    "dist/libmount.mjs",
+    "dist/libmount.min.mjs",
     "LICENSE",
     "README.md"
   ],
   "exports": {
-    ".": {
-      "types": "./types/libmount.d.mts",
-      "import": "./dist/libmount.min.mjs"
-    }
+    ".": "./dist/libmount.mjs"
   },
   "repository": {
     "type": "git",
@@ -36,26 +34,29 @@
   },
   "scripts": {
     "lint": "eslint",
-    "clean": "node scripts/clean.mjs",
+    "generate": "node scripts/generate.mjs",
     "compile": "node scripts/compile.mjs",
-    "coverage": "vitest run --coverage coverage.test.mjs",
-    "test": "vitest run libmount.test.mjs",
-    "build": "npm run lint && npm run clean && npm run compile && npm run coverage && npm run test",
-    "dev": "node scripts/server.mjs"
+    "coverage": "vitest run --coverage main.test.mjs",
+    "test": "vitest run",
+    "build": "npm run lint && npm run generate && npm run test && npm run coverage",
+    "dev": "node scripts/server.mjs",
+    "madge": "madge src/mount.mjs src/fdisk.mjs src/mkfs.vfat.mjs --image graph.svg --exclude \"^(const|types|log|utils|dao)\\.mjs$\""
   },
   "devDependencies": {
-    "@stylistic/eslint-plugin": "^3.0.1",
-    "@types/express": "^5.0.0",
+    "@stylistic/eslint-plugin": "^5.x",
+    "@types/express": "^5.x",
     "@types/google-closure-compiler": "^20231112.0.0",
-    "@types/node": "^22.10.2",
-    "@types/serve-static": "^1.15.7",
-    "@vitest/coverage-istanbul": "^2.1.6",
-    "eslint": "^9.16.0",
-    "eslint-plugin-jsdoc": "^50.6.0",
-    "express": "^4.21.1",
-    "google-closure-compiler": "^20240317.0.0",
-    "prettier": "^3.4.1",
-    "serve-static": "^1.16.2",
-    "vitest": "^2.1.6"
+    "@types/node": "24.x",
+    "@types/serve-static": "^2.x",
+    "@vitest/coverage-istanbul": "^4.x",
+    "@vue/runtime-dom": "^3.5.24",
+    "eslint": "^9.x",
+    "eslint-plugin-jsdoc": "^61.x",
+    "express": "^5.x",
+    "google-closure-compiler": "^20250709.0.0",
+    "iconv-tiny": "^1.x",
+    "prettier": "^3.x",
+    "serve-static": "^2.x",
+    "vitest": "^4.x"
   }
 }

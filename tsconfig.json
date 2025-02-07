@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
-    "rootDir": ".",
     "strict": true,
     "module": "ESNext",
     "target": "ESNext",
+    "allowJs": true,
     "checkJs": true,
-    "moduleResolution": "Bundler",
-    "outDir": "out",
+    "noEmit": true,
+    "moduleResolution": "Bundler"
   },
-  "exclude": ["node_modules", "dist", "src/**/*-externs.mjs"]
+  "include": ["src", "static", "scripts"],
+  "exclude": ["src/externs.mjs"]
 }

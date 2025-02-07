@@ -1,13 +1,14 @@
 /**
- * @implements {lmNS.Encoding}
+ * @implements {ns.Codepage}
  */
 class Latin1 {
   /**
    * @override
    * @param {!Uint8Array} array
-   * @returns {string}
+   * @return {string}
    */
-  // @ts-ignore
+  // @ts-expect-error
+  // eslint-disable-next-line class-methods-use-this
   decode(array) {
     return new TextDecoder("UTF-16").decode(new Uint16Array(array));
   }
@@ -15,21 +16,21 @@ class Latin1 {
   /**
    * @override
    * @param {string} text
-   * @returns {!Uint8Array}
+   * @return {!Uint8Array}
    */
-  // @ts-ignore
+  // @ts-expect-error
+  // eslint-disable-next-line class-methods-use-this
   encode(text) {
-    const bytes = new Uint8Array(text.length);
-    for (let i = 0; i < text.length; i++) {
+    const len = text.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
       const code = text.charCodeAt(i);
-      if (code < 256) {
-        bytes[i] = code;
-      } else {
-        bytes[i] = "?".charCodeAt(0);
-      }
+      bytes[i] = code < 256 ? code : "?".charCodeAt(0);
     }
     return bytes;
   }
 }
 
-export const LATIN1 = new Latin1();
+// Export
+
+export const latin1 = new Latin1();

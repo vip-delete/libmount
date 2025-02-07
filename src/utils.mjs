@@ -1,123 +1,148 @@
-import { assert, impossibleNull } from "./support.mjs";
+import {
+  DIR_NAME_LENGTH,
+  LFN_ALL_NAMES_LENGTH,
+  LFN_BUFFER_LEN,
+  LFN_MAX_LEN,
+  LFN_NAME1_LENGTH,
+  LFN_NAME2_LENGTH,
+  LFN_NAME3_LENGTH,
+  MAX_BYTE,
+  MAX_WORD,
+} from "./const.mjs";
+import { CHS, DirEntryLFN } from "./types.mjs";
 
-const SHORT_NAME_SPECIAL_CHARACTERS = [
-  " ".charCodeAt(0),
-  "$".charCodeAt(0),
-  "%".charCodeAt(0),
-  "'".charCodeAt(0),
-  "-".charCodeAt(0),
-  "_".charCodeAt(0),
-  "@".charCodeAt(0),
-  "~".charCodeAt(0),
-  "`".charCodeAt(0),
-  "!".charCodeAt(0),
-  "(".charCodeAt(0),
-  ")".charCodeAt(0),
-  "{".charCodeAt(0),
-  "}".charCodeAt(0),
-  "^".charCodeAt(0),
-  "#".charCodeAt(0),
-  "&".charCodeAt(0),
-];
+// @ts-expect-error
+// eslint-disable-next-line no-undef
+const ASSERTS_ENABLED = typeof USE_ASSERTS === "boolean" ? USE_ASSERTS : true;
 
-const LONG_NAME_SPECIAL_CHARACTERS = [
-  ".".charCodeAt(0),
-  "+".charCodeAt(0),
-  ",".charCodeAt(0),
-  ";".charCodeAt(0),
-  "=".charCodeAt(0),
-  "[".charCodeAt(0),
-  "]".charCodeAt(0),
-];
+/**
+ * @param {boolean|number} expression
+ * @param {string} [msg]
+ */
+export const assert = (expression, msg) => {
+  if (ASSERTS_ENABLED) {
+    if (!expression) {
+      throw new Error(msg ?? "AssertionError");
+    }
+  }
+};
+
+/**
+ * @return {null}
+ */
+export const impossibleNull = () => {
+  assert(false);
+  return null;
+};
+
+/**
+ * @param {string} str
+ * @return {!Uint8Array}
+ */
+export const str2bytes = (str) => new Uint8Array([...str].map((/** @type {string} */ it) => it.charCodeAt(0)));
+
+/**
+ * @type {!Uint8Array}
+ */
+const SHORT_NAME_SPECIAL_CHARACTERS = str2bytes(" $%'-_@~`!(){}^#&");
+
+/**
+ * @type {!Uint8Array}
+ */
+const LONG_NAME_SPECIAL_CHARACTERS = str2bytes(".+,;=[]");
 
 /**
  * @param {number} code
- * @returns {boolean}
+ * @return {boolean}
  */
-function isCapitalLetter(code) {
-  return code >= "A".charCodeAt(0) && code <= "Z".charCodeAt(0);
-}
+const isCapitalLetter = (code) => code > "A".charCodeAt(0) - 1 && code < "Z".charCodeAt(0) + 1;
 
 /**
  * @param {number} code
- * @returns {boolean}
+ * @return {boolean}
  */
-function isSmallLetter(code) {
-  return code >= "a".charCodeAt(0) && code <= "z".charCodeAt(0);
-}
+const isSmallLetter = (code) => code > "a".charCodeAt(0) - 1 && code < "z".charCodeAt(0) + 1;
 
 /**
  * @param {number} code
- * @returns {boolean}
+ * @return {boolean}
  */
-function isDigit(code) {
-  return code >= "0".charCodeAt(0) && code <= "9".charCodeAt(0);
-}
+const isDigit = (code) => code > "0".charCodeAt(0) - 1 && code < "9".charCodeAt(0) + 1;
 
 /**
  * @param {number} code
- * @returns {boolean}
+ * @return {boolean}
  */
-function isUnicode(code) {
-  return code > 255;
-}
+const isUnicode = (code) => code > 255;
 
 /**
  * @param {number} code
- * @returns {boolean}
+ * @return {boolean}
  */
-function isExtended(code) {
-  return code > 127;
-}
+const isExtended = (code) => code > 127;
 
 /**
  * @param {!Uint8Array} sfn
- * @returns {number}
+ * @return {number}
  */
-export function getChkSum(sfn) {
-  assert(sfn.length === 11);
-  return sfn.reduce((/** @type {number} */ acc, /** @type {number} */ curr) => (((acc & 1) << 7) + (acc >> 1) + curr) & 0xff, 0);
-}
+export const getChkSum = (sfn) => {
+  assert(sfn.length === DIR_NAME_LENGTH);
+  let sum = sfn[0];
+  for (let i = 1, len = sfn.length; i < len; i++) {
+    sum = (((sum << 7) | (sum >> 1)) + sfn[i]) & 0xff;
+  }
+  return sum;
+};
 
 /**
  * @param {number} code
- * @returns {boolean}
+ * @return {boolean}
  */
-export function isShortNameValidCode(code) {
-  assert(code >= 0 && code <= 0xff);
+export const isShortNameValidCode = (code) => {
+  assert(code >= 0 && code <= MAX_BYTE);
   return isExtended(code) || isCapitalLetter(code) || isDigit(code) || SHORT_NAME_SPECIAL_CHARACTERS.includes(code);
-}
+};
 
 /**
  * @param {number} wcCode
- * @returns {boolean}
+ * @return {boolean}
  */
-export function isLongNameValidCode(wcCode) {
-  assert(wcCode >= 0 && wcCode <= 0xffff);
+const isLongNameValidCode = (wcCode) => {
+  assert(wcCode >= 0 && wcCode <= MAX_WORD);
   return isUnicode(wcCode) || isSmallLetter(wcCode) || isShortNameValidCode(wcCode) || LONG_NAME_SPECIAL_CHARACTERS.includes(wcCode);
-}
+};
 
 /**
  * @param {string} longName
- * @returns {string}
+ * @return {string}
  */
-export function normalizeLongName(longName) {
-  // remove trim and remove trailing dots
-  return longName.replace(/[\s.]*$/gu, "").trim();
-}
+export const normalizeLongName = (longName) => {
+  // return longName.replace(/[\s.]*$/gu, "").trim();
+  let i = 0;
+  while (i < longName.length && longName.charCodeAt(i) === " ".charCodeAt(0)) {
+    i++;
+  }
+  let j = longName.length - 1;
+  // eslint-disable-next-line init-declarations
+  let ch;
+  while (j >= i && ((ch = longName.charCodeAt(j)) === " ".charCodeAt(0) || ch === ".".charCodeAt(0))) {
+    j--;
+  }
+  return longName.slice(i, j + 1);
+};
 
 /**
  * @param {string} path
- * @returns {!Array<string>}
+ * @return {!Array<string>}
  */
-export function split(path) {
+export const split = (path) => {
   const names = [];
   const parts = path.split(/[/\\]/u);
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i].trim();
     if (part !== "" && part !== ".") {
       if (part === "..") {
-        if (names.length > 0) {
+        if (names.length) {
           names.length--;
         }
       } else {
@@ -129,61 +154,36 @@ export function split(path) {
     }
   }
   return names;
-}
+};
 
 /**
  * @param {!Uint8Array} sfn
- * @param {!lmNS.Encoding} encoding
- * @returns {string}
+ * @param {!ns.Codepage} cp
+ * @return {string}
  */
-export function sfnToStr(sfn, encoding) {
-  assert(sfn.length === 11);
-  const str = encoding.decode(sfn);
+export const sfnToStr = (sfn, cp) => {
+  assert(sfn.length === DIR_NAME_LENGTH);
+  const str = cp.decode(sfn);
   const basename = str.slice(0, 8).trimEnd();
   const ext = str.slice(8, 11).trimEnd();
   return ext === "" ? basename : basename + "." + ext;
-}
-
-/**
- * @param {string} str
- * @param {!lmNS.Encoding} encoding
- * @returns {?Uint8Array}
- */
-export function strToSfn(str, encoding) {
-  const i = str.lastIndexOf(".");
-  const basename = i < 0 ? str : str.substring(0, i);
-  const ext = i < 0 ? "" : str.substring(i + 1);
-  if (basename === "" && ext === "") {
-    // both are empty
-    return null;
-  }
-  const sfn = new Uint8Array(11);
-  if (!appendToSFN(sfn, 0, 8, encoding, basename)) {
-    // filename is not valid for short name
-    return null;
-  }
-  if (!appendToSFN(sfn, 8, 3, encoding, ext)) {
-    // ext is not valid for short name
-    return null;
-  }
-  return sfn;
-}
+};
 
 /**
  * @param {!Uint8Array} sfn
  * @param {number} offset
  * @param {number} len
- * @param {!lmNS.Encoding} encoding
+ * @param {!ns.Codepage} cp
  * @param {string} str
- * @returns {boolean}
+ * @return {boolean}
  */
-function appendToSFN(sfn, offset, len, encoding, str) {
+const appendToSFN = (sfn, offset, len, cp, str) => {
   if (str.startsWith(" ") || str.endsWith(" ")) {
     // invalid
     return false;
   }
   let i = 0;
-  const buf = encoding.encode(str);
+  const buf = cp.encode(str);
   if (buf.length > len) {
     // too long
     return false;
@@ -203,51 +203,170 @@ function appendToSFN(sfn, offset, len, encoding, str) {
     i++;
   }
   return true;
-}
+};
 
 /**
  * @param {string} str
- * @returns {?Uint8Array}
+ * @param {!ns.Codepage} codepage
+ * @return {?Uint8Array}
  */
-export function strToLfn(str) {
-  if (str === "") {
-    // too short
+export const strToSfn = (str, codepage) => {
+  const i = str.lastIndexOf(".");
+  const basename = i < 0 ? str : str.substring(0, i);
+  const ext = i < 0 ? "" : str.substring(i + 1);
+  if (basename === "" && ext === "") {
+    // both are empty
     return null;
   }
-  if (str.length > 255) {
-    // too long
+  const sfn = new Uint8Array(DIR_NAME_LENGTH);
+  if (!appendToSFN(sfn, 0, 8, codepage, basename)) {
+    // filename is not valid for short name
     return null;
   }
-  const lfn = new Uint8Array(str.length * 2);
+  if (!appendToSFN(sfn, 8, 3, codepage, ext)) {
+    // ext is not valid for short name
+    return null;
+  }
+  return sfn;
+};
+
+const LFN_BUFFER = new Uint8Array(LFN_BUFFER_LEN);
+
+/**
+ * @param {string} str
+ * @return {?Uint8Array}
+ */
+export const strToLfn = (str) => {
+  assert(str.length && str.length <= LFN_MAX_LEN);
+  const lfn = LFN_BUFFER;
   let i = 0;
+  let j = 0;
   while (i < str.length) {
-    const wcCode = str.charCodeAt(i);
-    if (!isLongNameValidCode(wcCode)) {
+    let ch = str.charCodeAt(i++);
+    if (!isLongNameValidCode(ch)) {
       // invalid char
       return null;
     }
-    const low = wcCode & 0xff;
-    const high = wcCode >> 8;
-    lfn[2 * i] = low;
-    lfn[2 * i + 1] = high;
-    i++;
+    lfn[j++] = ch; // & 0xff;
+    ch >>= 8;
+    lfn[j++] = ch; // & 0xff;
   }
-  return lfn;
-}
+  // A name that fits exactly in a set of long name directory entries
+  // (i.e. is an integer multiple of 13) is not NULL terminated and not padded with 0xFFFF.
+  if (j % LFN_ALL_NAMES_LENGTH !== 0) {
+    // NULL-terminator
+    lfn[j++] = 0;
+    lfn[j++] = 0;
+    // 0xFF padding
+    while (j % LFN_ALL_NAMES_LENGTH !== 0) {
+      lfn[j++] = MAX_BYTE;
+      lfn[j++] = MAX_BYTE;
+    }
+  }
+  assert(j <= lfn.length);
+  return lfn.subarray(0, j);
+};
+
+const LFN_DECODE_BUFFER = new Uint16Array(LFN_BUFFER_LEN / 2);
+
+/**
+ * @param {!Array<!DirEntryLFN>} chain
+ * @return {string}
+ */
+export const lfnToStr = (chain) => {
+  assert(chain.length > 0);
+  const buf = LFN_DECODE_BUFFER;
+  let len = 0;
+  let k = chain.length - 1;
+  // eslint-disable-next-line init-declarations
+  let ch;
+  do {
+    const item = chain[k--];
+    const Name1 = item.Name1;
+    let i = 0;
+    while (i < LFN_NAME1_LENGTH && (ch = Name1[i++] | (Name1[i++] << 8))) {
+      buf[len++] = ch;
+    }
+    if (ch) {
+      const Name2 = item.Name2;
+      i = 0;
+      while (i < LFN_NAME2_LENGTH && (ch = Name2[i++] | (Name2[i++] << 8))) {
+        buf[len++] = ch;
+      }
+      if (ch) {
+        const Name3 = item.Name3;
+        i = 0;
+        while (i < LFN_NAME3_LENGTH && (ch = Name3[i++] | (Name3[i++] << 8))) {
+          buf[len++] = ch;
+        }
+      }
+    }
+  } while (ch && k >= 0);
+  return String.fromCharCode(...buf.subarray(0, len));
+};
 
 /**
  * @param {string} str
- * @param {!lmNS.Encoding} encoding
- * @param {!Set<string>} fileNames
- * @returns {?string}
+ * @param {number} max
+ * @param {!ns.Codepage} cp
+ * @return {string}
  */
-export function strToTildeName(str, encoding, fileNames) {
+const toValidShortNameCharacters = (str, max, cp) => {
+  let ret = "";
+  let i = 0;
+  let count = 0;
+  while (i < str.length && count < max) {
+    const ch = str.charAt(i);
+    // skip leading spaces
+    if (ret !== "" || ch !== " ") {
+      const buf = cp.encode(ch);
+      // check 1st byte only
+      const code = buf[0];
+      // ignore all characters encoded as "?" as they are "unmapped"
+      if (code !== "?".charCodeAt(0)) {
+        if (isShortNameValidCode(code)) {
+          // character is "mapped" and 1st byte is valid for SFN
+          ret += ch;
+          // encoding can be multi-byte
+          count += buf.length;
+        } else {
+          // replace all "mapped" but invalid for SFN characters by "_"
+          ret += "_";
+          count++;
+        }
+      }
+    }
+    i++;
+  }
+  return ret;
+};
+
+/**
+ * @param {string} str
+ * @return {string}
+ */
+const strToHash = (str) => {
+  let sum = 0;
+  for (let i = 0; i < str.length; i++) {
+    sum = (sum + str.charCodeAt(i)) & 0xffff;
+  }
+  return sum.toString(16).padStart(4, "0").toUpperCase();
+};
+
+/**
+ * @param {string} str
+ * @param {!ns.Codepage} cp
+ * @param {!Set<string>} fileNames
+ * @return {string}
+ */
+export const strToTildeName = (str, cp, fileNames) => {
+  str = str.toUpperCase();
   const i = str.lastIndexOf(".");
   const basename = i < 0 ? str : str.substring(0, i);
   const ext = i < 0 ? "" : str.substring(i + 1);
 
-  const basename6 = toValidShortNameCharacters(basename.toUpperCase(), 6, encoding);
-  const ext3 = toValidShortNameCharacters(ext.toUpperCase(), 3, encoding);
+  const basename6 = toValidShortNameCharacters(basename, 6, cp);
+  const ext3 = toValidShortNameCharacters(ext, 3, cp);
 
   assert(!basename6.startsWith(" ") && basename6.length <= 6);
   assert(!ext3.startsWith(" ") && ext3.length <= 3);
@@ -265,76 +384,34 @@ export function strToTildeName(str, encoding, fileNames) {
     num++;
     numLen = num.toString().length;
   }
-  return impossibleNull();
-}
-
-/**
- * @param {string} str
- * @param {number} max
- * @param {!lmNS.Encoding} encoding
- * @returns {string}
- */
-function toValidShortNameCharacters(str, max, encoding) {
-  let ret = "";
-  let i = 0;
-  const buf = encoding.encode(str);
-  while (i < str.length && ret.length < max) {
-    const ch = str.charAt(i);
-    const code = buf[i];
-    // ignore all characters encoded as "?": they are "unmapped"
-    if (code !== "?".charCodeAt(0)) {
-      if (isShortNameValidCode(code)) {
-        // character is "mapped" and valid for SFN, append to ret but skip leading spaces
-        const leadingSpace = ch === " " && ret === "";
-        if (!leadingSpace) {
-          ret += ch;
-        }
-      } else {
-        // replace all "mapped" but invalid for SFN characters by "_"
-        ret += "_";
-      }
-    }
-    i++;
-  }
-  return ret;
-}
-
-/**
- * @param {string} str
- * @returns {string}
- */
-function strToHash(str) {
-  let sum = 0;
-  for (let i = 0; i < str.length; i++) {
-    sum = (sum + str.charCodeAt(i)) & 0xffff;
-  }
-  return sum.toString(16).padStart(4, "0").toUpperCase();
-}
+  // namespace overflow is impossible
+  return "";
+};
 
 // Dates
 
 /**
  * @param {number} date
- * @returns {?Date}
+ * @return {?Date}
  */
-export function parseDate(date) {
-  if (date === 0) {
+export const parseDate = (date) => {
+  if (!date) {
     return null;
   }
   const dayOfMonth = date & 0b11111;
   const monthOfYear = (date >> 5) & 0b1111;
   const yearSince1980 = (date >> 9) & 0b1111111;
   return new Date(1980 + yearSince1980, Math.max(0, monthOfYear - 1), Math.max(1, dayOfMonth));
-}
+};
 
 /**
  * @param {number} date
  * @param {number} time
  * @param {number} timeTenth
- * @returns {?Date}
+ * @return {?Date}
  */
-export function parseDateTime(date, time, timeTenth) {
-  if (date === 0) {
+export const parseDateTime = (date, time, timeTenth) => {
+  if (!date) {
     return null;
   }
   const dayOfMonth = date & 0b11111;
@@ -345,36 +422,86 @@ export function parseDateTime(date, time, timeTenth) {
   const minutes = (time >> 5) & 0b111111;
   const hours = (time >> 11) & 0b11111;
   return new Date(1980 + yearSince1980, Math.max(0, monthOfYear - 1), Math.max(1, dayOfMonth), hours, minutes, seconds, millis);
-}
+};
 
 /**
- * @param {!Date} date
- * @returns {number}
+ * @param {?Date} date
+ * @return {number}
  */
-export function toDate(date) {
+export const toDate = (date) => {
+  if (!date) {
+    return 0;
+  }
   const yearSince1980 = date.getFullYear() - 1980;
   const monthOfYear = date.getMonth() + 1;
   const dayOfMonth = date.getDate();
   return (yearSince1980 << 9) | (monthOfYear << 5) | dayOfMonth;
-}
+};
 
 /**
- * @param {!Date} date
- * @returns {number}
+ * @param {?Date} date
+ * @return {number}
  */
-export function toTime(date) {
+export const toTime = (date) => {
+  if (!date) {
+    return 0;
+  }
   const hours = date.getHours();
   const minutes = date.getMinutes();
   const seconds = date.getSeconds();
   return (hours << 11) | (minutes << 5) | (seconds >> 1);
-}
+};
 
 /**
- * @param {!Date} date
- * @returns {number}
+ * @param {?Date} date
+ * @return {number}
  */
-export function toTimeTenth(date) {
+export const toTimeTenth = (date) => {
+  if (!date) {
+    return 0;
+  }
   const seconds = date.getSeconds();
   const millis = date.getMilliseconds();
   return Math.floor(((seconds % 2) * 1000 + Number(millis)) / 10);
-}
+};
+
+/**
+ * @param {!ns.Codepage} cp
+ * @param {number} len
+ * @param {?string} str
+ * @return {!Uint8Array}
+ */
+export const strToUint8Array = (cp, len, str) => {
+  const data = new Uint8Array(len).fill(" ".charCodeAt(0));
+  if (str) {
+    data.set(cp.encode(str.substring(0, len)).subarray(0, len));
+  }
+  return data;
+};
+
+/**
+ * @param {!CHS} chs
+ * @param {number} TH
+ * @param {number} TS
+ * @return {number}
+ */
+export const chs2lba = (chs, TH, TS) => (chs.Cylinder * TH + chs.Head) * TS + (chs.Sector - 1);
+
+/**
+ * @param {number} LBA
+ * @param {number} TH
+ * @param {number} TS
+ * @return {!CHS}
+ */
+export const lba2chs = (LBA, TH, TS) => {
+  const Cylinder = Math.floor(LBA / (TS * TH));
+  const i = Cylinder * TH * TS;
+  const Head = Math.floor((LBA - i) / TS);
+  const j = Head * TS;
+  const Sector = LBA - i - j + 1;
+  return {
+    Cylinder,
+    Head,
+    Sector,
+  };
+};

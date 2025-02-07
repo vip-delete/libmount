@@ -1,38 +1,48 @@
-import { existsSync, readFileSync } from "fs";
+import { mount } from "libmount";
 import { expect, test } from "vitest";
+import { existsSync, readBinaryFileSync } from "../scripts/commons.mjs";
+import { chs2lba, lba2chs } from "../src/utils.mjs";
 
-/**
- * @param {function(Uint8Array,lmNS.MountOptions=):lmNS.Disk} mount
- */
-export function testWindowsMe(mount) {
-  const filename = "./public/images/fat32/windowsme.img";
+const getWinMeFs = () => {
+  const filename = "images/fat32/windowsme.img";
   if (!existsSync(filename)) {
-    return;
+    return null;
   }
 
-  const imgFile = readFileSync(filename, { flag: "r" });
+  const imgFile = readBinaryFileSync(filename);
   const img = new Uint8Array(imgFile);
   const disk = mount(img);
-  expect(disk.getFileSystem()).toBeNull();
   const partitions = disk.getPartitions();
   expect(partitions.length).toBe(1);
-  expect(partitions[0]).toStrictEqual({
+  const partition = partitions[0];
+  expect(partition).toStrictEqual({
     active: true,
-    begin: 32256,
-    end: 834011136,
+    relativeSectors: 63,
+    totalSectors: 1628865,
     type: 11,
   });
+  const chs = {
+    Cylinder: 807,
+    Head: 31,
+    Sector: 63,
+  };
+  const NumHeads = 32;
+  const SecPerTrk = 63;
+  const lastSector = partition.relativeSectors + partition.totalSectors - 1;
+  expect(chs2lba(chs, NumHeads, SecPerTrk)).toBe(lastSector);
+  expect(lba2chs(lastSector, NumHeads, SecPerTrk)).toStrictEqual(chs);
   const fs = mount(img, { partition: partitions[0] }).getFileSystem();
   expect(fs?.getName()).toBe("FAT32");
+  return fs;
+};
 
-  test("winme-listFiles", () => {
-    const themes = fs?.getRoot().getFile("/Program Files/Plus!/Themes");
-    expect(themes?.listFiles()?.length).toBe(554);
-  });
+test("winme", { timeout: 30000 }, () => {
+  const fs = getWinMeFs();
 
-  test("winme-getSizeOnDisk", () => {
-    const directX = fs?.getRoot().getFile("/WINDOWS/SYSTEM/DirectX");
-    expect(directX?.length()).toBe(3107950);
-    expect(directX?.getSizeOnDisk()).toBe(3641344);
-  });
-}
+  const themes = fs?.getRoot().getFile("/Program Files/Plus!/Themes");
+  expect(themes?.listFiles()?.length).toBe(554);
+
+  const directX = fs?.getRoot().getFile("/WINDOWS/SYSTEM/DirectX");
+  expect(directX?.length()).toBe(3107950);
+  expect(directX?.getSizeOnDisk()).toBe(3641344);
+});

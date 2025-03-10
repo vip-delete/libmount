@@ -44,7 +44,7 @@
     "dev": "node scripts/server.mjs"
   },
   "devDependencies": {
-    "@stylistic/eslint-plugin": "^3.0.1",
+    "@stylistic/eslint-plugin": "^4.2.0",
     "@types/express": "^5.0.0",
     "@types/google-closure-compiler": "^20231112.0.0",
     "@types/node": "^22.10.2",

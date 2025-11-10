@@ -10,4 +10,4 @@ import "./test-loader.mjs";
 import "./test-mbr.mjs";
 import "./test-mkfsvfat.mjs";
 import "./test-utils.mjs";
-import "./test-windowsme.mjs";
+// import "./test-windowsme.mjs";

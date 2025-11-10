@@ -53,7 +53,7 @@
     "eslint": "^9.x",
     "eslint-plugin-jsdoc": "^61.x",
     "express": "^5.x",
-    "google-closure-compiler": "^20250709.0.0",
+    "google-closure-compiler": "^20251104.0.0",
     "iconv-tiny": "^1.x",
     "prettier": "^3.x",
     "serve-static": "^2.x",

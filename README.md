@@ -74,7 +74,7 @@ See more [examples](examples)
 
 | File | Description |
 |------|-------------|
-|[mkfs.vfat.mjs](src/mkfs.vfat.mjs)|Make FAT filesystem function (format volume).|
+|[mkfsvfat.mjs](src/mkfsvfat.mjs)|Make FAT filesystem function (format volume).|
 |[fdisk.mjs](src/fdisk.mjs)|Make Partition Table function.|
 |[mount.mjs](src/mount.mjs)|Mount function.|
 

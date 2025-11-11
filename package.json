@@ -40,7 +40,7 @@
     "test": "vitest run",
     "build": "npm run lint && npm run generate && npm run test && npm run coverage",
     "dev": "node scripts/server.mjs",
-    "madge": "madge src/mount.mjs src/fdisk.mjs src/mkfs.vfat.mjs --image graph.svg --exclude \"^(const|types|log|utils|dao)\\.mjs$\""
+    "madge": "madge src/mount.mjs src/fdisk.mjs src/mkfsvfat.mjs --image graph.svg --exclude \"^(const|types|log|utils|dao)\\.mjs$\""
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^5.x",

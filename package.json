@@ -56,7 +56,6 @@
     "google-closure-compiler": "^20251104.0.0",
     "iconv-tiny": "^1.x",
     "prettier": "^3.x",
-    "serve-static": "^2.x",
     "vitest": "^4.x"
   }
 }

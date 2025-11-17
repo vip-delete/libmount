@@ -1,5 +1,4 @@
 import {
-  DIR_CRT_DATE_TIME_OFFSET,
   DIR_ENTRY_ATTR_DIRECTORY,
   DIR_ENTRY_ATTR_LFN,
   DIR_ENTRY_ATTR_VOLUME_ID,
@@ -7,12 +6,7 @@ import {
   DIR_ENTRY_FLAG_LAST,
   DIR_ENTRY_SIZE,
   DIR_ENTRY_SIZE_BITS,
-  DIR_FILE_SIZE_OFFSET,
-  DIR_FST_CLUS_HI_OFFSET,
-  DIR_FST_CLUS_LO_OFFSET,
-  DIR_LST_ACC_DATE_OFFSET,
   DIR_NAME_LENGTH,
-  DIR_WRT_DATE_TIME_OFFSET,
   FAT_THRESHOLD,
   FREE_CLUS,
   FSI_NEXT_FREE_OFFSET,
@@ -21,6 +15,7 @@ import {
   LFN_NAME2_LENGTH,
   LFN_NAME3_LENGTH,
   MIN_CLUS_NUM,
+  SZ,
 } from "./const.mjs";
 import {
   createDirEntry,
@@ -35,12 +30,12 @@ import {
   writeDirEntry,
   writeDirEntryLFN,
 } from "./dao.mjs";
-import { createLogger } from "./log.mjs";
-import { BootSector, DirEntry, DirEntryLFN, FAT, FATNode, FATVariables, IO, Logger } from "./types.mjs";
+import { createIO } from "./io.mjs";
+// import { createLogger } from "./log.mjs";
+import { BootSector, DirEntry, DirEntryLFN, Driver, FAT, FATNode, FATVariables, IO, ValidationError } from "./types.mjs";
 import {
   assert,
   getChkSum,
-  impossibleNull,
   isShortNameValidCode,
   lfnToStr,
   normalizeLongName,
@@ -58,10 +53,10 @@ import {
   toTimeTenth,
 } from "./utils.mjs";
 
-/**
- * @type {!Logger}
- */
-const log = createLogger("FS");
+// /**
+//  * @type {!Logger}
+//  */
+// const log = createLogger("FS");
 
 // @ts-expect-error
 // eslint-disable-next-line no-undef
@@ -120,6 +115,70 @@ const DOT_SFN = str2bytes(".          ");
  * @type {!Uint8Array}
  */
 const DOT_DOT_SFN = str2bytes("..         ");
+
+/**
+ * @param {!IO} io
+ * @param {number} flag
+ * @param {number} offset
+ * @param {!ns.Codepage} cp
+ * @return {?FATNode}
+ */
+const readNode = (io, flag, offset, cp) => {
+  if (flag === DIR_ENTRY_FLAG_LAST) {
+    return createNode(NODE_LAST, "", offset, DUMMY_DIR);
+  }
+
+  if (flag === DIR_ENTRY_FLAG_DELETED) {
+    return createNode(NODE_DELETED, "", offset, DUMMY_DIR);
+  }
+
+  const dir = loadDirEntry(io);
+  const dirName = dir.Name;
+  const dirAttributes = dir.Attributes;
+
+  const isLabel = (dirAttributes & DIR_ENTRY_ATTR_VOLUME_ID) > 0;
+  if (isLabel) {
+    return createNode(NODE_LABEL, cp.decode(dirName).trimEnd(), offset, dir);
+  }
+
+  const isDir = (dirAttributes & DIR_ENTRY_ATTR_DIRECTORY) > 0;
+  if (isDir && dirName.every((it, i) => it === DOT_SFN[i])) {
+    return createNode(NODE_DOT_DIR, ".", offset, dir);
+  }
+  if (isDir && dirName.every((it, i) => it === DOT_DOT_SFN[i])) {
+    return createNode(NODE_DOT_DIR, "..", offset, dir);
+  }
+
+  if (dirName.every(isShortNameValidCode)) {
+    const shortName = sfnToStr(dirName, cp);
+    if (shortName && !shortName.startsWith(" ")) {
+      return createNode(isDir ? NODE_REG_DIR : NODE_REG_FILE, shortName, offset, dir);
+    }
+  }
+
+  // invalid node
+  return null;
+};
+
+/**
+ * @param {!Driver} driver
+ * @param {number} offset
+ * @param {!DirEntry} dirEntry
+ */
+const flushDirEntry = (driver, offset, dirEntry) => {
+  const array = new Uint8Array(DIR_ENTRY_SIZE);
+  const io = createIO(array);
+  writeDirEntry(io, 0, dirEntry);
+  driver.writeUint8Array(offset, array);
+};
+
+/**
+ * @param {!Driver} driver
+ * @param {!FATNode} node
+ */
+const flushNode = (driver, node) => {
+  flushDirEntry(driver, node.dirOffset, node.dirEntry);
+};
 
 /**
  * @private
@@ -189,10 +248,10 @@ const fillNode = (node, chain, firstDirOffset) => {
         node.firstDirOffset = firstDirOffset;
         node.dirCount = chain.length + 1;
       } else {
-        log.warn(`Skip invalid chainLFN at ${firstDirOffset}: chksum mismatch`);
+        // log.warn(`Skip invalid chainLFN at ${firstDirOffset}: chksum mismatch`);
       }
     } else {
-      log.warn(`Skip invalid chainLFN at ${firstDirOffset}: chain is not finished`);
+      // log.warn(`Skip invalid chainLFN at ${firstDirOffset}: chain is not finished`);
     }
   }
 };
@@ -202,10 +261,14 @@ const fillNode = (node, chain, firstDirOffset) => {
  */
 class FAT12 {
   /**
-   * @param {!FileSystem} fs
+   * @param {!Driver} driver
+   * @param {!FATVariables} vars
+   * @param {!Array<number>} offsetFATs
    */
-  constructor(fs) {
-    /** @constant */ this.fs = fs;
+  constructor(driver, vars, offsetFATs) {
+    /** @constant */ this.driver = driver;
+    /** @constant */ this.vars = vars;
+    /** @constant */ this.offsetFATs = offsetFATs;
   }
 
   /**
@@ -215,10 +278,10 @@ class FAT12 {
    */
   // @ts-expect-error
   getNextClusNum(clusNum) {
-    const fs = this.fs;
-    assert(clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus);
-    const val = fs.io.seek(fs.offsetFATs[0] + clusNum + (clusNum >> 1)).readWord();
-    return clusNum & 1 ? val >> 4 : val & fs.vars.FinalClus;
+    const { driver, vars, offsetFATs } = this;
+    assert(clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus);
+    const val = driver.readWord(offsetFATs[0] + clusNum + (clusNum >> 1));
+    return clusNum & 1 ? val >> 4 : val & vars.FinalClus;
   }
 
   /**
@@ -228,11 +291,12 @@ class FAT12 {
    */
   // @ts-expect-error
   setNextClusNum(clusNum, value) {
-    const fs = this.fs;
-    assert(clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus);
-    for (let i = 0; i < fs.offsetFATs.length; i++) {
-      const val = fs.io.seek(fs.offsetFATs[i] + clusNum + (clusNum >> 1)).readWord();
-      fs.io.skip(-2).writeWord(clusNum & 1 ? (value << 4) | (val & 0xf) : (val & 0xf000) | value);
+    const { driver, vars, offsetFATs } = this;
+    assert(clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus);
+    for (let i = 0; i < offsetFATs.length; i++) {
+      const address = offsetFATs[i] + clusNum + (clusNum >> 1);
+      const val = driver.readWord(address);
+      driver.writeWord(address, clusNum & 1 ? (value << 4) | (val & 0xf) : (val & 0xf000) | value);
     }
   }
 
@@ -262,10 +326,14 @@ class FAT12 {
  */
 class FAT16 {
   /**
-   * @param {!FileSystem} fs
+   * @param {!Driver} driver
+   * @param {!FATVariables} vars
+   * @param {!Array<number>} offsetFATs
    */
-  constructor(fs) {
-    /** @constant */ this.fs = fs;
+  constructor(driver, vars, offsetFATs) {
+    /** @constant */ this.driver = driver;
+    /** @constant */ this.vars = vars;
+    /** @constant */ this.offsetFATs = offsetFATs;
   }
 
   /**
@@ -275,9 +343,9 @@ class FAT16 {
    */
   // @ts-expect-error
   getNextClusNum(clusNum) {
-    const fs = this.fs;
-    assert(clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus);
-    return fs.io.seek(fs.offsetFATs[0] + clusNum * 2).readWord();
+    const { driver, vars, offsetFATs } = this;
+    assert(clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus);
+    return driver.readWord(offsetFATs[0] + clusNum * 2);
   }
 
   /**
@@ -287,10 +355,10 @@ class FAT16 {
    */
   // @ts-expect-error
   setNextClusNum(clusNum, value) {
-    const fs = this.fs;
-    assert(clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus);
-    for (let i = 0; i < fs.offsetFATs.length; i++) {
-      fs.io.seek(fs.offsetFATs[i] + clusNum * 2).writeWord(value);
+    const { driver, vars, offsetFATs } = this;
+    assert(clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus);
+    for (let i = 0; i < offsetFATs.length; i++) {
+      driver.writeWord(offsetFATs[i] + clusNum * 2, value);
     }
   }
 
@@ -320,14 +388,18 @@ class FAT16 {
  */
 class FAT32 {
   /**
-   * @param {!FileSystem} fs
+   * @param {!Driver} driver
+   * @param {!FATVariables} vars
+   * @param {!Array<number>} offsetFATs
+   * @param {number} fsiOffset
+   * @param {number} fsiNxtFreeOffset
    */
-  constructor(fs) {
-    /** @constant */ this.fs = fs;
-    this.fsiOffset = this.fs.bs.bpb.BytsPerSec * this.fs.bs.bpb.FSInfo;
-    this.fsiNxtFreeOffset = this.fsiOffset + FSI_NEXT_FREE_OFFSET;
-    this.fs.io.seek(this.fsiOffset);
-    loadFSI(this.fs.io);
+  constructor(driver, vars, offsetFATs, fsiOffset, fsiNxtFreeOffset) {
+    /** @constant */ this.driver = driver;
+    /** @constant */ this.vars = vars;
+    /** @constant */ this.offsetFATs = offsetFATs;
+    /** @constant */ this.fsiOffset = fsiOffset;
+    /** @constant */ this.fsiNxtFreeOffset = fsiNxtFreeOffset;
   }
 
   /**
@@ -337,9 +409,9 @@ class FAT32 {
    */
   // @ts-expect-error
   getNextClusNum(clusNum) {
-    const fs = this.fs;
-    assert(clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus);
-    return fs.io.seek(fs.offsetFATs[0] + clusNum * 4).readDoubleWord() & fs.vars.FinalClus;
+    const { driver, vars, offsetFATs } = this;
+    assert(clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus);
+    return driver.readDoubleWord(offsetFATs[0] + clusNum * 4) & vars.FinalClus;
   }
 
   /**
@@ -349,11 +421,12 @@ class FAT32 {
    */
   // @ts-expect-error
   setNextClusNum(clusNum, value) {
-    const fs = this.fs;
-    assert(clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus);
-    for (let i = 0; i < fs.offsetFATs.length; i++) {
-      const val = fs.io.seek(fs.offsetFATs[i] + clusNum * 4).readDoubleWord();
-      fs.io.skip(-4).writeDoubleWord((val & 0xf0000000) | value);
+    const { driver, vars, offsetFATs } = this;
+    assert(clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus);
+    for (let i = 0; i < offsetFATs.length; i++) {
+      const address = offsetFATs[i] + clusNum * 4;
+      const val = driver.readDoubleWord(address);
+      driver.writeDoubleWord(address, (val & 0xf0000000) | value);
     }
   }
 
@@ -363,9 +436,9 @@ class FAT32 {
    */
   // @ts-expect-error
   getNextFreeClus() {
-    const fs = this.fs;
-    const clusNum = fs.io.seek(this.fsiNxtFreeOffset).readDoubleWord();
-    return clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus ? clusNum : MIN_CLUS_NUM;
+    const { driver, vars, fsiNxtFreeOffset } = this;
+    const clusNum = driver.readDoubleWord(fsiNxtFreeOffset);
+    return clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus ? clusNum : MIN_CLUS_NUM;
   }
 
   /**
@@ -374,8 +447,8 @@ class FAT32 {
    */
   // @ts-expect-error
   setNextFreeClus(clusNum) {
-    const fs = this.fs;
-    fs.io.seek(this.fsiNxtFreeOffset).writeDoubleWord(clusNum);
+    const { driver, fsiNxtFreeOffset } = this;
+    driver.writeDoubleWord(fsiNxtFreeOffset, clusNum);
   }
 }
 
@@ -443,7 +516,7 @@ class FileIO {
     if (len) {
       const offset = fs.getContentOffset(this.curr);
       if (offset) {
-        buf.set(fs.io.seek(offset).peekUint8Array(len));
+        buf.set(fs.driver.readUint8Array(offset, len));
         // move to the next cluster
         this.prev = this.curr;
         this.curr = fs.FAT.getNextClusNum(this.curr);
@@ -483,9 +556,9 @@ class FileIO {
       this.curr = newClusNum;
       offset = fs.getContentOffset(newClusNum);
       node.dirEntry.FileSize = this.pos + len;
-      fs.io.seek(node.dirOffset + DIR_FILE_SIZE_OFFSET).writeDoubleWord(node.dirEntry.FileSize);
+      flushNode(this.fs.driver, this.node);
     }
-    fs.io.seek(offset).writeUint8Array(buf.subarray(0, len));
+    fs.driver.writeUint8Array(offset, buf.subarray(0, len));
     this.fileSize = this.pos + len;
 
     // move to the next cluster
@@ -538,7 +611,7 @@ class FileIO {
       assert(this.fileSize === 0);
     }
     this.node.dirEntry.FileSize = this.fileSize;
-    this.fs.io.seek(this.node.dirOffset + DIR_FILE_SIZE_OFFSET).writeDoubleWord(this.node.dirEntry.FileSize);
+    flushNode(this.fs.driver, this.node);
 
     const fileSize = data.length - tmp.length;
     assert(fileSize === this.node.dirEntry.FileSize);
@@ -552,13 +625,11 @@ class FileIO {
    * @param {number} clusNum
    */
   setFirstClus(clusNum) {
-    const { dirOffset, dirEntry } = this.node;
+    const { dirEntry } = this.node;
     this.node.fstClus = clusNum;
-    this.fs.io
-      .seek(dirOffset + DIR_FST_CLUS_HI_OFFSET)
-      .writeWord((dirEntry.FstClusHI = clusNum >>> 16))
-      .seek(dirOffset + DIR_FST_CLUS_LO_OFFSET)
-      .writeWord((dirEntry.FstClusLO = clusNum & 0xffff));
+    dirEntry.FstClusHI = clusNum >>> 16;
+    dirEntry.FstClusLO = clusNum & 0xffff;
+    flushNode(this.fs.driver, this.node);
   }
 }
 
@@ -677,11 +748,10 @@ class File {
    */
   // @ts-expect-error
   setLastModified(date) {
-    const { dirOffset, dirEntry } = this.node;
-    this.fs.io
-      .seek(dirOffset + DIR_WRT_DATE_TIME_OFFSET)
-      .writeWord((dirEntry.WrtTime = toTime(date)))
-      .writeWord((dirEntry.WrtDate = toDate(date)));
+    const { dirEntry } = this.node;
+    dirEntry.WrtTime = toTime(date);
+    dirEntry.WrtDate = toDate(date);
+    flushNode(this.fs.driver, this.node);
   }
 
   /**
@@ -702,12 +772,11 @@ class File {
    */
   // @ts-expect-error
   setCreationTime(date) {
-    const { dirOffset, dirEntry } = this.node;
-    this.fs.io
-      .seek(dirOffset + DIR_CRT_DATE_TIME_OFFSET)
-      .writeByte((dirEntry.CrtTimeTenth = toTimeTenth(date)))
-      .writeWord((dirEntry.CrtTime = toTime(date)))
-      .writeWord((dirEntry.CrtDate = toDate(date)));
+    const { dirEntry } = this.node;
+    dirEntry.CrtTimeTenth = toTimeTenth(date);
+    dirEntry.CrtTime = toTime(date);
+    dirEntry.CrtDate = toDate(date);
+    flushNode(this.fs.driver, this.node);
   }
 
   /**
@@ -727,10 +796,9 @@ class File {
    */
   // @ts-expect-error
   setLastAccessTime(date) {
-    const { dirOffset, dirEntry } = this.node;
-    this.fs.io //
-      .seek(dirOffset + DIR_LST_ACC_DATE_OFFSET)
-      .writeWord((dirEntry.LstAccDate = toDate(date)));
+    const { dirEntry } = this.node;
+    dirEntry.LstAccDate = toDate(date);
+    flushNode(this.fs.driver, this.node);
   }
 
   /**
@@ -797,7 +865,7 @@ class File {
     if (node.isRoot) {
       const rootClusNum = fs.getClusNum(fs.vars.RootDirOffset);
       if (rootClusNum) {
-        // FAT32: delele all clusters, writeZeros to the root cluster, add a label
+        // FAT32: delete all clusters, writeZeros to the root cluster, add a label
         const label = this.fs.getLabel();
         fs.unlink(rootClusNum);
         fs.writeZeros(rootClusNum);
@@ -849,6 +917,7 @@ class File {
       return null;
     }
     if (!dest.startsWith("/") && !dest.startsWith("\\")) {
+      // convert relative path to the absolute path
       dest = this.absolutePath.substring(0, this.absolutePath.length - node.longName.length) + dest;
     }
     if (this.contains(dest)) {
@@ -885,7 +954,7 @@ class File {
     destDir.WrtDate = srcDir.WrtDate;
     destDir.FstClusLO = srcDir.FstClusLO;
     destDir.FileSize = srcDir.FileSize;
-    writeDirEntry(this.fs.io, dst.dirOffset, destDir);
+    flushDirEntry(this.fs.driver, dst.dirOffset, destDir);
     this.fs.markNodeDeleted(src);
     return target;
   }
@@ -976,89 +1045,42 @@ class File {
   }
 }
 
-// const FAT_FUNC = [FAT12, FAT16, FAT32]
-
-// const createFAT = (indexBits) => {
-//   if (indexBits === 12) {
-//     /**
-//      * @type {!FAT}
-//      */
-//     return new FAT12(this);
-//   } else if (this.vars.IndexBits === 16) {
-//     /**
-//      * @constant
-//      * @type {!FAT}
-//      */
-//     return new FAT16(this);
-//   } else if (this.vars.IndexBits === 32) {
-//     /**
-//      * @constant
-//      * @type {!FAT}
-//      */
-//     return new FAT32(this);
-//   } else {
-//     throw new Error();
-//   }
-// };
-
 /**
  * @implements {ns.FileSystem}
  */
 class FileSystem {
   /**
-   * @param {!IO} io
+   * @param {!Driver} driver
+   * @param {!BootSector} bs
+   * @param {!FATVariables} vars
+   * @param {!FAT} fat
    * @param {!ns.Codepage} cp
    */
-  constructor(io, cp) {
+  constructor(driver, bs, vars, fat, cp) {
     /**
      * @constant
      */
-    this.io = io;
+    this.driver = driver;
+    /**
+     * @constant
+     */
+    this.bs = bs;
     /**
      * @constant
      */
     this.cp = cp;
     /**
      * @constant
-     * @type {!BootSector}
      */
-    this.bs = loadBootSector(io);
-    /**
-     * @constant
-     * @type {!FATVariables}
-     */
-    this.vars = loadFATVariables(this.bs);
+    this.vars = vars;
     /**
      * @constant
      */
     this.root = new File(this, "/", ROOT_NODE);
     /**
      * @constant
-     * @type {!Array<number>}
      */
-    this.offsetFATs = new Array(this.bs.bpb.NumFATs);
-    for (let i = 0; i < this.bs.bpb.NumFATs; i++) {
-      this.offsetFATs[i] = (this.bs.bpb.RsvdSecCnt + i * this.vars.FATSz) * this.bs.bpb.BytsPerSec;
-    }
-
-    /**
-     * @type {!FAT}
-     */
-    // eslint-disable-next-line init-declarations
-    let impl;
-    if (this.vars.IndexBits === 12) {
-      impl = new FAT12(this);
-    } else if (this.vars.IndexBits === 16) {
-      impl = new FAT16(this);
-    } else if (this.vars.IndexBits === 32) {
-      impl = new FAT32(this);
-    } else {
-      throw new Error();
-    }
-    /**
-     * @type {!FAT}
-     */
-    this.FAT = impl;
+    this.FAT = fat;
   }
 
   // ns.FileSystem
@@ -1091,10 +1113,12 @@ class FileSystem {
     const node = this.findFirstLabelNode();
     if (label) {
       const sfn = strToUint8Array(this.cp, DIR_NAME_LENGTH, label);
-      const dir = createVolumeDirEntry(sfn);
+      const dirEntry = createVolumeDirEntry(sfn);
       const offset = node?.dirOffset ?? this.allocate(ROOT_NODE, 1);
       if (offset) {
-        writeDirEntry(this.io, offset, dir);
+        flushDirEntry(this.driver, offset, dirEntry);
+      } else {
+        // setting a label failed: no space
       }
     } else if (node) {
       this.markNodeDeleted(node);
@@ -1222,7 +1246,7 @@ class FileSystem {
    */
   getOrMakeNode(parent, name, isFile) {
     if (!parent.isDir) {
-      log.warn(`'${parent.longName}' is not a directory`);
+      // log.warn(`'${parent.longName}' is not a directory`);
       return null;
     }
     const filename = normalizeLongName(name);
@@ -1262,7 +1286,8 @@ class FileSystem {
       sfn = strToSfn((shortName = strToTildeName(filename, cp, used)), cp);
     }
     if (!sfn) {
-      return impossibleNull();
+      assert(false);
+      return null;
     }
 
     return this.makeNode(parent, isFile, shortName, filename, sfn);
@@ -1273,17 +1298,17 @@ class FileSystem {
    */
   markNodeDeleted(node) {
     assert(node.isLabel || node.isReg);
-    const { io } = this;
+    const { driver } = this;
     if (LFN_ENABLED) {
       // mark all elements in the chain by setting 0xE5 to the first byte
       // it is possible that the chain spans across multiple non-contiguous clusters
-      let i = 0;
       let offset = node.firstDirOffset;
-      do {
-        io.seek(offset).writeByte(DIR_ENTRY_FLAG_DELETED);
-      } while (++i < node.dirCount && (offset = this.getNextDirEntryOffset(offset + DIR_ENTRY_SIZE)));
+      for (let i = 0; i < node.dirCount && offset > 0; i++) {
+        driver.writeByte(offset, DIR_ENTRY_FLAG_DELETED);
+        offset = this.getNextDirEntryOffset(offset) ?? this.getNextDirEntryOffsetFromNextClusNum(offset);
+      }
     } else {
-      io.seek(node.dirOffset).writeByte(DIR_ENTRY_FLAG_DELETED);
+      driver.writeByte(node.dirOffset, DIR_ENTRY_FLAG_DELETED);
     }
   }
 
@@ -1335,7 +1360,6 @@ class FileSystem {
       return null;
     }
 
-    const io = this.io;
     const dirEntry = createDirEntry(sfn, new Date());
     if (!isFile) {
       // create "." and ".." dir entries
@@ -1350,21 +1374,28 @@ class FileSystem {
       dirEntry.FstClusLO = clusNum & 0xffff;
       dirEntry.FstClusHI = clusNum >>> 16;
       dirEntry.Attributes = DIR_ENTRY_ATTR_DIRECTORY;
-      writeDirEntry(io, clusOffset, createDotDirEntry(DOT_SFN, dirEntry));
-      writeDirEntry(io, clusOffset + DIR_ENTRY_SIZE, createDotDirEntry(DOT_DOT_SFN, parent.dirEntry));
+      const array = new Uint8Array(2 * DIR_ENTRY_SIZE);
+      const io = createIO(array);
+      writeDirEntry(io, 0, createDotDirEntry(DOT_SFN, dirEntry));
+      writeDirEntry(io, DIR_ENTRY_SIZE, createDotDirEntry(DOT_DOT_SFN, parent.dirEntry));
+      this.driver.writeUint8Array(clusOffset, array);
     }
 
     // write dirEntry
     let offset = firstDirOffset;
     if (LFN_ENABLED) {
+      // dirLFNs may not be stored sequentially on disk
       const len = dirLFNs.length;
       for (let i = 0; i < len; i++) {
-        writeDirEntryLFN(io, offset, dirLFNs[len - 1 - i]);
-        offset = this.getNextDirEntryOffset(offset + DIR_ENTRY_SIZE);
+        const array = new Uint8Array(DIR_ENTRY_SIZE);
+        const io = createIO(array);
+        writeDirEntryLFN(io, 0, dirLFNs[len - 1 - i]);
+        this.driver.writeUint8Array(offset, array);
+        offset = this.getNextDirEntryOffset(offset) ?? this.getNextDirEntryOffsetFromNextClusNum(offset);
         assert(offset > 0);
       }
     }
-    writeDirEntry(io, offset, dirEntry);
+    flushDirEntry(this.driver, offset, dirEntry);
     const kind = isFile ? NODE_REG_FILE : NODE_REG_DIR;
     const node = createNode(kind, shortName, offset, dirEntry);
     if (LFN_ENABLED) {
@@ -1385,7 +1416,7 @@ class FileSystem {
     assert(node.isDir);
     let /** @type {number} */ firstDirOffset = 0;
     let /** @type {number} */ allocated = 0;
-    const { io, vars } = this;
+    const { driver, vars } = this;
     let offset = vars.RootDirOffset;
     if (node.isRegDir) {
       assert(node.fstClus > 0);
@@ -1394,7 +1425,8 @@ class FileSystem {
     let lastOffset = offset;
     while (offset) {
       lastOffset = offset;
-      const flag = io.seek(offset).readByte();
+      // TODO: implement 512 chunk processing instead of async every 32 bytes, RootDirOffset is different case
+      const flag = driver.readByte(offset);
       if (flag === DIR_ENTRY_FLAG_LAST || flag === DIR_ENTRY_FLAG_DELETED) {
         if (allocated === 0) {
           firstDirOffset = offset;
@@ -1406,7 +1438,7 @@ class FileSystem {
       } else {
         allocated = 0;
       }
-      offset = this.getNextDirEntryOffset(offset + DIR_ENTRY_SIZE);
+      offset = this.getNextDirEntryOffset(offset) ?? this.getNextDirEntryOffsetFromNextClusNum(offset);
     }
     // we have reached the end of directory and need to allocate 1 or 2 clusters: 32*(20+1)=672 bytes maximum
     // find the last cluster number
@@ -1472,7 +1504,7 @@ class FileSystem {
   getNext(node, noLast) {
     const lastDirOffset = node.dirOffset;
     if (lastDirOffset > 0) {
-      const offset = this.getNextDirEntryOffset(lastDirOffset + DIR_ENTRY_SIZE);
+      const offset = this.getNextDirEntryOffset(lastDirOffset) ?? this.getNextDirEntryOffsetFromNextClusNum(lastDirOffset);
       if (offset) {
         const next = this.loadFromOffset(offset);
         return noLast && next?.isLast ? null : next;
@@ -1487,32 +1519,24 @@ class FileSystem {
    * @return {?FATNode}
    */
   loadFromOffset(firstDirOffset) {
-    const node = this.getNextNode(firstDirOffset);
-    assert(!node || node.firstDirOffset === firstDirOffset);
-    assert(!node || node.dirCount > 0);
-    return node;
-  }
-
-  /**
-   * @private
-   * @param {number} firstDirOffset
-   * @return {?FATNode}
-   */
-  getNextNode(firstDirOffset) {
-    const { io } = this;
+    const { driver } = this;
     /**
      * @type {!Array<!DirEntryLFN>}
      */
     const chain = [];
     let offset = firstDirOffset;
+    let skipped = 0;
     while (offset) {
-      const flag = io.seek(offset).readByte();
-      io.skip(-1);
+      // TODO: implement 512-bytes chunk processing instead of doing async every 32 bytes
+      const array = driver.readUint8Array(offset, DIR_ENTRY_SIZE);
+      const io = createIO(array);
+      const flag = array[0];
       if (LFN_ENABLED && flag !== DIR_ENTRY_FLAG_LAST && flag !== DIR_ENTRY_FLAG_DELETED && isDirEntryLFN(io)) {
         const dirLFN = loadDirEntryLFN(io);
         if (dirLFN.Ord & DIR_LN_LAST_LONG_ENTRY) {
           if (chain.length) {
-            log.warn(`Skip invalid chainLFN at ${firstDirOffset}: new chain started`);
+            // log.warn(`Skip invalid chainLFN at ${firstDirOffset}: new chain started`);
+            skipped += chain.length;
           }
           chain.length = 0;
           chain.push(dirLFN);
@@ -1522,71 +1546,30 @@ class FileSystem {
           if (prev === curr + 1) {
             chain.push(dirLFN);
           } else {
-            log.warn(`Skip invalid chainLFN at ${firstDirOffset}: order mismatch`);
+            // log.warn(`Skip invalid chainLFN at ${firstDirOffset}: order mismatch`);
+            skipped += chain.length;
             chain.length = 0;
           }
         } else {
-          log.warn(`Skip invalid dirLFN at ${offset}: chain is empty`);
+          // log.warn(`Skip invalid dirLFN at ${offset}: chain is empty`);
+          skipped++;
         }
       } else {
         // simple node: last node of the chain, or not LFN, or deleted, etc
-        const node = this.readNode(offset);
+        const node = readNode(io, flag, offset, this.cp);
         if (node) {
           // node is valid, fill LFN if needed
           fillNode(node, chain, firstDirOffset);
+          assert(node.dirCount > 0);
+          assert(node.firstDirOffset === firstDirOffset + skipped * DIR_ENTRY_SIZE);
           return node;
         }
-        log.warn(`Skip invalid node at ${offset}`);
+        // log.warn(`Skip invalid node at ${offset}`);
+        skipped++;
       }
-      offset = this.getNextDirEntryOffset(offset + DIR_ENTRY_SIZE);
+      offset = this.getNextDirEntryOffset(offset) ?? this.getNextDirEntryOffsetFromNextClusNum(offset);
     }
     // EOF
-    return null;
-  }
-
-  /**
-   * @private
-   * @param {number} offset
-   * @return {?FATNode}
-   */
-  readNode(offset) {
-    const { io, cp } = this;
-    const flag = io.seek(offset).readByte();
-    io.skip(-1);
-
-    if (flag === DIR_ENTRY_FLAG_LAST) {
-      return createNode(NODE_LAST, "", offset, DUMMY_DIR);
-    }
-
-    if (flag === DIR_ENTRY_FLAG_DELETED) {
-      return createNode(NODE_DELETED, "", offset, DUMMY_DIR);
-    }
-
-    const dir = loadDirEntry(io);
-    const dirName = dir.Name;
-    const dirAttributes = dir.Attributes;
-
-    const isLabel = (dirAttributes & DIR_ENTRY_ATTR_VOLUME_ID) > 0;
-    if (isLabel) {
-      return createNode(NODE_LABEL, cp.decode(dirName).trimEnd(), offset, dir);
-    }
-
-    const isDir = (dirAttributes & DIR_ENTRY_ATTR_DIRECTORY) > 0;
-    if (isDir && dirName.every((it, i) => it === DOT_SFN[i])) {
-      return createNode(NODE_DOT_DIR, ".", offset, dir);
-    }
-    if (isDir && dirName.every((it, i) => it === DOT_DOT_SFN[i])) {
-      return createNode(NODE_DOT_DIR, "..", offset, dir);
-    }
-
-    if (dirName.every(isShortNameValidCode)) {
-      const shortName = sfnToStr(dirName, cp);
-      if (shortName && !shortName.startsWith(" ")) {
-        return createNode(isDir ? NODE_REG_DIR : NODE_REG_FILE, shortName, offset, dir);
-      }
-    }
-
-    // invalid node
     return null;
   }
 
@@ -1635,7 +1618,7 @@ class FileSystem {
   writeZeros(clusNum) {
     const offset = this.getContentOffset(clusNum);
     assert(offset > 0);
-    this.io.seek(offset).writeBytes(0, this.vars.SizeOfCluster);
+    this.driver.writeBytes(offset, 0, this.vars.SizeOfCluster);
     return offset;
   }
 
@@ -1682,10 +1665,11 @@ class FileSystem {
   /**
    * @private
    * @param {number} offset
-   * @return {number}
+   * @return {?number}
    */
   getNextDirEntryOffset(offset) {
-    assert(offset > 512 && offset % DIR_ENTRY_SIZE === 0);
+    offset += DIR_ENTRY_SIZE;
+    assert(offset > SZ && offset % DIR_ENTRY_SIZE === 0);
     const { BytsPerSec, SecPerClus } = this.bs.bpb;
     const { FirstDataSec } = this.vars;
     // if the offset points to the first byte of the cluster, treat it as 'overflow'
@@ -1714,6 +1698,25 @@ class FileSystem {
     // [2 3 4 ...
     //      ^
     //      overflow at N=2, N+1 is the cluster number before overflow
+    return null;
+  }
+
+  /**
+   * @private
+   * @param {number} offset
+   * @return {number}
+   */
+  getNextDirEntryOffsetFromNextClusNum(offset) {
+    offset += DIR_ENTRY_SIZE;
+    assert(offset > SZ && offset % DIR_ENTRY_SIZE === 0);
+    const { BytsPerSec, SecPerClus } = this.bs.bpb;
+    const { FirstDataSec } = this.vars;
+    assert(offset % BytsPerSec === 0);
+    const secNum = offset / BytsPerSec;
+    assert(Number.isInteger(secNum));
+    assert(secNum > FirstDataSec);
+    const dataSecNum = secNum - FirstDataSec;
+    assert(dataSecNum % SecPerClus === 0);
     const clusNum = 1 + dataSecNum / SecPerClus;
     assert(Number.isInteger(clusNum));
     const nexClusNum = this.FAT.getNextClusNum(clusNum);
@@ -1724,19 +1727,51 @@ class FileSystem {
 // Export
 
 /**
- * @param {!IO} io
+ * @param {!Driver} driver
  * @param {!ns.Codepage} cp
  * @return {?ns.FileSystem}
  */
-export const createFileSystem = (io, cp) => {
-  /**
-   * @type {?ns.FileSystem}
-   */
-  let fs = null;
-  try {
-    fs = new FileSystem(io, cp);
-  } catch (/** @type {!*} */ e) {
-    log.warn("No FileSystem", e);
+export const createFileSystem = (driver, cp) => {
+  if (driver.len() < SZ) {
+    return null;
   }
-  return fs;
+  try {
+    const array = driver.readUint8Array(0, SZ);
+    const io = createIO(array);
+    const bs = loadBootSector(io);
+    const vars = loadFATVariables(bs);
+    /**
+     * @type {!Array<number>}
+     */
+    const offsetFATs = new Array(bs.bpb.NumFATs);
+    for (let i = 0; i < bs.bpb.NumFATs; i++) {
+      offsetFATs[i] = (bs.bpb.RsvdSecCnt + i * vars.FATSz) * bs.bpb.BytsPerSec;
+    }
+    /**
+     * @type {!FAT}
+     */
+    // eslint-disable-next-line init-declarations
+    let fat;
+    if (vars.IndexBits === 12) {
+      fat = new FAT12(driver, vars, offsetFATs);
+    } else if (vars.IndexBits === 16) {
+      fat = new FAT16(driver, vars, offsetFATs);
+    } else if (vars.IndexBits === 32) {
+      const fsiOffset = bs.bpb.BytsPerSec * bs.bpb.FSInfo;
+      const fsiNxtFreeOffset = fsiOffset + FSI_NEXT_FREE_OFFSET;
+      // validate FSInfo structure
+      loadFSI(createIO(driver.readUint8Array(fsiOffset, SZ)));
+      fat = new FAT32(driver, vars, offsetFATs, fsiOffset, fsiNxtFreeOffset);
+    } else {
+      throw new ValidationError();
+    }
+    return new FileSystem(driver, bs, vars, fat, cp);
+    // @ts-expect-error
+  } catch (/** @type {!Error} */ e) {
+    if (e.name === "ValidationError") {
+      // log.warn("No FileSystem", e);
+      return null;
+    }
+    throw e;
+  }
 };

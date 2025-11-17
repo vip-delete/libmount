@@ -33,7 +33,7 @@ export const readFileSync = (filename) => fs.readFileSync(abs(filename), "utf-8"
 
 /**
  * @param {string} path
- * @returns {!string}
+ * @returns {!Array<string>}
  */
 export const getExports = (path) => {
   const exports = readFileSync(path)
@@ -51,7 +51,7 @@ export const getExports = (path) => {
       return [];
     });
 
-  return "{" + exports.join(",") + "}";
+  return exports;
 };
 
 /**
@@ -158,3 +158,13 @@ export const nasm = async (name, src, dest, args) => {
 
   console.log(`\x1b[33m${name}\x1b[0m: \x1b[92mCOMPILED\x1b[0m: ${dest}\n`);
 };
+
+/**
+ * @param {!Uint8Array} img
+ * @returns {!ns.RandomAccessDriver}
+ */
+export const createRawImageDriver = (img) => ({
+  capacity: img.length,
+  read: (address, length) => img.slice(address, address + length),
+  write: (address, data) => img.set(data, address),
+});

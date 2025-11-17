@@ -1,5 +1,5 @@
 /**
- * iconv-tiny v0.4.0
+ * iconv-tiny v0.5.0
  * (c) 2025-present vip.delete
  * @license MIT
  **/
@@ -9,6 +9,7 @@
 var MAX_BYTE = 255;
 var MAX_WORD = 65535;
 var MAX_DOUBLE_WORD = 4294967295;
+var SZ = 512;
 var BS_JUMP_BOOT_LENGTH = 3;
 var BS_OEM_NAME_LENGTH = 8;
 var DIR_NAME_LENGTH = 11;
@@ -27,12 +28,6 @@ var LFN_NAME2_LENGTH = 12;
 var LFN_NAME3_LENGTH = 4;
 var LFN_ALL_NAMES_LENGTH = LFN_NAME1_LENGTH + LFN_NAME2_LENGTH + LFN_NAME3_LENGTH;
 var LFN_BUFFER_LEN = 520;
-var DIR_CRT_DATE_TIME_OFFSET = 13;
-var DIR_LST_ACC_DATE_OFFSET = 18;
-var DIR_FST_CLUS_HI_OFFSET = 20;
-var DIR_WRT_DATE_TIME_OFFSET = 22;
-var DIR_FST_CLUS_LO_OFFSET = 26;
-var DIR_FILE_SIZE_OFFSET = 28;
 var DIR_ENTRY_SIZE_BITS = 5;
 var DIR_ENTRY_SIZE = 1 << DIR_ENTRY_SIZE_BITS;
 var FAT_THRESHOLD = 4087;
@@ -52,6 +47,17 @@ var DIR_ENTRY_FLAG_LAST = 0;
 var DIR_ENTRY_FLAG_DELETED = 229;
 var DIR_ENTRY_FLAG_E5 = 5;
 
+// src/types.mjs
+var ValidationError = class extends Error {
+  /**
+   * @param {string} [message]
+   */
+  constructor(message) {
+    super(message);
+    this.name = "ValidationError";
+  }
+};
+
 // src/utils.mjs
 var ASSERTS_ENABLED = typeof USE_ASSERTS === "boolean" ? USE_ASSERTS : true;
 var assert = (expression, msg) => {
@@ -60,10 +66,6 @@ var assert = (expression, msg) => {
       throw new Error(msg ?? "AssertionError");
     }
   }
-};
-var impossibleNull = () => {
-  assert(false);
-  return null;
 };
 var str2bytes = (str) => new Uint8Array([...str].map((it) => it.charCodeAt(0)));
 var SHORT_NAME_SPECIAL_CHARACTERS = str2bytes(" $%'-_@~`!(){}^#&");
@@ -333,183 +335,10 @@ var strToUint8Array = (cp, len, str) => {
   return data;
 };
 
-// src/io.mjs
-var SyncIO = class {
-  /**
-   * @param {!Uint8Array} img
-   */
-  constructor(img) {
-    this.img = img;
-    this.i = 0;
-  }
-  // IO
-  /**
-   * @override
-   * @return {number}
-   */
-  // @ts-expect-error
-  pos() {
-    return this.i;
-  }
-  /**
-   * @override
-   * @return {number}
-   */
-  // @ts-expect-error
-  len() {
-    return this.img.length;
-  }
-  /**
-   * @override
-   * @param {number} offset
-   * @return {!IO}
-   */
-  // @ts-expect-error
-  seek(offset) {
-    this.i = offset;
-    return this;
-  }
-  /**
-   * @override
-   * @param {number} bytes
-   * @return {!IO}
-   */
-  // @ts-expect-error
-  skip(bytes) {
-    this.i += bytes;
-    return this;
-  }
-  /**
-   * @override
-   * @param {number} len
-   * @return {!Uint8Array}
-   */
-  // @ts-expect-error
-  peekUint8Array(len) {
-    assert(this.i + len <= this.img.length);
-    return this.img.subarray(this.i, this.i + len);
-  }
-  /**
-   * @override
-   * @param {number} len
-   * @return {!Uint8Array}
-   */
-  // @ts-expect-error
-  readUint8Array(len) {
-    assert(this.i + len <= this.img.length);
-    const k = new Uint8Array(this.img.subarray(this.i, this.i += len));
-    return k;
-  }
-  /**
-   * @override
-   * @return {number}
-   */
-  // @ts-expect-error
-  readByte() {
-    assert(this.i < this.img.length);
-    return this.img[this.i++];
-  }
-  /**
-   * @override
-   * @return {number}
-   */
-  // @ts-expect-error
-  readWord() {
-    const { img } = this;
-    assert(this.i + 2 <= img.length);
-    const k = img[this.i++] | img[this.i++] << 8;
-    return k;
-  }
-  /**
-   * @override
-   * @return {number}
-   */
-  // @ts-expect-error
-  readDoubleWord() {
-    const { img } = this;
-    assert(this.i + 4 <= img.length);
-    const k = (img[this.i++] | img[this.i++] << 8 | img[this.i++] << 16 | img[this.i++] << 24) >>> 0;
-    return k;
-  }
-  /**
-   * @override
-   * @param {!Uint8Array} array
-   * @return {!IO}
-   */
-  // @ts-expect-error
-  writeUint8Array(array) {
-    assert(this.i + array.length <= this.img.length);
-    this.img.set(array, this.i);
-    this.i += array.length;
-    return this;
-  }
-  /**
-   * @override
-   * @param {number} data
-   * @return {!IO}
-   */
-  // @ts-expect-error
-  writeByte(data) {
-    assert(this.i + 1 <= this.img.length);
-    assert(data >= 0 && data <= MAX_BYTE);
-    this.img[this.i++] = data;
-    return this;
-  }
-  /**
-   * @override
-   * @param {number} data
-   * @param {number} count
-   * @return {!IO}
-   */
-  // @ts-expect-error
-  writeBytes(data, count) {
-    assert(count >= 0);
-    assert(this.i + count <= this.img.length);
-    assert(data >= 0 && data <= MAX_BYTE);
-    this.img.fill(data, this.i, this.i += count);
-    return this;
-  }
-  /**
-   * @override
-   * @param {number} data
-   * @return {!IO}
-   */
-  // @ts-expect-error
-  writeWord(data) {
-    const { img } = this;
-    assert(this.i + 2 <= img.length);
-    assert(data >= 0 && data <= MAX_WORD);
-    img[this.i++] = data;
-    data >>>= 8;
-    img[this.i++] = data;
-    return this;
-  }
-  /**
-   * @override
-   * @param {number} data
-   * @return {!IO}
-   */
-  // @ts-expect-error
-  writeDoubleWord(data) {
-    const { img } = this;
-    assert(this.i + 4 <= img.length);
-    assert(data >= 0 && data <= MAX_DOUBLE_WORD);
-    img[this.i++] = data;
-    data >>>= 8;
-    img[this.i++] = data;
-    data >>>= 8;
-    img[this.i++] = data;
-    data >>>= 8;
-    img[this.i++] = data;
-    return this;
-  }
-};
-var createIO = (img) => new SyncIO(img);
-
 // src/dao.mjs
 var validate = (expression) => {
   if (!expression) {
-    throw new Error();
+    throw new ValidationError();
   }
 };
 var loadCHS = (io) => {
@@ -529,10 +358,11 @@ var writeCHS = (io, chs) => {
   io.writeByte(b1).writeByte(b2).writeByte(b3);
 };
 var loadPartitionTable = (io) => {
+  validate(io.len() >= 512);
   io.seek(510 - 16 * 4);
   const table = [];
   for (let i = 0; i < 4; i++) {
-    let e = {
+    let partition = {
       BootIndicator: io.readByte(),
       Starting: loadCHS(io),
       SystemID: io.readByte(),
@@ -541,14 +371,14 @@ var loadPartitionTable = (io) => {
       TotalSectors: io.readDoubleWord()
     };
     try {
-      validate(e.SystemID > 0);
-      validate([0, 128].includes(e.BootIndicator));
-      validate(e.TotalSectors > 0);
+      validate(partition.SystemID > 0);
+      validate([0, 128].includes(partition.BootIndicator));
+      validate(partition.TotalSectors > 0);
     } catch {
-      e = null;
+      partition = null;
     }
-    if (e) {
-      table.push(e);
+    if (partition) {
+      table.push(partition);
     }
   }
   return table;
@@ -571,6 +401,7 @@ var writePartitionTable = (io, partitions) => {
 };
 var isBpbFat32 = (bpb) => bpb.FATSz16 === 0;
 var loadBootSector = (io) => {
+  validate(io.len() >= 512);
   io.seek(0);
   const jmpBoot = io.readUint8Array(BS_JUMP_BOOT_LENGTH);
   const OEMName = io.readUint8Array(BS_OEM_NAME_LENGTH);
@@ -758,6 +589,276 @@ var createDirEntry = (Name, dateTime) => {
     FileSize: 0
   };
 };
+
+// src/io.mjs
+var DriverIO = class {
+  /**
+   * @param {!ns.RandomAccessDriver} driver
+   */
+  constructor(driver) {
+    this.driver = driver;
+  }
+  // Driver
+  /**
+   * @override
+   * @return {number}
+   */
+  // @ts-expect-error
+  len() {
+    return this.driver.capacity;
+  }
+  /**
+   * @override
+   * @param {number} address
+   * @param {number} len
+   * @return {!Uint8Array}
+   */
+  // @ts-expect-error
+  readUint8Array(address, len) {
+    assert(address + len <= this.driver.capacity);
+    return this.driver.read(address, len);
+  }
+  /**
+   * @override
+   * @param {number} address
+   * @return {number}
+   */
+  // @ts-expect-error
+  readByte(address) {
+    return this.readUint8Array(address, 1)[0];
+  }
+  /**
+   * @override
+   * @param {number} address
+   * @return {number}
+   */
+  // @ts-expect-error
+  readWord(address) {
+    const array = this.readUint8Array(address, 2);
+    const k = array[0] | array[1] << 8;
+    return k;
+  }
+  /**
+   * @override
+   * @param {number} address
+   * @return {number}
+   */
+  // @ts-expect-error
+  readDoubleWord(address) {
+    const array = this.readUint8Array(address, 4);
+    const k = (array[0] | array[1] << 8 | array[2] << 16 | array[3] << 24) >>> 0;
+    return k;
+  }
+  /**
+   * @override
+   * @param {number} address
+   * @param {!Uint8Array} array
+   */
+  // @ts-expect-error
+  writeUint8Array(address, array) {
+    assert(address + array.length <= this.driver.capacity);
+    this.driver.write?.(address, array);
+  }
+  /**
+   * @override
+   * @param {number} address
+   * @param {number} data
+   */
+  // @ts-expect-error
+  writeByte(address, data) {
+    this.writeUint8Array(address, new Uint8Array([data]));
+  }
+  /**
+   * @override
+   * @param {number} address
+   * @param {number} data
+   * @param {number} count
+   */
+  // @ts-expect-error
+  writeBytes(address, data, count) {
+    this.writeUint8Array(address, new Uint8Array(count).fill(data));
+  }
+  /**
+   * @override
+   * @param {number} address
+   * @param {number} data
+   */
+  // @ts-expect-error
+  writeWord(address, data) {
+    this.writeUint8Array(address, new Uint8Array([data, data >>> 8]));
+  }
+  /**
+   * @override
+   * @param {number} address
+   * @param {number} data
+   */
+  // @ts-expect-error
+  writeDoubleWord(address, data) {
+    this.writeUint8Array(address, new Uint8Array([data, data >>> 8, data >>> 16, data >>> 24]));
+  }
+};
+var SyncIO = class {
+  /**
+   * @param {!Uint8Array} array
+   */
+  constructor(array) {
+    this.array = array;
+    this.i = 0;
+  }
+  // IO
+  /**
+   * @override
+   * @return {number}
+   */
+  // @ts-expect-error
+  pos() {
+    return this.i;
+  }
+  /**
+   * @override
+   * @return {number}
+   */
+  // @ts-expect-error
+  len() {
+    return this.array.length;
+  }
+  /**
+   * @override
+   * @param {number} offset
+   * @return {!IO}
+   */
+  // @ts-expect-error
+  seek(offset) {
+    this.i = offset;
+    return this;
+  }
+  /**
+   * @override
+   * @param {number} bytes
+   * @return {!IO}
+   */
+  // @ts-expect-error
+  skip(bytes) {
+    this.i += bytes;
+    return this;
+  }
+  /**
+   * @override
+   * @param {number} len
+   * @return {!Uint8Array}
+   */
+  // @ts-expect-error
+  readUint8Array(len) {
+    assert(this.i + len <= this.array.length);
+    const k = new Uint8Array(this.array.subarray(this.i, this.i += len));
+    return k;
+  }
+  /**
+   * @override
+   * @return {number}
+   */
+  // @ts-expect-error
+  readByte() {
+    assert(this.i < this.array.length);
+    return this.array[this.i++];
+  }
+  /**
+   * @override
+   * @return {number}
+   */
+  // @ts-expect-error
+  readWord() {
+    const { array } = this;
+    assert(this.i + 2 <= array.length);
+    const k = array[this.i++] | array[this.i++] << 8;
+    return k;
+  }
+  /**
+   * @override
+   * @return {number}
+   */
+  // @ts-expect-error
+  readDoubleWord() {
+    const { array } = this;
+    assert(this.i + 4 <= array.length);
+    const k = (array[this.i++] | array[this.i++] << 8 | array[this.i++] << 16 | array[this.i++] << 24) >>> 0;
+    return k;
+  }
+  /**
+   * @override
+   * @param {!Uint8Array} array
+   * @return {!IO}
+   */
+  // @ts-expect-error
+  writeUint8Array(array) {
+    assert(this.i + array.length <= this.array.length);
+    this.array.set(array, this.i);
+    this.i += array.length;
+    return this;
+  }
+  /**
+   * @override
+   * @param {number} data
+   * @return {!IO}
+   */
+  // @ts-expect-error
+  writeByte(data) {
+    assert(this.i + 1 <= this.array.length);
+    assert(data >= 0 && data <= MAX_BYTE);
+    this.array[this.i++] = data;
+    return this;
+  }
+  /**
+   * @override
+   * @param {number} data
+   * @param {number} count
+   * @return {!IO}
+   */
+  // @ts-expect-error
+  writeBytes(data, count) {
+    assert(count >= 0);
+    assert(this.i + count <= this.array.length);
+    assert(data >= 0 && data <= MAX_BYTE);
+    this.array.fill(data, this.i, this.i += count);
+    return this;
+  }
+  /**
+   * @override
+   * @param {number} data
+   * @return {!IO}
+   */
+  // @ts-expect-error
+  writeWord(data) {
+    const { array } = this;
+    assert(this.i + 2 <= array.length);
+    assert(data >= 0 && data <= MAX_WORD);
+    array[this.i++] = data;
+    data >>>= 8;
+    array[this.i++] = data;
+    return this;
+  }
+  /**
+   * @override
+   * @param {number} data
+   * @return {!IO}
+   */
+  // @ts-expect-error
+  writeDoubleWord(data) {
+    const { array } = this;
+    assert(this.i + 4 <= array.length);
+    assert(data >= 0 && data <= MAX_DOUBLE_WORD);
+    array[this.i++] = data;
+    data >>>= 8;
+    array[this.i++] = data;
+    data >>>= 8;
+    array[this.i++] = data;
+    data >>>= 8;
+    array[this.i++] = data;
+    return this;
+  }
+};
+var createDriver = (driver) => new DriverIO(driver);
+var createIO = (array) => new SyncIO(array);
 
 // src/fdisk.mjs
 var fdisk = (partitions) => {
@@ -974,7 +1075,7 @@ var createDiskLayout = (capacity, options) => {
   assert(Wasted >= 0);
   const Reminder = MetaSec % SecPerClus;
   const Alignment = Reminder === 0 ? 0 : SecPerClus - Reminder;
-  let AlignmentAsjustment = 0;
+  let AlignmentAdjustment = 0;
   if (Alignment > Wasted) {
     CountOfClusters--;
     Wasted += SecPerClus;
@@ -982,13 +1083,13 @@ var createDiskLayout = (capacity, options) => {
       return null;
     }
     const NewFATSz = getMinFATSz(CountOfClusters, IndexBits, BytsPerSecBits);
-    AlignmentAsjustment = (FATSz - NewFATSz) * NumFATs;
-    assert(AlignmentAsjustment >= 0);
+    AlignmentAdjustment = (FATSz - NewFATSz) * NumFATs;
+    assert(AlignmentAdjustment >= 0);
     FATSz = NewFATSz;
   }
   Wasted -= Alignment;
   assert(Wasted >= 0);
-  RsvdSecCnt += Alignment + AlignmentAsjustment;
+  RsvdSecCnt += Alignment + AlignmentAdjustment;
   TotSec = DskSz - Wasted;
   assert(TotSec <= MAX_DOUBLE_WORD);
   MetaSec = RsvdSecCnt + FATSz * NumFATs + RootDirSectors;
@@ -1145,35 +1246,7 @@ var mkfsvfat = (capacity, options) => {
   };
 };
 
-// src/log.mjs
-var LOG_ENABLED = typeof USE_LOG === "boolean" ? USE_LOG : true;
-var Console = class {
-  /**
-   * @param {string} name
-   */
-  constructor(name) {
-    this.name = name;
-  }
-  // Log
-  /**
-   * @override
-   * @param {string} msg
-   * @param {!*} [e]
-   */
-  // @ts-expect-error
-  warn(msg, e) {
-    if (LOG_ENABLED) {
-      console.warn(`${(/* @__PURE__ */ new Date()).toLocaleString()} WARN  [${this.name}] ${msg}`);
-      if (e) {
-        console.warn(e);
-      }
-    }
-  }
-};
-var createLogger = (name) => new Console(name);
-
 // src/fs.mjs
-var log = createLogger("FS");
 var LFN_ENABLED = typeof USE_LFN === "boolean" ? USE_LFN : true;
 var NODE_ROOT = 0;
 var NODE_LABEL = 1;
@@ -1210,6 +1283,44 @@ var DUMMY_DIR = createDirEntry(new Uint8Array(DIR_NAME_LENGTH), null);
 var ROOT_NODE = createNode(NODE_ROOT, "", 0, DUMMY_DIR);
 var DOT_SFN = str2bytes(".          ");
 var DOT_DOT_SFN = str2bytes("..         ");
+var readNode = (io, flag, offset, cp) => {
+  if (flag === DIR_ENTRY_FLAG_LAST) {
+    return createNode(NODE_LAST, "", offset, DUMMY_DIR);
+  }
+  if (flag === DIR_ENTRY_FLAG_DELETED) {
+    return createNode(NODE_DELETED, "", offset, DUMMY_DIR);
+  }
+  const dir = loadDirEntry(io);
+  const dirName = dir.Name;
+  const dirAttributes = dir.Attributes;
+  const isLabel = (dirAttributes & DIR_ENTRY_ATTR_VOLUME_ID) > 0;
+  if (isLabel) {
+    return createNode(NODE_LABEL, cp.decode(dirName).trimEnd(), offset, dir);
+  }
+  const isDir = (dirAttributes & DIR_ENTRY_ATTR_DIRECTORY) > 0;
+  if (isDir && dirName.every((it, i) => it === DOT_SFN[i])) {
+    return createNode(NODE_DOT_DIR, ".", offset, dir);
+  }
+  if (isDir && dirName.every((it, i) => it === DOT_DOT_SFN[i])) {
+    return createNode(NODE_DOT_DIR, "..", offset, dir);
+  }
+  if (dirName.every(isShortNameValidCode)) {
+    const shortName = sfnToStr(dirName, cp);
+    if (shortName && !shortName.startsWith(" ")) {
+      return createNode(isDir ? NODE_REG_DIR : NODE_REG_FILE, shortName, offset, dir);
+    }
+  }
+  return null;
+};
+var flushDirEntry = (driver, offset, dirEntry) => {
+  const array = new Uint8Array(DIR_ENTRY_SIZE);
+  const io = createIO(array);
+  writeDirEntry(io, 0, dirEntry);
+  driver.writeUint8Array(offset, array);
+};
+var flushNode = (driver, node) => {
+  flushDirEntry(driver, node.dirOffset, node.dirEntry);
+};
 var loadFATVariables = (bs) => {
   const bpb = bs.bpb;
   const bpbFat32 = isBpbFat32(bpb);
@@ -1255,19 +1366,21 @@ var fillNode = (node, chain, firstDirOffset) => {
         node.firstDirOffset = firstDirOffset;
         node.dirCount = chain.length + 1;
       } else {
-        log.warn(`Skip invalid chainLFN at ${firstDirOffset}: chksum mismatch`);
       }
     } else {
-      log.warn(`Skip invalid chainLFN at ${firstDirOffset}: chain is not finished`);
     }
   }
 };
 var FAT122 = class {
   /**
-   * @param {!FileSystem} fs
+   * @param {!Driver} driver
+   * @param {!FATVariables} vars
+   * @param {!Array<number>} offsetFATs
    */
-  constructor(fs) {
-    this.fs = fs;
+  constructor(driver, vars, offsetFATs) {
+    this.driver = driver;
+    this.vars = vars;
+    this.offsetFATs = offsetFATs;
   }
   /**
    * @override
@@ -1276,10 +1389,10 @@ var FAT122 = class {
    */
   // @ts-expect-error
   getNextClusNum(clusNum) {
-    const fs = this.fs;
-    assert(clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus);
-    const val = fs.io.seek(fs.offsetFATs[0] + clusNum + (clusNum >> 1)).readWord();
-    return clusNum & 1 ? val >> 4 : val & fs.vars.FinalClus;
+    const { driver, vars, offsetFATs } = this;
+    assert(clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus);
+    const val = driver.readWord(offsetFATs[0] + clusNum + (clusNum >> 1));
+    return clusNum & 1 ? val >> 4 : val & vars.FinalClus;
   }
   /**
    * @override
@@ -1288,11 +1401,12 @@ var FAT122 = class {
    */
   // @ts-expect-error
   setNextClusNum(clusNum, value) {
-    const fs = this.fs;
-    assert(clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus);
-    for (let i = 0; i < fs.offsetFATs.length; i++) {
-      const val = fs.io.seek(fs.offsetFATs[i] + clusNum + (clusNum >> 1)).readWord();
-      fs.io.skip(-2).writeWord(clusNum & 1 ? value << 4 | val & 15 : val & 61440 | value);
+    const { driver, vars, offsetFATs } = this;
+    assert(clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus);
+    for (let i = 0; i < offsetFATs.length; i++) {
+      const address = offsetFATs[i] + clusNum + (clusNum >> 1);
+      const val = driver.readWord(address);
+      driver.writeWord(address, clusNum & 1 ? value << 4 | val & 15 : val & 61440 | value);
     }
   }
   /**
@@ -1315,10 +1429,14 @@ var FAT122 = class {
 };
 var FAT162 = class {
   /**
-   * @param {!FileSystem} fs
+   * @param {!Driver} driver
+   * @param {!FATVariables} vars
+   * @param {!Array<number>} offsetFATs
    */
-  constructor(fs) {
-    this.fs = fs;
+  constructor(driver, vars, offsetFATs) {
+    this.driver = driver;
+    this.vars = vars;
+    this.offsetFATs = offsetFATs;
   }
   /**
    * @override
@@ -1327,9 +1445,9 @@ var FAT162 = class {
    */
   // @ts-expect-error
   getNextClusNum(clusNum) {
-    const fs = this.fs;
-    assert(clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus);
-    return fs.io.seek(fs.offsetFATs[0] + clusNum * 2).readWord();
+    const { driver, vars, offsetFATs } = this;
+    assert(clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus);
+    return driver.readWord(offsetFATs[0] + clusNum * 2);
   }
   /**
    * @override
@@ -1338,10 +1456,10 @@ var FAT162 = class {
    */
   // @ts-expect-error
   setNextClusNum(clusNum, value) {
-    const fs = this.fs;
-    assert(clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus);
-    for (let i = 0; i < fs.offsetFATs.length; i++) {
-      fs.io.seek(fs.offsetFATs[i] + clusNum * 2).writeWord(value);
+    const { driver, vars, offsetFATs } = this;
+    assert(clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus);
+    for (let i = 0; i < offsetFATs.length; i++) {
+      driver.writeWord(offsetFATs[i] + clusNum * 2, value);
     }
   }
   /**
@@ -1364,14 +1482,18 @@ var FAT162 = class {
 };
 var FAT322 = class {
   /**
-   * @param {!FileSystem} fs
+   * @param {!Driver} driver
+   * @param {!FATVariables} vars
+   * @param {!Array<number>} offsetFATs
+   * @param {number} fsiOffset
+   * @param {number} fsiNxtFreeOffset
    */
-  constructor(fs) {
-    this.fs = fs;
-    this.fsiOffset = this.fs.bs.bpb.BytsPerSec * this.fs.bs.bpb.FSInfo;
-    this.fsiNxtFreeOffset = this.fsiOffset + FSI_NEXT_FREE_OFFSET;
-    this.fs.io.seek(this.fsiOffset);
-    loadFSI(this.fs.io);
+  constructor(driver, vars, offsetFATs, fsiOffset, fsiNxtFreeOffset) {
+    this.driver = driver;
+    this.vars = vars;
+    this.offsetFATs = offsetFATs;
+    this.fsiOffset = fsiOffset;
+    this.fsiNxtFreeOffset = fsiNxtFreeOffset;
   }
   /**
    * @override
@@ -1380,9 +1502,9 @@ var FAT322 = class {
    */
   // @ts-expect-error
   getNextClusNum(clusNum) {
-    const fs = this.fs;
-    assert(clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus);
-    return fs.io.seek(fs.offsetFATs[0] + clusNum * 4).readDoubleWord() & fs.vars.FinalClus;
+    const { driver, vars, offsetFATs } = this;
+    assert(clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus);
+    return driver.readDoubleWord(offsetFATs[0] + clusNum * 4) & vars.FinalClus;
   }
   /**
    * @override
@@ -1391,11 +1513,12 @@ var FAT322 = class {
    */
   // @ts-expect-error
   setNextClusNum(clusNum, value) {
-    const fs = this.fs;
-    assert(clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus);
-    for (let i = 0; i < fs.offsetFATs.length; i++) {
-      const val = fs.io.seek(fs.offsetFATs[i] + clusNum * 4).readDoubleWord();
-      fs.io.skip(-4).writeDoubleWord(val & 4026531840 | value);
+    const { driver, vars, offsetFATs } = this;
+    assert(clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus);
+    for (let i = 0; i < offsetFATs.length; i++) {
+      const address = offsetFATs[i] + clusNum * 4;
+      const val = driver.readDoubleWord(address);
+      driver.writeDoubleWord(address, val & 4026531840 | value);
     }
   }
   /**
@@ -1404,9 +1527,9 @@ var FAT322 = class {
    */
   // @ts-expect-error
   getNextFreeClus() {
-    const fs = this.fs;
-    const clusNum = fs.io.seek(this.fsiNxtFreeOffset).readDoubleWord();
-    return clusNum >= MIN_CLUS_NUM && clusNum <= fs.vars.MaxClus ? clusNum : MIN_CLUS_NUM;
+    const { driver, vars, fsiNxtFreeOffset } = this;
+    const clusNum = driver.readDoubleWord(fsiNxtFreeOffset);
+    return clusNum >= MIN_CLUS_NUM && clusNum <= vars.MaxClus ? clusNum : MIN_CLUS_NUM;
   }
   /**
    * @override
@@ -1414,8 +1537,8 @@ var FAT322 = class {
    */
   // @ts-expect-error
   setNextFreeClus(clusNum) {
-    const fs = this.fs;
-    fs.io.seek(this.fsiNxtFreeOffset).writeDoubleWord(clusNum);
+    const { driver, fsiNxtFreeOffset } = this;
+    driver.writeDoubleWord(fsiNxtFreeOffset, clusNum);
   }
 };
 var FileIO = class {
@@ -1473,7 +1596,7 @@ var FileIO = class {
     if (len) {
       const offset = fs.getContentOffset(this.curr);
       if (offset) {
-        buf.set(fs.io.seek(offset).peekUint8Array(len));
+        buf.set(fs.driver.readUint8Array(offset, len));
         this.prev = this.curr;
         this.curr = fs.FAT.getNextClusNum(this.curr);
         this.pos += sizeOfCluster;
@@ -1507,9 +1630,9 @@ var FileIO = class {
       this.curr = newClusNum;
       offset = fs.getContentOffset(newClusNum);
       node.dirEntry.FileSize = this.pos + len;
-      fs.io.seek(node.dirOffset + DIR_FILE_SIZE_OFFSET).writeDoubleWord(node.dirEntry.FileSize);
+      flushNode(this.fs.driver, this.node);
     }
-    fs.io.seek(offset).writeUint8Array(buf.subarray(0, len));
+    fs.driver.writeUint8Array(offset, buf.subarray(0, len));
     this.fileSize = this.pos + len;
     this.prev = this.curr;
     this.curr = fs.FAT.getNextClusNum(this.curr);
@@ -1554,7 +1677,7 @@ var FileIO = class {
       assert(this.fileSize === 0);
     }
     this.node.dirEntry.FileSize = this.fileSize;
-    this.fs.io.seek(this.node.dirOffset + DIR_FILE_SIZE_OFFSET).writeDoubleWord(this.node.dirEntry.FileSize);
+    flushNode(this.fs.driver, this.node);
     const fileSize = data.length - tmp.length;
     assert(fileSize === this.node.dirEntry.FileSize);
     return fileSize;
@@ -1565,9 +1688,11 @@ var FileIO = class {
    * @param {number} clusNum
    */
   setFirstClus(clusNum) {
-    const { dirOffset, dirEntry } = this.node;
+    const { dirEntry } = this.node;
     this.node.fstClus = clusNum;
-    this.fs.io.seek(dirOffset + DIR_FST_CLUS_HI_OFFSET).writeWord(dirEntry.FstClusHI = clusNum >>> 16).seek(dirOffset + DIR_FST_CLUS_LO_OFFSET).writeWord(dirEntry.FstClusLO = clusNum & 65535);
+    dirEntry.FstClusHI = clusNum >>> 16;
+    dirEntry.FstClusLO = clusNum & 65535;
+    flushNode(this.fs.driver, this.node);
   }
 };
 var File = class _File {
@@ -1672,8 +1797,10 @@ var File = class _File {
    */
   // @ts-expect-error
   setLastModified(date) {
-    const { dirOffset, dirEntry } = this.node;
-    this.fs.io.seek(dirOffset + DIR_WRT_DATE_TIME_OFFSET).writeWord(dirEntry.WrtTime = toTime(date)).writeWord(dirEntry.WrtDate = toDate(date));
+    const { dirEntry } = this.node;
+    dirEntry.WrtTime = toTime(date);
+    dirEntry.WrtDate = toDate(date);
+    flushNode(this.fs.driver, this.node);
   }
   /**
    * yyyy.MM.dd HH:mm:ss
@@ -1692,8 +1819,11 @@ var File = class _File {
    */
   // @ts-expect-error
   setCreationTime(date) {
-    const { dirOffset, dirEntry } = this.node;
-    this.fs.io.seek(dirOffset + DIR_CRT_DATE_TIME_OFFSET).writeByte(dirEntry.CrtTimeTenth = toTimeTenth(date)).writeWord(dirEntry.CrtTime = toTime(date)).writeWord(dirEntry.CrtDate = toDate(date));
+    const { dirEntry } = this.node;
+    dirEntry.CrtTimeTenth = toTimeTenth(date);
+    dirEntry.CrtTime = toTime(date);
+    dirEntry.CrtDate = toDate(date);
+    flushNode(this.fs.driver, this.node);
   }
   /**
    * yyyy.MM.dd
@@ -1711,8 +1841,9 @@ var File = class _File {
    */
   // @ts-expect-error
   setLastAccessTime(date) {
-    const { dirOffset, dirEntry } = this.node;
-    this.fs.io.seek(dirOffset + DIR_LST_ACC_DATE_OFFSET).writeWord(dirEntry.LstAccDate = toDate(date));
+    const { dirEntry } = this.node;
+    dirEntry.LstAccDate = toDate(date);
+    flushNode(this.fs.driver, this.node);
   }
   /**
    * @override
@@ -1853,7 +1984,7 @@ var File = class _File {
     destDir.WrtDate = srcDir.WrtDate;
     destDir.FstClusLO = srcDir.FstClusLO;
     destDir.FileSize = srcDir.FileSize;
-    writeDirEntry(this.fs.io, dst.dirOffset, destDir);
+    flushDirEntry(this.fs.driver, dst.dirOffset, destDir);
     this.fs.markNodeDeleted(src);
     return target;
   }
@@ -1939,30 +2070,19 @@ var File = class _File {
 };
 var FileSystem = class {
   /**
-   * @param {!IO} io
+   * @param {!Driver} driver
+   * @param {!BootSector} bs
+   * @param {!FATVariables} vars
+   * @param {!FAT} fat
    * @param {!ns.Codepage} cp
    */
-  constructor(io, cp) {
-    this.io = io;
+  constructor(driver, bs, vars, fat, cp) {
+    this.driver = driver;
+    this.bs = bs;
     this.cp = cp;
-    this.bs = loadBootSector(io);
-    this.vars = loadFATVariables(this.bs);
+    this.vars = vars;
     this.root = new File(this, "/", ROOT_NODE);
-    this.offsetFATs = new Array(this.bs.bpb.NumFATs);
-    for (let i = 0; i < this.bs.bpb.NumFATs; i++) {
-      this.offsetFATs[i] = (this.bs.bpb.RsvdSecCnt + i * this.vars.FATSz) * this.bs.bpb.BytsPerSec;
-    }
-    let impl;
-    if (this.vars.IndexBits === 12) {
-      impl = new FAT122(this);
-    } else if (this.vars.IndexBits === 16) {
-      impl = new FAT162(this);
-    } else if (this.vars.IndexBits === 32) {
-      impl = new FAT322(this);
-    } else {
-      throw new Error();
-    }
-    this.FAT = impl;
+    this.FAT = fat;
   }
   // ns.FileSystem
   /**
@@ -1991,10 +2111,11 @@ var FileSystem = class {
     const node = this.findFirstLabelNode();
     if (label) {
       const sfn = strToUint8Array(this.cp, DIR_NAME_LENGTH, label);
-      const dir = createVolumeDirEntry(sfn);
+      const dirEntry = createVolumeDirEntry(sfn);
       const offset = node?.dirOffset ?? this.allocate(ROOT_NODE, 1);
       if (offset) {
-        writeDirEntry(this.io, offset, dir);
+        flushDirEntry(this.driver, offset, dirEntry);
+      } else {
       }
     } else if (node) {
       this.markNodeDeleted(node);
@@ -2109,7 +2230,6 @@ var FileSystem = class {
    */
   getOrMakeNode(parent, name, isFile) {
     if (!parent.isDir) {
-      log.warn(`'${parent.longName}' is not a directory`);
       return null;
     }
     const filename = normalizeLongName(name);
@@ -2144,7 +2264,8 @@ var FileSystem = class {
       sfn = strToSfn(shortName = strToTildeName(filename, cp, used), cp);
     }
     if (!sfn) {
-      return impossibleNull();
+      assert(false);
+      return null;
     }
     return this.makeNode(parent, isFile, shortName, filename, sfn);
   }
@@ -2153,15 +2274,15 @@ var FileSystem = class {
    */
   markNodeDeleted(node) {
     assert(node.isLabel || node.isReg);
-    const { io } = this;
+    const { driver } = this;
     if (LFN_ENABLED) {
-      let i = 0;
       let offset = node.firstDirOffset;
-      do {
-        io.seek(offset).writeByte(DIR_ENTRY_FLAG_DELETED);
-      } while (++i < node.dirCount && (offset = this.getNextDirEntryOffset(offset + DIR_ENTRY_SIZE)));
+      for (let i = 0; i < node.dirCount && offset > 0; i++) {
+        driver.writeByte(offset, DIR_ENTRY_FLAG_DELETED);
+        offset = this.getNextDirEntryOffset(offset) ?? this.getNextDirEntryOffsetFromNextClusNum(offset);
+      }
     } else {
-      io.seek(node.dirOffset).writeByte(DIR_ENTRY_FLAG_DELETED);
+      driver.writeByte(node.dirOffset, DIR_ENTRY_FLAG_DELETED);
     }
   }
   /**
@@ -2203,7 +2324,6 @@ var FileSystem = class {
     if (!firstDirOffset) {
       return null;
     }
-    const io = this.io;
     const dirEntry = createDirEntry(sfn, /* @__PURE__ */ new Date());
     if (!isFile) {
       const clusNum = this.allocateCluster();
@@ -2215,19 +2335,25 @@ var FileSystem = class {
       dirEntry.FstClusLO = clusNum & 65535;
       dirEntry.FstClusHI = clusNum >>> 16;
       dirEntry.Attributes = DIR_ENTRY_ATTR_DIRECTORY;
-      writeDirEntry(io, clusOffset, createDotDirEntry(DOT_SFN, dirEntry));
-      writeDirEntry(io, clusOffset + DIR_ENTRY_SIZE, createDotDirEntry(DOT_DOT_SFN, parent.dirEntry));
+      const array = new Uint8Array(2 * DIR_ENTRY_SIZE);
+      const io = createIO(array);
+      writeDirEntry(io, 0, createDotDirEntry(DOT_SFN, dirEntry));
+      writeDirEntry(io, DIR_ENTRY_SIZE, createDotDirEntry(DOT_DOT_SFN, parent.dirEntry));
+      this.driver.writeUint8Array(clusOffset, array);
     }
     let offset = firstDirOffset;
     if (LFN_ENABLED) {
       const len = dirLFNs.length;
       for (let i = 0; i < len; i++) {
-        writeDirEntryLFN(io, offset, dirLFNs[len - 1 - i]);
-        offset = this.getNextDirEntryOffset(offset + DIR_ENTRY_SIZE);
+        const array = new Uint8Array(DIR_ENTRY_SIZE);
+        const io = createIO(array);
+        writeDirEntryLFN(io, 0, dirLFNs[len - 1 - i]);
+        this.driver.writeUint8Array(offset, array);
+        offset = this.getNextDirEntryOffset(offset) ?? this.getNextDirEntryOffsetFromNextClusNum(offset);
         assert(offset > 0);
       }
     }
-    writeDirEntry(io, offset, dirEntry);
+    flushDirEntry(this.driver, offset, dirEntry);
     const kind = isFile ? NODE_REG_FILE : NODE_REG_DIR;
     const node = createNode(kind, shortName, offset, dirEntry);
     if (LFN_ENABLED) {
@@ -2247,7 +2373,7 @@ var FileSystem = class {
     assert(node.isDir);
     let firstDirOffset = 0;
     let allocated = 0;
-    const { io, vars } = this;
+    const { driver, vars } = this;
     let offset = vars.RootDirOffset;
     if (node.isRegDir) {
       assert(node.fstClus > 0);
@@ -2256,7 +2382,7 @@ var FileSystem = class {
     let lastOffset = offset;
     while (offset) {
       lastOffset = offset;
-      const flag = io.seek(offset).readByte();
+      const flag = driver.readByte(offset);
       if (flag === DIR_ENTRY_FLAG_LAST || flag === DIR_ENTRY_FLAG_DELETED) {
         if (allocated === 0) {
           firstDirOffset = offset;
@@ -2268,7 +2394,7 @@ var FileSystem = class {
       } else {
         allocated = 0;
       }
-      offset = this.getNextDirEntryOffset(offset + DIR_ENTRY_SIZE);
+      offset = this.getNextDirEntryOffset(offset) ?? this.getNextDirEntryOffsetFromNextClusNum(offset);
     }
     const lastClus = this.getClusNum(lastOffset);
     if (!lastClus) {
@@ -2322,7 +2448,7 @@ var FileSystem = class {
   getNext(node, noLast) {
     const lastDirOffset = node.dirOffset;
     if (lastDirOffset > 0) {
-      const offset = this.getNextDirEntryOffset(lastDirOffset + DIR_ENTRY_SIZE);
+      const offset = this.getNextDirEntryOffset(lastDirOffset) ?? this.getNextDirEntryOffsetFromNextClusNum(lastDirOffset);
       if (offset) {
         const next = this.loadFromOffset(offset);
         return noLast && next?.isLast ? null : next;
@@ -2336,28 +2462,19 @@ var FileSystem = class {
    * @return {?FATNode}
    */
   loadFromOffset(firstDirOffset) {
-    const node = this.getNextNode(firstDirOffset);
-    assert(!node || node.firstDirOffset === firstDirOffset);
-    assert(!node || node.dirCount > 0);
-    return node;
-  }
-  /**
-   * @private
-   * @param {number} firstDirOffset
-   * @return {?FATNode}
-   */
-  getNextNode(firstDirOffset) {
-    const { io } = this;
+    const { driver } = this;
     const chain = [];
     let offset = firstDirOffset;
+    let skipped = 0;
     while (offset) {
-      const flag = io.seek(offset).readByte();
-      io.skip(-1);
+      const array = driver.readUint8Array(offset, DIR_ENTRY_SIZE);
+      const io = createIO(array);
+      const flag = array[0];
       if (LFN_ENABLED && flag !== DIR_ENTRY_FLAG_LAST && flag !== DIR_ENTRY_FLAG_DELETED && isDirEntryLFN(io)) {
         const dirLFN = loadDirEntryLFN(io);
         if (dirLFN.Ord & DIR_LN_LAST_LONG_ENTRY) {
           if (chain.length) {
-            log.warn(`Skip invalid chainLFN at ${firstDirOffset}: new chain started`);
+            skipped += chain.length;
           }
           chain.length = 0;
           chain.push(dirLFN);
@@ -2367,58 +2484,23 @@ var FileSystem = class {
           if (prev === curr + 1) {
             chain.push(dirLFN);
           } else {
-            log.warn(`Skip invalid chainLFN at ${firstDirOffset}: order mismatch`);
+            skipped += chain.length;
             chain.length = 0;
           }
         } else {
-          log.warn(`Skip invalid dirLFN at ${offset}: chain is empty`);
+          skipped++;
         }
       } else {
-        const node = this.readNode(offset);
+        const node = readNode(io, flag, offset, this.cp);
         if (node) {
           fillNode(node, chain, firstDirOffset);
+          assert(node.dirCount > 0);
+          assert(node.firstDirOffset === firstDirOffset + skipped * DIR_ENTRY_SIZE);
           return node;
         }
-        log.warn(`Skip invalid node at ${offset}`);
+        skipped++;
       }
-      offset = this.getNextDirEntryOffset(offset + DIR_ENTRY_SIZE);
-    }
-    return null;
-  }
-  /**
-   * @private
-   * @param {number} offset
-   * @return {?FATNode}
-   */
-  readNode(offset) {
-    const { io, cp } = this;
-    const flag = io.seek(offset).readByte();
-    io.skip(-1);
-    if (flag === DIR_ENTRY_FLAG_LAST) {
-      return createNode(NODE_LAST, "", offset, DUMMY_DIR);
-    }
-    if (flag === DIR_ENTRY_FLAG_DELETED) {
-      return createNode(NODE_DELETED, "", offset, DUMMY_DIR);
-    }
-    const dir = loadDirEntry(io);
-    const dirName = dir.Name;
-    const dirAttributes = dir.Attributes;
-    const isLabel = (dirAttributes & DIR_ENTRY_ATTR_VOLUME_ID) > 0;
-    if (isLabel) {
-      return createNode(NODE_LABEL, cp.decode(dirName).trimEnd(), offset, dir);
-    }
-    const isDir = (dirAttributes & DIR_ENTRY_ATTR_DIRECTORY) > 0;
-    if (isDir && dirName.every((it, i) => it === DOT_SFN[i])) {
-      return createNode(NODE_DOT_DIR, ".", offset, dir);
-    }
-    if (isDir && dirName.every((it, i) => it === DOT_DOT_SFN[i])) {
-      return createNode(NODE_DOT_DIR, "..", offset, dir);
-    }
-    if (dirName.every(isShortNameValidCode)) {
-      const shortName = sfnToStr(dirName, cp);
-      if (shortName && !shortName.startsWith(" ")) {
-        return createNode(isDir ? NODE_REG_DIR : NODE_REG_FILE, shortName, offset, dir);
-      }
+      offset = this.getNextDirEntryOffset(offset) ?? this.getNextDirEntryOffsetFromNextClusNum(offset);
     }
     return null;
   }
@@ -2462,7 +2544,7 @@ var FileSystem = class {
   writeZeros(clusNum) {
     const offset = this.getContentOffset(clusNum);
     assert(offset > 0);
-    this.io.seek(offset).writeBytes(0, this.vars.SizeOfCluster);
+    this.driver.writeBytes(offset, 0, this.vars.SizeOfCluster);
     return offset;
   }
   /**
@@ -2501,10 +2583,11 @@ var FileSystem = class {
   /**
    * @private
    * @param {number} offset
-   * @return {number}
+   * @return {?number}
    */
   getNextDirEntryOffset(offset) {
-    assert(offset > 512 && offset % DIR_ENTRY_SIZE === 0);
+    offset += DIR_ENTRY_SIZE;
+    assert(offset > SZ && offset % DIR_ENTRY_SIZE === 0);
     const { BytsPerSec, SecPerClus } = this.bs.bpb;
     const { FirstDataSec } = this.vars;
     if (offset % BytsPerSec !== 0) {
@@ -2522,31 +2605,73 @@ var FileSystem = class {
     if (dataSecNum % SecPerClus !== 0) {
       return offset;
     }
+    return null;
+  }
+  /**
+   * @private
+   * @param {number} offset
+   * @return {number}
+   */
+  getNextDirEntryOffsetFromNextClusNum(offset) {
+    offset += DIR_ENTRY_SIZE;
+    assert(offset > SZ && offset % DIR_ENTRY_SIZE === 0);
+    const { BytsPerSec, SecPerClus } = this.bs.bpb;
+    const { FirstDataSec } = this.vars;
+    assert(offset % BytsPerSec === 0);
+    const secNum = offset / BytsPerSec;
+    assert(Number.isInteger(secNum));
+    assert(secNum > FirstDataSec);
+    const dataSecNum = secNum - FirstDataSec;
+    assert(dataSecNum % SecPerClus === 0);
     const clusNum = 1 + dataSecNum / SecPerClus;
     assert(Number.isInteger(clusNum));
     const nexClusNum = this.FAT.getNextClusNum(clusNum);
     return this.getContentOffset(nexClusNum);
   }
 };
-var createFileSystem = (io, cp) => {
-  let fs = null;
-  try {
-    fs = new FileSystem(io, cp);
-  } catch (e) {
-    log.warn("No FileSystem", e);
+var createFileSystem = (driver, cp) => {
+  if (driver.len() < SZ) {
+    return null;
   }
-  return fs;
+  try {
+    const array = driver.readUint8Array(0, SZ);
+    const io = createIO(array);
+    const bs = loadBootSector(io);
+    const vars = loadFATVariables(bs);
+    const offsetFATs = new Array(bs.bpb.NumFATs);
+    for (let i = 0; i < bs.bpb.NumFATs; i++) {
+      offsetFATs[i] = (bs.bpb.RsvdSecCnt + i * vars.FATSz) * bs.bpb.BytsPerSec;
+    }
+    let fat;
+    if (vars.IndexBits === 12) {
+      fat = new FAT122(driver, vars, offsetFATs);
+    } else if (vars.IndexBits === 16) {
+      fat = new FAT162(driver, vars, offsetFATs);
+    } else if (vars.IndexBits === 32) {
+      const fsiOffset = bs.bpb.BytsPerSec * bs.bpb.FSInfo;
+      const fsiNxtFreeOffset = fsiOffset + FSI_NEXT_FREE_OFFSET;
+      loadFSI(createIO(driver.readUint8Array(fsiOffset, SZ)));
+      fat = new FAT322(driver, vars, offsetFATs, fsiOffset, fsiNxtFreeOffset);
+    } else {
+      throw new ValidationError();
+    }
+    return new FileSystem(driver, bs, vars, fat, cp);
+  } catch (e) {
+    if (e.name === "ValidationError") {
+      return null;
+    }
+    throw e;
+  }
 };
 
 // src/disk.mjs
-var log2 = createLogger("DISK");
 var Disk = class {
   /**
-   * @param {!IO} io
+   * @param {!Driver} driver
    * @param {!ns.Codepage} cp
    */
-  constructor(io, cp) {
-    this.io = io;
+  constructor(driver, cp) {
+    this.driver = driver;
     this.cp = cp;
   }
   // ns.Disk
@@ -2556,7 +2681,7 @@ var Disk = class {
    */
   // @ts-expect-error
   capacity() {
-    return this.io.len();
+    return this.driver.len();
   }
   /**
    * @override
@@ -2564,7 +2689,7 @@ var Disk = class {
    */
   // @ts-expect-error
   getFileSystem() {
-    return createFileSystem(this.io, this.cp);
+    return createFileSystem(this.driver, this.cp);
   }
   /**
    * @override
@@ -2572,18 +2697,24 @@ var Disk = class {
    */
   // @ts-expect-error
   getPartitions() {
-    let partitions = [];
+    if (this.driver.len() < SZ) {
+      return [];
+    }
+    const array = this.driver.readUint8Array(0, SZ);
+    const io = createIO(array);
     try {
-      partitions = loadPartitionTable(this.io).map(({ BootIndicator, SystemID, RelativeSectors, TotalSectors }) => ({
+      return loadPartitionTable(io).map(({ BootIndicator, SystemID, RelativeSectors, TotalSectors }) => ({
         active: BootIndicator === 128,
         type: SystemID,
         relativeSectors: RelativeSectors,
         totalSectors: TotalSectors
       }));
     } catch (e) {
-      log2.warn("No partition table", e);
+      if (e.name === "ValidationError") {
+        return [];
+      }
+      throw e;
     }
-    return partitions;
   }
   /**
    * @override
@@ -2591,7 +2722,7 @@ var Disk = class {
    */
   // @ts-expect-error
   write(diskSectors) {
-    const io = this.io;
+    const { driver } = this;
     const { bytsPerSec, zeroRegions, dataSectors } = diskSectors;
     for (const {
       /** @type {number} */
@@ -2599,7 +2730,7 @@ var Disk = class {
       /** @type {number} */
       count
     } of zeroRegions) {
-      io.seek(bytsPerSec * i).writeBytes(0, bytsPerSec * count);
+      driver.writeBytes(bytsPerSec * i, 0, bytsPerSec * count);
     }
     for (const {
       /** @type {number} */
@@ -2607,11 +2738,11 @@ var Disk = class {
       /** @type {!Uint8Array} */
       data
     } of dataSectors) {
-      io.seek(bytsPerSec * i).writeUint8Array(data);
+      driver.writeUint8Array(bytsPerSec * i, data);
     }
   }
 };
-var createDisk = (io, cp) => new Disk(io, cp);
+var createDisk = (driver, cp) => new Disk(driver, cp);
 
 // src/latin1.mjs
 var Latin1 = class {
@@ -2645,16 +2776,48 @@ var Latin1 = class {
 var latin1 = new Latin1();
 
 // src/mount.mjs
-var mount = (img, options) => {
-  let begin = 0;
-  let end = img.length;
+var createUint8ArrayDriver = (img) => ({
+  capacity: img.length,
+  /**
+   * @param {number} address
+   * @param {number} count
+   * @return {!Uint8Array}
+   */
+  read: (address, count) => img.slice(address, address + count),
+  /**
+   * @param {number} address
+   * @param {!Uint8Array} data
+   * @return {void}
+   */
+  write: (address, data) => img.set(data, address)
+});
+var createPartitionDriver = (partition, driver) => {
+  const begin = partition.relativeSectors * SZ;
+  const { read, write } = driver;
+  const partitionDriver = {
+    capacity: partition.totalSectors * SZ,
+    /**
+     * @param {number} address
+     * @param {number} count
+     * @return {!Uint8Array}
+     */
+    read: (address, count) => read(begin + address, count)
+  };
+  if (write) {
+    partitionDriver.write = (address, data) => write(begin + address, data);
+  }
+  return partitionDriver;
+};
+var mount = (driver, options) => {
+  if (driver instanceof Uint8Array) {
+    driver = createUint8ArrayDriver(driver);
+  }
   const partition = options?.partition;
   if (partition) {
-    begin = partition.relativeSectors * 512;
-    end = begin + partition.totalSectors * 512;
+    driver = createPartitionDriver(partition, driver);
   }
-  const io = createIO(img.subarray(begin, end));
-  return createDisk(io, options?.codepage ?? latin1);
+  const driverIO = createDriver(driver);
+  return createDisk(driverIO, options?.codepage ?? latin1);
 };
 export {
   fdisk,

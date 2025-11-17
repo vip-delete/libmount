@@ -1,4 +1,5 @@
-import { mkfsvfat } from "../src/mkfsvfat.mjs";
+import { mkfsvfat } from "../src/index.mjs";
+// import { mkfsvfat } from "libmount";
 
 // http://www.syslinux.org/archives/2016-February/024850.html
 

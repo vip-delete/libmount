@@ -20,7 +20,7 @@ class Console {
   /**
    * @override
    * @param {string} msg
-   * @param {!*} [e]
+   * @param {!Error} [e]
    */
   // @ts-expect-error
   warn(msg, e) {

@@ -1,6 +1,7 @@
 export const MAX_BYTE = 0xff;
 export const MAX_WORD = 0xffff;
 export const MAX_DOUBLE_WORD = 0xffffffff;
+export const SZ = 512;
 
 export const BS_JUMP_BOOT_LENGTH = 3;
 export const BS_OEM_NAME_LENGTH = 8;
@@ -21,13 +22,6 @@ export const LFN_NAME2_LENGTH = 12;
 export const LFN_NAME3_LENGTH = 4;
 export const LFN_ALL_NAMES_LENGTH = LFN_NAME1_LENGTH + LFN_NAME2_LENGTH + LFN_NAME3_LENGTH;
 export const LFN_BUFFER_LEN = 520; // 2 * LFN_ALL_NAMES_LENGTH * Math.ceil(LFN_MAX_LEN / LFN_ALL_NAMES_LENGTH);
-
-export const DIR_CRT_DATE_TIME_OFFSET = 13;
-export const DIR_LST_ACC_DATE_OFFSET = 18;
-export const DIR_FST_CLUS_HI_OFFSET = 20;
-export const DIR_WRT_DATE_TIME_OFFSET = 22;
-export const DIR_FST_CLUS_LO_OFFSET = 26;
-export const DIR_FILE_SIZE_OFFSET = 28;
 
 /**
  * 2^5 = 32 bytes per dir entry

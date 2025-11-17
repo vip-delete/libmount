@@ -373,7 +373,7 @@ const createDiskLayout = (capacity, options) => {
   const Alignment = Reminder === 0 ? 0 : SecPerClus - Reminder;
 
   // take alignment from Wasted or from DataSec if Wasted is not enough
-  let AlignmentAsjustment = 0;
+  let AlignmentAdjustment = 0;
   if (Alignment > Wasted) {
     CountOfClusters--;
     Wasted += SecPerClus;
@@ -383,14 +383,14 @@ const createDiskLayout = (capacity, options) => {
     }
     // if FATSz is reduced we increase the Alignment
     const NewFATSz = getMinFATSz(CountOfClusters, IndexBits, BytsPerSecBits);
-    AlignmentAsjustment = (FATSz - NewFATSz) * NumFATs;
-    assert(AlignmentAsjustment >= 0);
+    AlignmentAdjustment = (FATSz - NewFATSz) * NumFATs;
+    assert(AlignmentAdjustment >= 0);
     FATSz = NewFATSz;
   }
 
   Wasted -= Alignment;
   assert(Wasted >= 0);
-  RsvdSecCnt += Alignment + AlignmentAsjustment;
+  RsvdSecCnt += Alignment + AlignmentAdjustment;
   TotSec = DskSz - Wasted;
   assert(TotSec <= MAX_DOUBLE_WORD);
 

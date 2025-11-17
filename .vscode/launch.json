@@ -4,11 +4,19 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug Vitest",
+      "name": "Vitest",
       "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
-      "args": ["run", "--pool=threads", "--poolOptions.threads.singleThread", "--testTimeout=0", "main.test.mjs"],
+      "args": ["run", "--no-file-parallelism", "--testTimeout=0", "main.test.mjs"],
       "autoAttachChildProcesses": true,
       "console": "integratedTerminal"
-    }
+    },
+    { "type": "node", "request": "launch", "name": "1.mjs", "program": "examples/1.mjs", "console": "integratedTerminal" },
+    { "type": "node", "request": "launch", "name": "2.mjs", "program": "examples/2.mjs", "console": "integratedTerminal" },
+    { "type": "node", "request": "launch", "name": "3.mjs", "program": "examples/3.mjs", "console": "integratedTerminal" },
+    { "type": "node", "request": "launch", "name": "4.mjs", "program": "examples/4.mjs", "console": "integratedTerminal" },
+    { "type": "node", "request": "launch", "name": "5.mjs", "program": "examples/5.mjs", "console": "integratedTerminal" },
+    { "type": "node", "request": "launch", "name": "6.mjs", "program": "examples/6.mjs", "console": "integratedTerminal" },
+    { "type": "node", "request": "launch", "name": "7.mjs", "program": "examples/7.mjs", "console": "integratedTerminal" },
+    { "type": "node", "request": "launch", "name": "raw-disk.mjs", "program": "examples/raw-disk.mjs", "console": "integratedTerminal" }
   ]
 }

@@ -3,12 +3,10 @@ import { expect, test } from "vitest";
 import { existsSync, readBinaryFileSync } from "../scripts/commons.mjs";
 import { chs2lba, lba2chs } from "../src/utils.mjs";
 
-const getWinMeFs = () => {
-  const filename = "images/fat32/windowsme.img";
-  if (!existsSync(filename)) {
-    return null;
-  }
+const filename = "tests/images/windowsme.img";
+const skip = !existsSync(filename);
 
+const getWinMeFs = () => {
   const imgFile = readBinaryFileSync(filename);
   const img = new Uint8Array(imgFile);
   const disk = mount(img);
@@ -32,11 +30,12 @@ const getWinMeFs = () => {
   expect(chs2lba(chs, NumHeads, SecPerTrk)).toBe(lastSector);
   expect(lba2chs(lastSector, NumHeads, SecPerTrk)).toStrictEqual(chs);
   const fs = mount(img, { partition: partitions[0] }).getFileSystem();
+  expect(fs).toBeDefined();
   expect(fs?.getName()).toBe("FAT32");
   return fs;
 };
 
-test("winme", { timeout: 30000 }, () => {
+(skip ? test.skip : test)("winme", { timeout: 30000 }, () => {
   const fs = getWinMeFs();
 
   const themes = fs?.getRoot().getFile("/Program Files/Plus!/Themes");

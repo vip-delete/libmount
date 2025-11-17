@@ -1,14 +1,16 @@
-import { readFileSync } from "fs";
-import { mount } from "libmount";
+import { readBinaryFileSync } from "../scripts/commons.mjs";
+import { mount } from "../src/index.mjs";
+// import { mount } from "libmount";
 
+/**
+ * @param {import("libmount").File} file
+ */
 const print = (file) => {
   console.log(file.getAbsolutePath());
   file.listFiles()?.forEach(print);
 };
 
-const imgFilename = "./images/freedos722.img";
-const imgFile = readFileSync(imgFilename, { flag: "r" });
-const img = new Uint8Array(imgFile);
+const img = readBinaryFileSync("./images/freedos722.img");
 const disk = mount(img);
 let fs = disk.getFileSystem();
 
@@ -40,7 +42,7 @@ FileSystem Type: ${fs.getName()}
 CountOfClusters: ${countOfClusters}
    FreeClusters: ${freeClusNum}
      Used Space: ${used} bytes
-     Free Space: ${free} bytes (${Math.round((free * 100) / used)}%)
+     Free Space: ${free} bytes (${Math.round((freeClusNum * 100) / countOfClusters)}%)
 `);
 
 const root = fs.getRoot();

@@ -28,14 +28,6 @@ export const assert = (expression, msg) => {
 };
 
 /**
- * @return {null}
- */
-export const impossibleNull = () => {
-  assert(false);
-  return null;
-};
-
-/**
  * @param {string} str
  * @return {!Uint8Array}
  */

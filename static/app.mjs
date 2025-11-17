@@ -3,6 +3,16 @@ import { CP1251 as CP } from "iconv-tiny";
 
 addEventListener("load", onLoad);
 
+/**
+ * @param {!Uint8Array} img
+ * @returns {!ns.RandomAccessDriver}
+ */
+const createRawImageDriver = (img) => ({
+  capacity: img.length,
+  read: (address, length) => img.slice(address, address + length),
+  write: (address, data) => img.set(data, address),
+});
+
 async function onLoad() {
   await onMount("images/freedos722.img");
 }
@@ -40,12 +50,14 @@ async function onMount(imgFile) {
   );
 
   const codepage = CP.create();
-  const disk = mount(img, { codepage });
+
+  const driver = createRawImageDriver(img);
+  const disk = mount(driver, { codepage });
   let fs = disk.getFileSystem();
   if (!fs) {
     const partitions = disk.getPartitions();
     if (partitions.length > 0) {
-      const partition = mount(img, { codepage, partition: partitions[0] });
+      const partition = mount(driver, { codepage, partition: partitions[0] });
       fs = partition.getFileSystem();
     }
     if (!fs) {
@@ -148,7 +160,11 @@ function createRow(f, name, onDelete, onClick) {
               f.delete();
               onDelete?.();
             }),
-      name === ". ." ? $("span").cls("action icon-up") : $("span").cls("action").cls(f.isDirectory() ? "icon-dir" : "icon-file"),
+      name === ". ."
+        ? $("span").cls("action icon-up")
+        : $("span")
+            .cls("action")
+            .cls(f.isDirectory() ? "icon-dir" : "icon-file"),
       $("span").children([
         name.startsWith("/")
           ? $("span").text(name)

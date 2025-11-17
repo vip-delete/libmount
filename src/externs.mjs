@@ -1,18 +1,20 @@
 /* eslint-disable no-empty-function */
 /* eslint-disable no-unused-expressions */
 /* eslint-disable no-unused-vars */
+/* eslint-disable class-methods-use-this */
+/* eslint-disable jsdoc/require-returns-check */
 
 /**
  * @file Public API of "libmount" for Closure Compiler
  * @externs
  */
-let ns = {
+const ns = {
   /**
-   * @param {!Uint8Array} img
+   * @param {!ns.RandomAccessDriver|!Uint8Array} driver
    * @param {!ns.MountOptions} [options]
    * @return {!ns.Disk}
    */
-  mount(img, options) {},
+  mount(driver, options) {},
 
   /**
    * @param {!Array<!ns.Partition>} partitions
@@ -88,7 +90,7 @@ let ns = {
 
     /**
      * @param {?string} label
-     * @return {undefined}
+     * @return {void}
      */
     setLabel(label) {}
 
@@ -221,7 +223,7 @@ let ns = {
     open() {}
 
     /**
-     * @return {undefined}
+     * @return {void}
      */
     delete() {}
 
@@ -368,3 +370,13 @@ ns.DataSector;
  *          }}
  */
 ns.Partition;
+
+/**
+ * @typedef {{
+ *            capacity: number,
+ *            read: function(number,number):!Uint8Array,
+ *            write: (function(number,!Uint8Array):void|void),
+ *            close: (function():void|void),
+ *          }}
+ */
+ns.RandomAccessDriver;

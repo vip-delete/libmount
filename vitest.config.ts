@@ -6,7 +6,7 @@ export default defineConfig({
       provider: "istanbul",
       reporter: ["text"],
       include: ["src/**/*.mjs"],
-      exclude: ["src/externs.mjs", "src/log.mjs", "src/types.mjs"],
+      exclude: ["src/defines.mjs", "src/externs.mjs", "src/log.mjs", "src/types.mjs"],
     },
   },
 });

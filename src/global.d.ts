@@ -1,12 +1,12 @@
 declare namespace ns {
   /**
-   * Mount a raw image.
+   * Mount
    *
-   * @param img - A Raw image.
+   * @param driver - Driver or Uint8Array
    * @param options - Mount options.
    * @returns A mounted disk.
    */
-  export function mount(img: Uint8Array, options?: MountOptions): Disk;
+  export function mount(driver: RandomAccessDriver | Uint8Array, options?: MountOptions): Disk;
 
   /**
    * Create partition table
@@ -74,7 +74,7 @@ declare namespace ns {
     /**
      * Write the given sectors on disk
      *
-     * @param diskSectors sectors to write on disk
+     * @param diskSectors - sectors to write on disk
      */
     write(diskSectors: DiskSectors): void;
   }
@@ -279,14 +279,14 @@ declare namespace ns {
 
     /**
      * Read current cluster to the buffer
-     * @param buf buffer to read
+     * @param buf - buffer to read
      * @returns number of bytes read
      */
     readClus(buf: Uint8Array): number;
 
     /**
      * Write the buffer to the current cluster
-     * @param buf buffer to write
+     * @param buf - buffer to write
      * @returns number of bytes written
      */
     writeClus(buf: Uint8Array): number;
@@ -297,7 +297,7 @@ declare namespace ns {
     readData(): Uint8Array;
 
     /**
-     * @param data the whole file content
+     * @param data - the whole file content
      */
     writeData(data: Uint8Array): number;
   }
@@ -340,7 +340,7 @@ declare namespace ns {
     /**
      * Minimum number of entries in the root directory (FAT12/16 only).
      * Valid values are from 1 to 512.
-     * The real RootEntCnt is rounted up to the sector size:
+     * The real RootEntCnt is rounded up to the sector size:
      * if rootEntCnt=1 then real RootEntCnt is 16*CEIL(1/16)=16
      * if rootEntCnt=112 then real RootEntCnt is 16*CEIL(112/16)=112
      * This option is ignored for FAT32.
@@ -383,9 +383,9 @@ declare namespace ns {
      *
      * Overall,
      * 1. mkfs always creates DOS/Windows compatible images.
-     * 2. compat=0 or compat=1 can create images which are not spec-complient in rare cases,
+     * 2. compat=0 or compat=1 can create images which are not spec-compliant in rare cases,
      *    and some FAT drivers will not correctly detect the filesystem type.
-     * 3. compat=2 and above create spec-complient images always,
+     * 3. compat=2 and above create spec-compliant images always,
      *    but the world is full of FAT code that is wrong,
      *    and some FAT drivers will not correctly detect the filesystem type.
      * 4. compat=16 will create compatible images for all shitty FAT drivers in the world I believe.
@@ -537,5 +537,37 @@ declare namespace ns {
      * Sector bytes.
      */
     data: Uint8Array;
+  };
+
+  /**
+   * Random-access storage device driver.
+   */
+  type RandomAccessDriver = {
+    /**
+     * Total storage capacity in bytes.
+     */
+    readonly capacity: number;
+
+    /**
+     * Reads data.
+     *
+     * @param address - The byte offset to begin reading from. Must be >= 0 and < capacity.
+     * @param count - The number of bytes to read.
+     * @returns {Uint8Array} A buffer containing the requested data.
+     */
+    read(address: number, count: number): Uint8Array;
+
+    /**
+     * Writes data. Optional for readonly drivers.
+     *
+     * @param address - The byte offset to begin writing to.
+     * @param data - The buffer containing data to write.
+     */
+    write?(address: number, data: Uint8Array): void;
+
+    /**
+     * Release resources. Options. Not used by libmount.
+     */
+    close?(): void;
   };
 }

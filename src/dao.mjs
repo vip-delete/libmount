@@ -22,7 +22,7 @@ import {
   MAX_WORD,
   MIN_CLUS_NUM,
 } from "./const.mjs";
-import { BiosParameterBlock, BootSector, CHS, DirEntry, DirEntryLFN, FSI, IO, PartitionEntry } from "./types.mjs";
+import { BiosParameterBlock, BootSector, CHS, DirEntry, DirEntryLFN, FSI, IO, PartitionEntry, ValidationError } from "./types.mjs";
 import { assert, toDate, toTime, toTimeTenth } from "./utils.mjs";
 
 /**
@@ -30,7 +30,7 @@ import { assert, toDate, toTime, toTimeTenth } from "./utils.mjs";
  */
 const validate = (expression) => {
   if (!expression) {
-    throw new Error();
+    throw new ValidationError();
   }
 };
 
@@ -69,13 +69,14 @@ const writeCHS = (io, chs) => {
  * @return {!Array<!PartitionEntry>}
  */
 export const loadPartitionTable = (io) => {
+  validate(io.len() >= 512);
   io.seek(510 - 16 * 4);
   const table = [];
   for (let i = 0; i < 4; i++) {
     /**
      * @type {?PartitionEntry}
      */
-    let e = {
+    let partition = {
       BootIndicator: io.readByte(),
       Starting: loadCHS(io),
       SystemID: io.readByte(),
@@ -84,9 +85,9 @@ export const loadPartitionTable = (io) => {
       TotalSectors: io.readDoubleWord(),
     };
     try {
-      validate(e.SystemID > 0);
-      validate([0x00, 0x80].includes(e.BootIndicator));
-      validate(e.TotalSectors > 0);
+      validate(partition.SystemID > 0);
+      validate([0x00, 0x80].includes(partition.BootIndicator));
+      validate(partition.TotalSectors > 0);
       // CHS schema may not be correct, just ignore
       // validate(e.Starting.Sector !== 0);
       // validate(e.Ending.Sector !== 0);
@@ -98,10 +99,10 @@ export const loadPartitionTable = (io) => {
       // validate(StartingLBA === e.RelativeSectors);
       // validate(EndingLBA - StartingLBA + 1 === e.TotalSectors);
     } catch {
-      e = null;
+      partition = null;
     }
-    if (e) {
-      table.push(e);
+    if (partition) {
+      table.push(partition);
     }
   }
   return table;
@@ -143,6 +144,7 @@ export const isBpbFat32 = (bpb) => bpb.FATSz16 === 0;
  * @return {!BootSector}
  */
 export const loadBootSector = (io) => {
+  validate(io.len() >= 512);
   io.seek(0);
   const jmpBoot = io.readUint8Array(BS_JUMP_BOOT_LENGTH);
   const OEMName = io.readUint8Array(BS_OEM_NAME_LENGTH);

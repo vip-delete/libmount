@@ -365,8 +365,8 @@ test("FAT32-93GB", () => {
 // });
 
 test("FAT12/16-check-edge-cases", () => {
-  testEdgeCases(mkfsvfat, "FAT12", MaxClusFAT12, FAT12_DEFAULT_EDGES);
-  testEdgeCases(mkfsvfat, "FAT16", MaxClusFAT16, FAT16_DEFAULT_EDGES);
+  testEdgeCases("FAT12", MaxClusFAT12, FAT12_DEFAULT_EDGES);
+  testEdgeCases("FAT16", MaxClusFAT16, FAT16_DEFAULT_EDGES);
 });
 
 test("PartitionDisk-1", () => {
@@ -460,7 +460,7 @@ test("PartitionDisk-2", () => {
   expect(partitions[0]).toStrictEqual(partition);
 
   const disk0 = mount(img, { partition: partitions[0] });
-  expect(disk0.capacity()).toBe((realCapacity - offset) * Sz);
+  expect(disk0.capacity()).toBe(partition.totalSectors * Sz);
   // (~93MB) FAT32: 100029193728 / 512 = 195369519 = 58 RsvdSecCnt + 23843 FATSz * 2 NumFATs + 0 RootDirSectors + 3051902 CountOfClusters * 64 SecPerClus + 47 Wasted
   const file = mkfsvfat(capacity * Sz, { secPerClus: 64, label: latin1.encode("FAT32-23843") });
   expect(file).not.toBeNull();

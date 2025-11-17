@@ -1,6 +1,6 @@
 import { writeFileSync } from "../scripts/commons.mjs";
-import { fdisk } from "../src/fdisk.mjs";
-import { mount } from "../src/mount.mjs";
+import { fdisk, mount } from "../src/index.mjs";
+// import { fdisk, mount } from "libmount";
 
 // Create boot sector with partition table
 

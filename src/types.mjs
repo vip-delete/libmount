@@ -190,12 +190,6 @@ export class IO {
    * @param {number} len
    * @return {!Uint8Array}
    */
-  peekUint8Array(len) {}
-
-  /**
-   * @param {number} len
-   * @return {!Uint8Array}
-   */
   readUint8Array(len) {}
 
   /**
@@ -248,10 +242,76 @@ export class IO {
 /**
  * @interface
  */
+export class Driver {
+  /**
+   * @return {number}
+   */
+  len() {}
+
+  /**
+   * @param {number} address
+   * @param {number} len
+   * @return {!Uint8Array}
+   */
+  readUint8Array(address, len) {}
+
+  /**
+   * @param {number} address
+   * @return {number}
+   */
+  readByte(address) {}
+
+  /**
+   * @param {number} address
+   * @return {number}
+   */
+  readWord(address) {}
+
+  /**
+   * @param {number} address
+   * @return {number}
+   */
+  readDoubleWord(address) {}
+
+  /**
+   * @param {number} address
+   * @param {!Uint8Array} array
+   */
+  writeUint8Array(address, array) {}
+
+  /**
+   * @param {number} address
+   * @param {number} byte
+   */
+  writeByte(address, byte) {}
+
+  /**
+   * @param {number} address
+   * @param {number} byte
+   * @param {number} count
+   */
+  writeBytes(address, byte, count) {}
+
+  /**
+   * @param {number} address
+   * @param {number} word
+   */
+  writeWord(address, word) {}
+
+  /**
+   * @param {number} address
+   * @param {number} doubleWord
+   */
+  writeDoubleWord(address, doubleWord) {}
+}
+
+/**
+ * @interface
+ */
 export class Logger {
   /**
    * @param {string} msg
-   * @param {!*} [e]
+   * @param {!Error} [e]
    */
   warn(msg, e) {}
 }
@@ -281,4 +341,14 @@ export class FAT {
    * @param {number} clusNum
    */
   setNextFreeClus(clusNum) {}
+}
+
+export class ValidationError extends Error {
+  /**
+   * @param {string} [message]
+   */
+  constructor(message) {
+    super(message);
+    this.name = "ValidationError";
+  }
 }

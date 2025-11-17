@@ -11,7 +11,7 @@ export default [
     semi: true,
   }),
   {
-    ignores: ["dist", "src/externs.mjs", "static"],
+    ignores: ["dist", "static"],
   },
   {
     plugins: {
@@ -38,6 +38,7 @@ export default [
       "no-param-reassign": 0,
       "no-plusplus": 0,
       "no-ternary": 0,
+      "no-warning-comments": 0,
       "one-var": 0,
       "prefer-destructuring": 0,
       "prefer-template": 0,

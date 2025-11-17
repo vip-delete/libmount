@@ -1,5 +1,5 @@
-import { createIO } from "./io.mjs";
 import { writePartitionTable } from "./dao.mjs";
+import { createIO } from "./io.mjs";
 
 /**
  * @param {!Array<!ns.Partition>} partitions

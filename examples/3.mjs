@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "../scripts/commons.mjs";
+import { mkfsvfat, mount } from "../src/index.mjs";
 import { latin1 } from "../src/latin1.mjs";
-import { mkfsvfat } from "../src/mkfsvfat.mjs";
-import { mount } from "../src/mount.mjs";
+// import { mkfsvfat, mount } from "libmount";
 
 mkdirSync("temp");
 

@@ -1,6 +1,6 @@
 import { writeFileSync } from "../scripts/commons.mjs";
-import { mkfsvfat } from "../src/mkfsvfat.mjs";
-import { mount } from "../src/mount.mjs";
+import { mkfsvfat, mount } from "../src/index.mjs";
+// import { mkfsvfat, mount } from "libmount";
 
 // Create 1.44MB floppy disk image.
 const capacityInBytes = 1440 * 1024;

@@ -1,23 +1,19 @@
-import { createFileSystem } from "./fs.mjs";
+import { SZ } from "./const.mjs";
 import { loadPartitionTable } from "./dao.mjs";
-import { createLogger } from "./log.mjs";
-import { IO, Logger } from "./types.mjs";
-
-/**
- * @type {!Logger}
- */
-const log = createLogger("DISK");
+import { createFileSystem } from "./fs.mjs";
+import { createIO } from "./io.mjs";
+import { Driver } from "./types.mjs";
 
 /**
  * @implements {ns.Disk}
  */
 class Disk {
   /**
-   * @param {!IO} io
+   * @param {!Driver} driver
    * @param {!ns.Codepage} cp
    */
-  constructor(io, cp) {
-    this.io = io;
+  constructor(driver, cp) {
+    this.driver = driver;
     this.cp = cp;
   }
 
@@ -29,7 +25,7 @@ class Disk {
    */
   // @ts-expect-error
   capacity() {
-    return this.io.len();
+    return this.driver.len();
   }
 
   /**
@@ -38,7 +34,7 @@ class Disk {
    */
   // @ts-expect-error
   getFileSystem() {
-    return createFileSystem(this.io, this.cp);
+    return createFileSystem(this.driver, this.cp);
   }
 
   /**
@@ -47,21 +43,26 @@ class Disk {
    */
   // @ts-expect-error
   getPartitions() {
-    /**
-     * @type {!Array<!ns.Partition>}
-     */
-    let partitions = [];
+    if (this.driver.len() < SZ) {
+      return [];
+    }
+    const array = this.driver.readUint8Array(0, SZ);
+    const io = createIO(array);
     try {
-      partitions = loadPartitionTable(this.io).map(({ BootIndicator, SystemID, RelativeSectors, TotalSectors }) => ({
+      return loadPartitionTable(io).map(({ BootIndicator, SystemID, RelativeSectors, TotalSectors }) => ({
         active: BootIndicator === 0x80,
         type: SystemID,
         relativeSectors: RelativeSectors,
         totalSectors: TotalSectors,
       }));
-    } catch (/** @type {!*} */ e) {
-      log.warn("No partition table", e);
+      // @ts-expect-error
+    } catch (/** @type {!Error} */ e) {
+      if (e.name === "ValidationError") {
+        // console.warn("No partition table", e);
+        return [];
+      }
+      throw e;
     }
-    return partitions;
   }
 
   /**
@@ -70,13 +71,13 @@ class Disk {
    */
   // @ts-expect-error
   write(diskSectors) {
-    const io = this.io;
+    const { driver } = this;
     const { bytsPerSec, zeroRegions, dataSectors } = diskSectors;
     for (const { /** @type {number} */ i, /** @type {number} */ count } of zeroRegions) {
-      io.seek(bytsPerSec * i).writeBytes(0, bytsPerSec * count);
+      driver.writeBytes(bytsPerSec * i, 0, bytsPerSec * count);
     }
     for (const { /** @type {number} */ i, /** @type {!Uint8Array} */ data } of dataSectors) {
-      io.seek(bytsPerSec * i).writeUint8Array(data);
+      driver.writeUint8Array(bytsPerSec * i, data);
     }
   }
 }
@@ -84,8 +85,8 @@ class Disk {
 // Export
 
 /**
- * @param {!IO} io
+ * @param {!Driver} driver
  * @param {!ns.Codepage} cp
  * @return {!ns.Disk}
  */
-export const createDisk = (io, cp) => new Disk(io, cp);
+export const createDisk = (driver, cp) => new Disk(driver, cp);

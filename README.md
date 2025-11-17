@@ -7,12 +7,13 @@
 Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript
 
 ## Features
+
 1. No dependencies.
-2. Supported filesystems: FAT12, FAT16, FAT32 inclusing LFN (Long File Names) extension.
-3. Format volume with multiple parameters like "mkfs.vfat".
-4. Mount or create disk partitions like "fdisk".
-5. Typescript friendly.
-6. Tiny: 20KB of full bundle.mjs, ~9KB in gzip.
+1. Supported filesystems: FAT12, FAT16, FAT32 including LFN (Long File Names) extension.
+1. Format volume with multiple parameters like "mkfs.vfat" in Linux.
+1. Mount or create disk partitions like "fdisk".
+1. Typescript friendly.
+1. Tiny: 20KB of full bundle.mjs, ~9KB in gzip.
 
 ## Installation
 
@@ -26,7 +27,7 @@ or use CDN:
 <script type="importmap">
   {
     "imports": {
-      "libmount": "https://unpkg.com/libmount@0.4.0/dist/libmount.mjs"
+      "libmount": "https://cdn.jsdelivr.net/npm/libmount@0.5.0/dist/libmount.mjs"
     }
   }
 </script>
@@ -34,57 +35,105 @@ or use CDN:
 
 ## Basic API
 
-See [libmount.d.mts](dist/libmount.d.mts)
+See the public API in [libmount.d.mts](dist/libmount.d.mts)
 
 ```javascript
-function mount(img: Uint8Array, options?: MountOptions): Disk;
+/**
+ * Random-access storage device interface.
+ */
+type RandomAccessDriver = {
+  /**
+   * The total size of the storage device in bytes.
+   * @readonly
+   */
+  capacity: number;
+
+  /**
+   * Reads a specific chunk of data from the device.
+   * @param address - The byte offset to begin reading from. Must be >= 0 and < capacity.
+   * @param count - The number of bytes to read.
+   * @returns {Uint8Array} A buffer containing the requested data.
+   */
+  read(address: number, count: number): Uint8Array;
+
+  /**
+   * Writes data to the device at a specific offset.
+   * @param address - The byte offset to begin writing to.
+   * @param data - The buffer containing data to write.
+   */
+  write(address: number, data: Uint8Array): void;
+};
+
+/**
+ * Mount
+ * @param driver - Driver.
+ * @param options - Mount options.
+ * @returns A mounted disk.
+ */
+function mount(driver: RandomAccessDriver, options?: MountOptions): Disk;
 ```
 
 ```javascript
 import { mount } from "libmount";
-const disk = mount(img); // Uint8Array
+const disk = mount(driver);
 const fs = disk.getFileSystem();
-const data = fs.getRoot().getFile("kernel.sys").getData(); // Uint8Array
+const data = fs.getRoot().getFile("kernel.sys").open()?.readData(); // Uint8Array
 ```
 
 See more [examples](examples)
 
+You can use a driver to access your hardware devices (e.g., /dev/sdb or \\.\PhysicalDrive1) or large disk images without loading the entire disk into memory.
+
+```javascript
+const driver = {
+  capacity,
+  read: (address, count) => { ... },
+};
+const disk = mount(driver);
+```
+
+See [raw-disk.mjs](examples/raw-disk.mjs)
+
 ## Constants, Types, Misc
 
-| File | Description |
-|------|-------------|
-|[const.mjs](src/const.mjs)|FAT specification constants.|
-|[log.mjs](src/log.mjs)|Console logger, used for debug only.|
-|[types.mjs](src/types.mjs)|Type definitions and interfaces.|
-|[utils.mjs](src/utils.mjs)|Various utility functions.|
+| File                       | Description                    |
+| -------------------------- | ------------------------------ |
+| [const.mjs](src/const.mjs) | FAT specification constants.   |
+| [log.mjs](src/log.mjs)     | Console logger.                |
+| [types.mjs](src/types.mjs) | FAT structures and interfaces. |
+| [utils.mjs](src/utils.mjs) | Various FAT utility functions. |
 
 ## Classes and Functions
 
-| File | Description |
-|------|-------------|
-|[bs.asm](src/bs.asm)|Default boot loader.|
-|[bs.mjs](src/bs.mjs)|Auto-generated from bs.asm.|
-|[dao.mjs](src/dao.mjs)|Various functions to read/write FAT structures.|
-|[disk.mjs](src/disk.mjs)|Disk class, can have FileSystem or Partition Table.|
-|[fs.mjs](src/fs.mjs)|FileSystem class.|
-|[io.mjs](src/io.mjs)|Reader/Writer class on top of Uint8Array.|
-|[latin1.mjs](src/latin1.mjs)|Latin1 aka ISO-8859-1 codepage.|
+| File                         | Description                                                 |
+| ---------------------------- | ----------------------------------------------------------- |
+| [bs.asm](src/bs.asm)         | Default boot loader written in NASM                         |
+| [bs.mjs](src/bs.mjs)         | Auto-generated from bs.asm.                                 |
+| [dao.mjs](src/dao.mjs)       | FAT structures Data Access functions: readers & writers     |
+| [disk.mjs](src/disk.mjs)     | Disk impl. It can have FileSystem or Partition Table.       |
+| [fs.mjs](src/fs.mjs)         | FileSystem impl.                                            |
+| [io.mjs](src/io.mjs)         | Reader/Writer class on top of Uint8Array and a Driver impl. |
+| [latin1.mjs](src/latin1.mjs) | Latin1 aka ISO-8859-1 codepage.                             |
 
 ## Exported Functions
 
-| File | Description |
-|------|-------------|
-|[mkfsvfat.mjs](src/mkfsvfat.mjs)|Make FAT filesystem function (format volume).|
-|[fdisk.mjs](src/fdisk.mjs)|Make Partition Table function.|
-|[mount.mjs](src/mount.mjs)|Mount function.|
+| File                             | Description                                   |
+| -------------------------------- | --------------------------------------------- |
+| [mkfsvfat.mjs](src/mkfsvfat.mjs) | Make FAT filesystem function (format volume). |
+| [fdisk.mjs](src/fdisk.mjs)       | Make Partition Table function.                |
+| [mount.mjs](src/mount.mjs)       | Mount function.                               |
+
+## Dependency Diagram
+
+Class dependencies digram excluding "support" classes (const, log, types, utils, dao, io) which are used everywhere
 
 ![graph.mjs](graph.svg)
 
 ## Abstract
 
-🐕 The **libmount** is an attempt to implement the FAT specification from scratch (FAT12, FAT16, FAT32) in pure JavaScript just for fun and because there is no such library except the outdated [fatfs](https://github.com/natevw/fatfs). The **libmount** is a project that is supposed to have all cutting-edge JavaScript dev-tools: Stylistic, Vitest, ESLint, Prettier, and, most importantly, Closure Compiler (CC). I know CC is out of support, but it does the job much better than TypeScript + any minifier. Let me know if you disagree or find any replacement for CC!
+🐕 The **libmount** implements the FAT specification from scratch (FAT12, FAT16, FAT32) in pure JavaScript just for fun and because there is no similar library except the outdated [fatfs](https://github.com/natevw/fatfs). The **libmount** is developed using the following JavaScript libraries: Stylistic, Vitest, ESLint, Prettier, and, most importantly, Closure Compiler (CC). It does the job much better than TypeScript + any minifier. Let me know if you disagree or find any replacement for CC!
 
-🏆 The **libmount** supports almost everything from the FAT specification: long filenames (LFNs), OEM charsets (codepages), and file manipulations such as listing, creating, renaming, moving, reading, writing, and deleting files. In addition, the library supports partitioned disk images and provides type definitions for TypeScript.
+🏆 The **libmount** supports almost everything from the FAT specification: long filenames (LFNs), OEM charsets (codepages), and file manipulations such as listing, creating, renaming, moving, reading, writing, and deleting files. In addition, the library supports partitioned disk images, create (format) volumes and provides type definitions for TypeScript.
 
 💡 The FAT specification requires an OEM charset to encode and decode short filenames (SFNs), also known as 8.3 names. SFNs can include uppercase letters, digits, characters with code point values greater than 127, and certain special characters. Code points above 127 are used for national symbols, such as Cyrillic (CP1251), Japanese (CP932), Arabic (ISO 8859-6), and others. If the FAT image contains SFNs with code points above 127, it is crucial to specify the correct codepage to decode the filenames accurately, rather than seeing garbled text like ïðèâåò. By default, libmount uses **latin1**. You can find more codepages in [iconv-tiny](https://github.com/vip-delete/iconv-tiny) package, it is fully compatible with **libmount**.
 
@@ -94,17 +143,19 @@ See more [examples](examples)
 
 ```javascript
 // examples/1.mjs
-import { readFileSync } from "fs";
-import { mount } from "libmount";
+import { readBinaryFileSync } from "../scripts/commons.mjs";
+import { mount } from "../src/index.mjs";
+// import { mount } from "libmount";
 
+/**
+ * @param {import("libmount").File} file
+ */
 const print = (file) => {
   console.log(file.getAbsolutePath());
   file.listFiles()?.forEach(print);
 };
 
-const imgFilename = "./images/freedos722.img";
-const imgFile = readFileSync(imgFilename, { flag: "r" });
-const img = new Uint8Array(imgFile);
+const img = readBinaryFileSync("./images/freedos722.img");
 const disk = mount(img);
 let fs = disk.getFileSystem();
 
@@ -136,7 +187,7 @@ FileSystem Type: ${fs.getName()}
 CountOfClusters: ${countOfClusters}
    FreeClusters: ${freeClusNum}
      Used Space: ${used} bytes
-     Free Space: ${free} bytes (${Math.round((free * 100) / used)}%)
+     Free Space: ${free} bytes (${Math.round((freeClusNum * 100) / countOfClusters)}%)
 `);
 
 const root = fs.getRoot();

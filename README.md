@@ -230,14 +230,14 @@ FileSystem Type: FAT12
 CountOfClusters: 713
    FreeClusters: 45
      Used Space: 684032 bytes
-     Free Space: 46080 bytes (7%)
+     Free Space: 46080 bytes (6%)
 
 
        FileSize: 12
            Name: .Hello[World]..txt
       ShortName: _HELLO~1.TXT
         Content: 😀😀😀
-   CreationTime: 2/16/2025, 6:05:00 PM
+   CreationTime: 11/23/2025, 10:52:03 PM
 
 /
 /KERNEL.SYS

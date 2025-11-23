@@ -551,7 +551,7 @@ declare namespace ns {
     /**
      * Reads data.
      *
-     * @param address - The byte offset to begin reading from. Must be >= 0 and < capacity.
+     * @param address - The byte offset to begin reading from.
      * @param count - The number of bytes to read.
      * @returns {Uint8Array} A buffer containing the requested data.
      */

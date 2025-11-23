@@ -39,60 +39,62 @@ See the public API in [libmount.d.mts](dist/libmount.d.mts)
 
 ```javascript
 /**
- * Random-access storage device interface.
+ * Random-access storage device driver.
  */
 type RandomAccessDriver = {
   /**
-   * The total size of the storage device in bytes.
-   * @readonly
+   * Total storage capacity in bytes.
    */
-  capacity: number;
+  readonly capacity: number;
 
   /**
-   * Reads a specific chunk of data from the device.
-   * @param address - The byte offset to begin reading from. Must be >= 0 and < capacity.
+   * Reads data.
+   *
+   * @param address - The byte offset to begin reading from.
    * @param count - The number of bytes to read.
    * @returns {Uint8Array} A buffer containing the requested data.
    */
   read(address: number, count: number): Uint8Array;
 
   /**
-   * Writes data to the device at a specific offset.
+   * Writes data. Optional for readonly drivers.
+   *
    * @param address - The byte offset to begin writing to.
    * @param data - The buffer containing data to write.
    */
-  write(address: number, data: Uint8Array): void;
+  write?(address: number, data: Uint8Array): void;
 };
 
 /**
  * Mount
- * @param driver - Driver.
+ *
+ * @param driver - Driver or Uint8Array
  * @param options - Mount options.
  * @returns A mounted disk.
  */
-function mount(driver: RandomAccessDriver, options?: MountOptions): Disk;
+export function mount(driver: RandomAccessDriver | Uint8Array, options?: MountOptions): Disk;
 ```
 
 ```javascript
 import { mount } from "libmount";
-const disk = mount(driver);
-const fs = disk.getFileSystem();
-const data = fs.getRoot().getFile("kernel.sys").open()?.readData(); // Uint8Array
-```
 
-See more [examples](examples)
+//You can use a driver to access your hardware devices (e.g., /dev/sdb or \\.\PhysicalDrive1) or large disk images without loading the entire disk into memory.
+// see examples/raw-disk.mjs
 
-You can use a driver to access your hardware devices (e.g., /dev/sdb or \\.\PhysicalDrive1) or large disk images without loading the entire disk into memory.
-
-```javascript
 const driver = {
   capacity,
   read: (address, count) => { ... },
 };
 const disk = mount(driver);
+
+// or just pass entire file as Uint8Array
+// const disk = mount(fs.readFileSync(filename, { flag: "r" }));
+
+const fs = disk.getFileSystem();
+const data = fs.getRoot().getFile("kernel.sys").open()?.readData(); // Uint8Array
 ```
 
-See [raw-disk.mjs](examples/raw-disk.mjs)
+See more [examples](examples)
 
 ## Constants, Types, Misc
 

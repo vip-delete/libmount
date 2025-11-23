@@ -8,7 +8,7 @@ if (!fs) {
   throw new Error();
 }
 
-test("flash-fat32-listFiles", () => {
+test("flash-fat32-info", () => {
   expect(fs.getName()).toBe("FAT32");
   expect(fs.getLabel()).toBe("FLASH");
   expect(fs.getOEMName()).toBe("LIBMOUNT");

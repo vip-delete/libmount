@@ -78,8 +78,9 @@ export function mount(driver: RandomAccessDriver | Uint8Array, options?: MountOp
 ```javascript
 import { mount } from "libmount";
 
-//You can use a driver to access your hardware devices (e.g., /dev/sdb or \\.\PhysicalDrive1) or large disk images without loading the entire disk into memory.
-// see examples/raw-disk.mjs
+// You can use a driver to access your hardware devices (e.g., /dev/sdb or \\.\PhysicalDrive1)
+// or large disk images without loading the entire disk into memory.
+// See examples/raw-disk.mjs
 
 const driver = {
   capacity,
@@ -127,7 +128,7 @@ See more [examples](examples)
 
 ## Dependency Diagram
 
-Class dependencies digram excluding "support" classes (const, log, types, utils, dao, io) which are used everywhere
+Class dependency digram excluding "support" classes (const, log, types, utils, dao, io) which are used everywhere
 
 ![graph.mjs](graph.svg)
 

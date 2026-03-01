@@ -50,7 +50,7 @@
     "@types/serve-static": "^2.x",
     "@vitest/coverage-istanbul": "^4.x",
     "@vue/runtime-dom": "^3.5.24",
-    "eslint": "^9.x",
+    "eslint": "^10.x",
     "eslint-plugin-jsdoc": "^61.x",
     "express": "^5.x",
     "google-closure-compiler": "^20251111.0.0",

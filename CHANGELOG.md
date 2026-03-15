@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.0] - 2026-03-15
+
+* Bump versions
+
 ## [0.5.0] - 2025-11-23
 
 * Add RandomAccessDriver

@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "libmount",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Standalone FAT12, FAT16, FAT32, VFAT implementation in JavaScript",
   "keywords": [
     "filesystem",
@@ -43,17 +43,20 @@
     "madge": "madge src/mount.mjs src/fdisk.mjs src/mkfsvfat.mjs --image graph.svg --exclude \"(const|log|types|utils|dao|io)\\.mjs$\""
   },
   "devDependencies": {
+    "@eslint/js": "^10.x",
     "@stylistic/eslint-plugin": "^5.x",
     "@types/express": "^5.x",
     "@types/google-closure-compiler": "^20231112.0.0",
-    "@types/node": "24.x",
+    "@types/node": "^25.x",
     "@types/serve-static": "^2.x",
     "@vitest/coverage-istanbul": "^4.x",
-    "@vue/runtime-dom": "^3.5.24",
-    "eslint": "^9.x",
-    "eslint-plugin-jsdoc": "^61.x",
+    "@vue/runtime-dom": "^3.5.30",
+    "esbuild": "^0.27.x",
+    "eslint": "^10.x",
+    "eslint-plugin-jsdoc": "^62.x",
     "express": "^5.x",
-    "google-closure-compiler": "^20251111.0.0",
+    "globals": "^17.x",
+    "google-closure-compiler": "^20260311.0.0",
     "iconv-tiny": "^1.x",
     "prettier": "^3.x",
     "vitest": "^4.x"

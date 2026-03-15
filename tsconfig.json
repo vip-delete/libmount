@@ -8,6 +8,5 @@
     "noEmit": true,
     "moduleResolution": "Bundler"
   },
-  "include": ["src", "static", "scripts", "examples", "tests"],
-  "exclude": ["src/externs.mjs"]
+  "exclude": ["dist", "src/externs.mjs"]
 }

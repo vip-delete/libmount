@@ -197,7 +197,6 @@ const loadFATVariables = (bs) => {
   const SizeOfCluster = BytsPerSec * SecPerClus;
   const CountOfClusters = Math.floor(DataSec / SecPerClus);
   // Windows: #define FatIndexBitSize(B) ((UCHAR)(IsBpbFat32(B) ? 32 : (FatNumberOfClusters(B) < 4087 ? 12 : 16)))
-  // eslint-disable-next-line no-nested-ternary
   const IndexBits = bpbFat32 ? 32 : CountOfClusters < FAT_THRESHOLD ? 12 : 16;
   const MaxClus = CountOfClusters + 1;
   const SystemArea = RsvdSecCnt + FATSz * NumFATs;

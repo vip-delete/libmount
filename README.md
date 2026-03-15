@@ -27,7 +27,7 @@ or use CDN:
 <script type="importmap">
   {
     "imports": {
-      "libmount": "https://cdn.jsdelivr.net/npm/libmount@0.5.0/dist/libmount.mjs"
+      "libmount": "https://cdn.jsdelivr.net/npm/libmount@0.6.0/dist/libmount.mjs"
     }
   }
 </script>

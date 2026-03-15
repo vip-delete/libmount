@@ -311,7 +311,6 @@ const createFloppyDiskLayout = (capacity, floppyFormat) => {
  * @param {!ns.VFATOptions} [options]
  * @return {?DiskLayout}
  */
-// eslint-disable-next-line max-lines-per-function
 const createDiskLayout = (capacity, options) => {
   const maxCapacity = Number.MAX_SAFE_INTEGER;
   capacity = getIntegerOrDefault(0, maxCapacity, maxCapacity, capacity);

@@ -5,7 +5,7 @@ export default defineConfig({
     coverage: {
       provider: "istanbul",
       reporter: ["text"],
-      include: ["src/**/*.mjs"],
+      include: ["src/**/*"],
       exclude: ["src/defines.mjs", "src/externs.mjs", "src/log.mjs", "src/types.mjs"],
     },
   },

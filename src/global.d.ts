@@ -294,7 +294,7 @@ declare namespace ns {
     /**
      * @returns the whole file content
      */
-    readData(): Uint8Array;
+    readData(): Uint8Array<ArrayBuffer>;
 
     /**
      * @param data - the whole file content

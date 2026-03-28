@@ -187,7 +187,7 @@ function createRow(f, name, onDelete, onClick) {
 /**
  * @param {string} url
  * @param {function(number,number):void} onProgress
- * @returns {Promise<Uint8Array>}
+ * @returns {Promise<Uint8Array<ArrayBuffer>>}
  */
 async function fetchWithProgress(url, onProgress) {
   const response = await fetch(url);
@@ -218,7 +218,7 @@ async function fetchWithProgress(url, onProgress) {
 }
 
 /**
- * @param {?Uint8Array} data
+ * @param {?Uint8Array<ArrayBuffer>} data
  * @param {string} name
  */
 function download(data, name) {

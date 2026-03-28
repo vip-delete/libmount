@@ -569,7 +569,7 @@ class FileIO {
 
   /**
    * @override
-   * @return {!Uint8Array}
+   * @return {!Uint8Array<ArrayBuffer>}
    */
   // @ts-expect-error
   readData() {
@@ -577,7 +577,6 @@ class FileIO {
     const fileSize = this.node.dirEntry.FileSize;
     const data = new Uint8Array(fileSize);
     if (fileSize) {
-      // eslint-disable-next-line init-declarations
       let len;
       let tmp = data;
       while ((len = this.readClus(tmp))) {
@@ -595,7 +594,6 @@ class FileIO {
   // @ts-expect-error
   writeData(data) {
     this.rewind();
-    // eslint-disable-next-line init-declarations
     let len;
     let tmp = data;
     while (tmp.length && (len = this.writeClus(tmp))) {
@@ -1749,7 +1747,6 @@ export const createFileSystem = (driver, cp) => {
     /**
      * @type {!FAT}
      */
-    // eslint-disable-next-line init-declarations
     let fat;
     if (vars.IndexBits === 12) {
       fat = new FAT12(driver, vars, offsetFATs);

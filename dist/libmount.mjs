@@ -1641,7 +1641,7 @@ var FileIO = class {
   }
   /**
    * @override
-   * @return {!Uint8Array}
+   * @return {!Uint8Array<ArrayBuffer>}
    */
   // @ts-expect-error
   readData() {

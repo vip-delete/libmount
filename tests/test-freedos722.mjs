@@ -331,7 +331,6 @@ test("FileIO-skipClus", () => {
     const io = file.open();
     expect(io).not.toBeNull();
     if (io) {
-      // eslint-disable-next-line init-declarations
       let len;
       let tmp = data;
       while ((len = io.readClus(tmp))) {
@@ -353,7 +352,6 @@ test("FileIO-readClus", () => {
     const io = file.open();
     expect(io).not.toBeNull();
     if (io) {
-      // eslint-disable-next-line init-declarations
       let len;
       let tmp = data;
       while ((len = io.readClus(tmp))) {
@@ -374,7 +372,6 @@ test("FileIO-writeClus", () => {
     const content = latin1.encode("Hello World!".repeat(100));
     if (io) {
       const expectedFreeClusters = fs.getFreeClusters() - Math.ceil(content.length / fs.getSizeOfCluster());
-      // eslint-disable-next-line init-declarations
       let len;
       let tmp = content;
       while (tmp.length && (len = io.writeClus(tmp))) {

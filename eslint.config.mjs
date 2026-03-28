@@ -27,6 +27,7 @@ export default [
       "jsdoc/reject-any-type": 0,
       "jsdoc/require-param-description": 0,
       "jsdoc/require-returns-description": 0,
+      "init-declarations": 0,
       "max-classes-per-file": 0,
       "max-depth": ["error", 5],
       "max-lines": 0,

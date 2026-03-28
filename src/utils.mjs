@@ -115,7 +115,6 @@ export const normalizeLongName = (longName) => {
     i++;
   }
   let j = longName.length - 1;
-  // eslint-disable-next-line init-declarations
   let ch;
   while (j >= i && ((ch = longName.charCodeAt(j)) === " ".charCodeAt(0) || ch === ".".charCodeAt(0))) {
     j--;
@@ -270,7 +269,6 @@ export const lfnToStr = (chain) => {
   const buf = LFN_DECODE_BUFFER;
   let len = 0;
   let k = chain.length - 1;
-  // eslint-disable-next-line init-declarations
   let ch;
   do {
     const item = chain[k--];

@@ -1,0 +1,20 @@
+{
+  "name": "LibMount Container",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "workspaceFolder": "/app",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/app,type=bind",
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+    }
+  },
+  "mounts": ["source=node_modules_libmount,target=/app/node_modules,type=volume"],
+  "postCreateCommand": "npm install -g npm-check-updates && npm install",
+  "portsAttributes": {
+    "3000": {
+      "label": "Demo"
+    }
+  }
+}

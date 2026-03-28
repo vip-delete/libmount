@@ -1,9 +1,9 @@
 import { compile, getExports, writeFileSync } from "./commons.mjs";
 
 const exports = getExports("src/index.mjs");
-
 writeFileSync("./dist/exports.mjs", `import { ${exports.join(", ")} } from "../src/index.mjs";\n${exports.map((it) => `ns.${it} = ${it};\n`).join("")}`);
-const outputWrapper = `const ns = {};\n%output%\nexport const { ${exports.join(", ")} } = ns;\n`;
+
+const outputWrapper = `const ns = {};\n{\n%output%\n}\nexport const { ${exports.join(", ")} } = ns;\n`;
 
 await compile(
   "lib-mount",

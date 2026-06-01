@@ -53,7 +53,7 @@
     "@vue/runtime-dom": "^3.5.31",
     "esbuild": "^0.27.x",
     "eslint": "^10.x",
-    "eslint-plugin-jsdoc": "^62.x",
+    "eslint-plugin-jsdoc": "^63.x",
     "express": "^5.x",
     "globals": "^17.x",
     "google-closure-compiler": "^20260324.0.0",

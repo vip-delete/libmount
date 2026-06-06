@@ -7,7 +7,7 @@ import { assert } from "./utils.mjs";
  */
 class DriverIO {
   /**
-   * @param {!ns.RandomAccessDriver} driver
+   * @param {!libmount.RandomAccessDriver} driver
    */
   constructor(driver) {
     /**
@@ -315,7 +315,7 @@ class SyncIO {
 // Export
 
 /**
- * @param {!ns.RandomAccessDriver} driver
+ * @param {!libmount.RandomAccessDriver} driver
  * @return {!Driver}
  */
 export const createDriver = (driver) => new DriverIO(driver);

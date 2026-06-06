@@ -1,5 +1,5 @@
 /**
- * iconv-tiny v0.6.0
+ * libmount v0.6.0
  * (c) 2025-present vip.delete
  * @license MIT
  **/
@@ -593,7 +593,7 @@ var createDirEntry = (Name, dateTime) => {
 // src/io.mjs
 var DriverIO = class {
   /**
-   * @param {!ns.RandomAccessDriver} driver
+   * @param {!libmount.RandomAccessDriver} driver
    */
   constructor(driver) {
     this.driver = driver;
@@ -1885,7 +1885,7 @@ var File = class _File {
   }
   /**
    * @override
-   * @return {?ns.FileIO}
+   * @return {?libmount.FileIO}
    */
   // @ts-expect-error
   open() {
@@ -2074,7 +2074,7 @@ var FileSystem = class {
    * @param {!BootSector} bs
    * @param {!FATVariables} vars
    * @param {!FAT} fat
-   * @param {!ns.Codepage} cp
+   * @param {!libmount.Codepage} cp
    */
   constructor(driver, bs, vars, fat, cp) {
     this.driver = driver;
@@ -2668,7 +2668,7 @@ var createFileSystem = (driver, cp) => {
 var Disk = class {
   /**
    * @param {!Driver} driver
-   * @param {!ns.Codepage} cp
+   * @param {!libmount.Codepage} cp
    */
   constructor(driver, cp) {
     this.driver = driver;
@@ -2685,7 +2685,7 @@ var Disk = class {
   }
   /**
    * @override
-   * @return {?ns.FileSystem}
+   * @return {?libmount.FileSystem}
    */
   // @ts-expect-error
   getFileSystem() {
@@ -2693,7 +2693,7 @@ var Disk = class {
   }
   /**
    * @override
-   * @return {!Array<!ns.Partition>}
+   * @return {!Array<!libmount.Partition>}
    */
   // @ts-expect-error
   getPartitions() {
@@ -2718,7 +2718,7 @@ var Disk = class {
   }
   /**
    * @override
-   * @param {!ns.DiskSectors} diskSectors
+   * @param {!libmount.DiskSectors} diskSectors
    */
   // @ts-expect-error
   write(diskSectors) {

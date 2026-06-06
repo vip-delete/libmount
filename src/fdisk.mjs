@@ -2,8 +2,8 @@ import { writePartitionTable } from "./dao.mjs";
 import { createIO } from "./io.mjs";
 
 /**
- * @param {!Array<!ns.Partition>} partitions
- * @return {!ns.DiskSectors}
+ * @param {!Array<!libmount.Partition>} partitions
+ * @return {!libmount.DiskSectors}
  */
 export const fdisk = (partitions) => {
   const bs = new Uint8Array(512);

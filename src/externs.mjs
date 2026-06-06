@@ -8,24 +8,24 @@
  * @file Public API of "libmount" for Closure Compiler
  * @externs
  */
-const ns = {
+const libmount = {
   /**
-   * @param {!ns.RandomAccessDriver|!Uint8Array} driver
-   * @param {!ns.MountOptions} [options]
-   * @return {!ns.Disk}
+   * @param {!libmount.RandomAccessDriver|!Uint8Array} driver
+   * @param {!libmount.MountOptions} [options]
+   * @return {!libmount.Disk}
    */
   mount(driver, options) {},
 
   /**
-   * @param {!Array<!ns.Partition>} partitions
-   * @return {!ns.DiskSectors}
+   * @param {!Array<!libmount.Partition>} partitions
+   * @return {!libmount.DiskSectors}
    */
   fdisk(partitions) {},
 
   /**
    * @param {number} capacity
-   * @param {!ns.VFATOptions} [options]
-   * @return {?ns.VFATResult}
+   * @param {!libmount.VFATOptions} [options]
+   * @return {?libmount.VFATResult}
    */
   mkfsvfat(capacity, options) {},
 
@@ -59,17 +59,17 @@ const ns = {
     capacity() {}
 
     /**
-     * @return {?ns.FileSystem}
+     * @return {?libmount.FileSystem}
      */
     getFileSystem() {}
 
     /**
-     * @return {!Array<!ns.Partition>}
+     * @return {!Array<!libmount.Partition>}
      */
     getPartitions() {}
 
     /**
-     * @param {!ns.DiskSectors} diskSectors
+     * @param {!libmount.DiskSectors} diskSectors
      */
     write(diskSectors) {}
   },
@@ -120,7 +120,7 @@ const ns = {
     getFreeClusters() {}
 
     /**
-     * @return {!ns.File}
+     * @return {!libmount.File}
      */
     getRoot() {}
   },
@@ -201,24 +201,24 @@ const ns = {
     setLastAccessTime(date) {}
 
     /**
-     * @param {function(!ns.File):boolean} predicate
-     * @return {?ns.File}
+     * @param {function(!libmount.File):boolean} predicate
+     * @return {?libmount.File}
      */
     findFirst(predicate) {}
 
     /**
-     * @param {function(!ns.File):boolean} predicate
-     * @return {?Array<!ns.File>}
+     * @param {function(!libmount.File):boolean} predicate
+     * @return {?Array<!libmount.File>}
      */
     findAll(predicate) {}
 
     /**
-     * @return {?Array<!ns.File>}
+     * @return {?Array<!libmount.File>}
      */
     listFiles() {}
 
     /**
-     * @return {?ns.FileIO}
+     * @return {?libmount.FileIO}
      */
     open() {}
 
@@ -229,25 +229,25 @@ const ns = {
 
     /**
      * @param {string} relativePath
-     * @return {?ns.File}
+     * @return {?libmount.File}
      */
     getFile(relativePath) {}
 
     /**
      * @param {string} relativePath
-     * @return {?ns.File}
+     * @return {?libmount.File}
      */
     makeFile(relativePath) {}
 
     /**
      * @param {string} relativePath
-     * @return {?ns.File}
+     * @return {?libmount.File}
      */
     makeDir(relativePath) {}
 
     /**
      * @param {string} dest
-     * @return {?ns.File}
+     * @return {?libmount.File}
      */
     moveTo(dest) {}
   },
@@ -293,11 +293,11 @@ const ns = {
 
 /**
  * @typedef {{
- *            codepage: ns.Codepage,
- *            partition: ns.Partition,
+ *            codepage: libmount.Codepage,
+ *            partition: libmount.Partition,
  *          }}
  */
-ns.MountOptions;
+libmount.MountOptions;
 
 /**
  * @typedef {{
@@ -317,11 +317,11 @@ ns.MountOptions;
  *            hiddSec: number,
  *          }}
  */
-ns.VFATOptions;
+libmount.VFATOptions;
 
 /**
  * @typedef {{
- *            sectors: ns.DiskSectors,
+ *            sectors: libmount.DiskSectors,
  *            id: number,
  *            type: string,
  *            totSec: number,
@@ -334,16 +334,16 @@ ns.VFATOptions;
  *            bytsPerSec: number,
  *          }}
  */
-ns.VFATResult;
+libmount.VFATResult;
 
 /**
  * @typedef {{
  *            bytsPerSec: number,
- *            zeroRegions: !Array<!ns.ZeroRegion>,
- *            dataSectors: !Array<!ns.DataSector>,
+ *            zeroRegions: !Array<!libmount.ZeroRegion>,
+ *            dataSectors: !Array<!libmount.DataSector>,
  *          }}
  */
-ns.DiskSectors;
+libmount.DiskSectors;
 
 /**
  * @typedef {{
@@ -351,7 +351,7 @@ ns.DiskSectors;
  *            count: number,
  *          }}
  */
-ns.ZeroRegion;
+libmount.ZeroRegion;
 
 /**
  * @typedef {{
@@ -359,7 +359,7 @@ ns.ZeroRegion;
  *            data: !Uint8Array,
  *          }}
  */
-ns.DataSector;
+libmount.DataSector;
 
 /**
  * @typedef {{
@@ -369,7 +369,7 @@ ns.DataSector;
  *            totalSectors: number,
  *          }}
  */
-ns.Partition;
+libmount.Partition;
 
 /**
  * @typedef {{
@@ -379,4 +379,4 @@ ns.Partition;
  *            close: (function():void|void),
  *          }}
  */
-ns.RandomAccessDriver;
+libmount.RandomAccessDriver;

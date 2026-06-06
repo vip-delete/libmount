@@ -5,7 +5,7 @@ addEventListener("load", onLoad);
 
 /**
  * @param {!Uint8Array} img
- * @returns {!ns.RandomAccessDriver}
+ * @returns {!libmount.RandomAccessDriver}
  */
 const createRawImageDriver = (img) => ({
   capacity: img.length,

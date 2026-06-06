@@ -1,13 +1,10 @@
-import { compile, getExports, writeFileSync } from "./commons.mjs";
+import { compile, getExports, readFileSync, writeFileSync } from "./commons.mjs";
 
 const exports = getExports("src/index.mjs");
-writeFileSync("./dist/exports.mjs", `import { ${exports.join(", ")} } from "../src/index.mjs";\n${exports.map((it) => `ns.${it} = ${it};\n`).join("")}`);
-
-const outputWrapper = `const ns = {};\n{\n%output%\n}\nexport const { ${exports.join(", ")} } = ns;\n`;
+writeFileSync("./dist/exports.mjs", `import { ${exports.join(", ")} } from "../src/index.mjs";\n${exports.map((it) => `libmount.${it} = ${it};\n`).join("")}`);
 
 await compile(
   "lib-mount",
-  outputWrapper,
   `dist/libmount.min.mjs`,
   [
     "src/externs.mjs",
@@ -39,3 +36,20 @@ await compile(
     "USE_LFN=true",
   ],
 );
+
+/**
+ * @param {string} match
+ * @param {string} name
+ * @returns {string}
+ */
+const replacer = (match, name) => ("\n" + (name[0] === name[0].toUpperCase() ? "" : "export ") + "const " + name);
+
+const filename = `dist/libmount.min.mjs`;
+const ident = "(?<name>[A-Za-z_$][A-Za-z0-9_$]*)";
+const regexp = "libmount\\." + ident;
+
+const min = readFileSync(filename) //
+  .replace(new RegExp("\\n" + regexp, "gu"), replacer)
+  .replace(new RegExp(regexp, "gu"), replacer);
+
+writeFileSync(filename, min);

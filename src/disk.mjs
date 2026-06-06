@@ -5,12 +5,12 @@ import { createIO } from "./io.mjs";
 import { Driver } from "./types.mjs";
 
 /**
- * @implements {ns.Disk}
+ * @implements {libmount.Disk}
  */
 class Disk {
   /**
    * @param {!Driver} driver
-   * @param {!ns.Codepage} cp
+   * @param {!libmount.Codepage} cp
    */
   constructor(driver, cp) {
     this.driver = driver;
@@ -30,7 +30,7 @@ class Disk {
 
   /**
    * @override
-   * @return {?ns.FileSystem}
+   * @return {?libmount.FileSystem}
    */
   // @ts-expect-error
   getFileSystem() {
@@ -39,7 +39,7 @@ class Disk {
 
   /**
    * @override
-   * @return {!Array<!ns.Partition>}
+   * @return {!Array<!libmount.Partition>}
    */
   // @ts-expect-error
   getPartitions() {
@@ -67,7 +67,7 @@ class Disk {
 
   /**
    * @override
-   * @param {!ns.DiskSectors} diskSectors
+   * @param {!libmount.DiskSectors} diskSectors
    */
   // @ts-expect-error
   write(diskSectors) {
@@ -86,7 +86,7 @@ class Disk {
 
 /**
  * @param {!Driver} driver
- * @param {!ns.Codepage} cp
- * @return {!ns.Disk}
+ * @param {!libmount.Codepage} cp
+ * @return {!libmount.Disk}
  */
 export const createDisk = (driver, cp) => new Disk(driver, cp);

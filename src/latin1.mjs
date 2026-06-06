@@ -1,5 +1,5 @@
 /**
- * @implements {ns.Codepage}
+ * @implements {libmount.Codepage}
  */
 class Latin1 {
   /**

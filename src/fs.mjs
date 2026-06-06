@@ -120,7 +120,7 @@ const DOT_DOT_SFN = str2bytes("..         ");
  * @param {!IO} io
  * @param {number} flag
  * @param {number} offset
- * @param {!ns.Codepage} cp
+ * @param {!libmount.Codepage} cp
  * @return {?FATNode}
  */
 const readNode = (io, flag, offset, cp) => {
@@ -453,7 +453,7 @@ class FAT32 {
 
 /**
  * @private
- * @implements {ns.FileIO}
+ * @implements {libmount.FileIO}
  */
 class FileIO {
   /**
@@ -631,7 +631,7 @@ class FileIO {
 }
 
 /**
- * @implements {ns.File}
+ * @implements {libmount.File}
  */
 class File {
   /**
@@ -841,7 +841,7 @@ class File {
 
   /**
    * @override
-   * @return {?ns.FileIO}
+   * @return {?libmount.FileIO}
    */
   // @ts-expect-error
   open() {
@@ -1043,7 +1043,7 @@ class File {
 }
 
 /**
- * @implements {ns.FileSystem}
+ * @implements {libmount.FileSystem}
  */
 class FileSystem {
   /**
@@ -1051,7 +1051,7 @@ class FileSystem {
    * @param {!BootSector} bs
    * @param {!FATVariables} vars
    * @param {!FAT} fat
-   * @param {!ns.Codepage} cp
+   * @param {!libmount.Codepage} cp
    */
   constructor(driver, bs, vars, fat, cp) {
     /**
@@ -1725,8 +1725,8 @@ class FileSystem {
 
 /**
  * @param {!Driver} driver
- * @param {!ns.Codepage} cp
- * @return {?ns.FileSystem}
+ * @param {!libmount.Codepage} cp
+ * @return {?libmount.FileSystem}
  */
 export const createFileSystem = (driver, cp) => {
   if (driver.len() < SZ) {

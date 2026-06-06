@@ -7,7 +7,7 @@ import pkg from "../package.json" with { type: "json" };
 
 export const getBanner = () =>
   `/**
- * iconv-tiny v${pkg.version}
+ * libmount v${pkg.version}
  * (c) 2025-present ${pkg.author}
  * @license ${pkg.license}
  **/
@@ -83,28 +83,24 @@ export const writeFileSync = (filename, content) => {
 
 /**
  * @param {string} name
- * @param {string} outputWrapper
  * @param {string} outputFile
  * @param {!Array<string>} files
  * @param {!Array<string>} defines
  */
-export const compile = async (name, outputWrapper, outputFile, files, defines) => {
+export const compile = async (name, outputFile, files, defines) => {
   const args = {
-    /* eslint-disable camelcase */
-    module_resolution: "BROWSER",
-    compilation_level: "ADVANCED",
-    warning_level: "VERBOSE",
-    jscomp_error: "*",
-    jscomp_warning: "reportUnknownTypes",
-    assume_function_wrapper: true,
-    output_wrapper: outputWrapper,
-    summary_detail_level: String(3),
-    use_types_for_optimization: true,
+    moduleResolution: "BROWSER",
+    compilationLevel: "ADVANCED",
+    warningLevel: "VERBOSE",
+    jscompError: "*",
+    jscompWarning: "reportUnknownTypes",
+    assumeFunctionWrapper: true,
+    summaryDetailLevel: String(3),
+    useTypesForOptimization: true,
     define: defines,
-    js_output_file: abs(outputFile),
+    jsOutputFile: abs(outputFile),
     charset: "utf-8",
     js: files.map(abs),
-    /* eslint-enable camelcase */
   };
 
   await new Promise((resolve, reject) => {
@@ -161,7 +157,7 @@ export const nasm = async (name, src, dest, args) => {
 
 /**
  * @param {!Uint8Array} img
- * @returns {!ns.RandomAccessDriver}
+ * @returns {!libmount.RandomAccessDriver}
  */
 export const createRawImageDriver = (img) => ({
   capacity: img.length,

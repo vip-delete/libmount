@@ -149,7 +149,7 @@ export const split = (path) => {
 
 /**
  * @param {!Uint8Array} sfn
- * @param {!ns.Codepage} cp
+ * @param {!libmount.Codepage} cp
  * @return {string}
  */
 export const sfnToStr = (sfn, cp) => {
@@ -164,7 +164,7 @@ export const sfnToStr = (sfn, cp) => {
  * @param {!Uint8Array} sfn
  * @param {number} offset
  * @param {number} len
- * @param {!ns.Codepage} cp
+ * @param {!libmount.Codepage} cp
  * @param {string} str
  * @return {boolean}
  */
@@ -198,7 +198,7 @@ const appendToSFN = (sfn, offset, len, cp, str) => {
 
 /**
  * @param {string} str
- * @param {!ns.Codepage} codepage
+ * @param {!libmount.Codepage} codepage
  * @return {?Uint8Array}
  */
 export const strToSfn = (str, codepage) => {
@@ -298,7 +298,7 @@ export const lfnToStr = (chain) => {
 /**
  * @param {string} str
  * @param {number} max
- * @param {!ns.Codepage} cp
+ * @param {!libmount.Codepage} cp
  * @return {string}
  */
 const toValidShortNameCharacters = (str, max, cp) => {
@@ -345,7 +345,7 @@ const strToHash = (str) => {
 
 /**
  * @param {string} str
- * @param {!ns.Codepage} cp
+ * @param {!libmount.Codepage} cp
  * @param {!Set<string>} fileNames
  * @return {string}
  */
@@ -456,7 +456,7 @@ export const toTimeTenth = (date) => {
 };
 
 /**
- * @param {!ns.Codepage} cp
+ * @param {!libmount.Codepage} cp
  * @param {number} len
  * @param {?string} str
  * @return {!Uint8Array}

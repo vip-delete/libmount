@@ -5,7 +5,7 @@ import { latin1 } from "./latin1.mjs";
 
 /**
  * @param {!Uint8Array} img
- * @return {!ns.RandomAccessDriver}
+ * @return {!libmount.RandomAccessDriver}
  */
 const createUint8ArrayDriver = (img) => ({
   capacity: img.length,
@@ -26,16 +26,16 @@ const createUint8ArrayDriver = (img) => ({
 });
 
 /**
- * @param {!ns.Partition} partition
- * @param {!ns.RandomAccessDriver} driver
- * @return {!ns.RandomAccessDriver}
+ * @param {!libmount.Partition} partition
+ * @param {!libmount.RandomAccessDriver} driver
+ * @return {!libmount.RandomAccessDriver}
  */
 const createPartitionDriver = (partition, driver) => {
   const begin = partition.relativeSectors * SZ;
   const { read, write } = driver;
 
   /**
-   * @type {!ns.RandomAccessDriver}
+   * @type {!libmount.RandomAccessDriver}
    */
   const partitionDriver = {
     capacity: partition.totalSectors * SZ,
@@ -61,9 +61,9 @@ const createPartitionDriver = (partition, driver) => {
 };
 
 /**
- * @param {!Uint8Array|!ns.RandomAccessDriver} driver
- * @param {!ns.MountOptions} [options]
- * @return {!ns.Disk}
+ * @param {!Uint8Array|!libmount.RandomAccessDriver} driver
+ * @param {!libmount.MountOptions} [options]
+ * @return {!libmount.Disk}
  */
 export const mount = (driver, options) => {
   if (driver instanceof Uint8Array) {

@@ -308,7 +308,7 @@ const createFloppyDiskLayout = (capacity, floppyFormat) => {
 /**
  * Crazy Math
  * @param {number} capacity
- * @param {!ns.VFATOptions} [options]
+ * @param {!libmount.VFATOptions} [options]
  * @return {?DiskLayout}
  */
 const createDiskLayout = (capacity, options) => {
@@ -421,7 +421,7 @@ const createDiskLayout = (capacity, options) => {
 
 /**
  * @param {!DiskLayout} diskLayout
- * @param {!ns.VFATOptions} [options]
+ * @param {!libmount.VFATOptions} [options]
  * @return {!BootSector}
  */
 const createBootSector = (diskLayout, options) => {
@@ -494,8 +494,8 @@ const createBootSector = (diskLayout, options) => {
 /**
  * @param {number} IndexBits
  * @param {!BootSector} bootSector
- * @param {!ns.VFATOptions} [options]
- * @return {!ns.DiskSectors}
+ * @param {!libmount.VFATOptions} [options]
+ * @return {!libmount.DiskSectors}
  */
 const createDiskSectors = (IndexBits, bootSector, options) => {
   const bpb = bootSector.bpb;
@@ -509,13 +509,13 @@ const createDiskSectors = (IndexBits, bootSector, options) => {
   const CountOfClusters = Math.floor(DataSec / SecPerClus);
 
   /**
-   * @type {!Array<!ns.ZeroRegion>}
+   * @type {!Array<!libmount.ZeroRegion>}
    */
   const zeroRegions = [];
   zeroRegions.push({ i: 0, count: MetaSec + (bpbFat32 ? SecPerClus : 0) });
 
   /**
-   * @type {!Array<!ns.DataSector>}
+   * @type {!Array<!libmount.DataSector>}
    */
   const dataSectors = [];
 
@@ -573,8 +573,8 @@ const createDiskSectors = (IndexBits, bootSector, options) => {
 
 /**
  * @param {number} capacity
- * @param {!ns.VFATOptions} [options]
- * @return {?ns.VFATResult}
+ * @param {!libmount.VFATOptions} [options]
+ * @return {?libmount.VFATResult}
  */
 export const mkfsvfat = (capacity, options) => {
   /**

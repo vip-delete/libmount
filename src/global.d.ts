@@ -1,4 +1,4 @@
-declare namespace ns {
+declare namespace libmount {
   /**
    * Mount
    *

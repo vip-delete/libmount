@@ -56,7 +56,7 @@ export default [
       globals: {
         TextDecoder: "readonly",
         TextEncoder: "readonly",
-        ns: "writable",
+        libmount: "writable",
       },
     },
     settings: {
@@ -68,7 +68,7 @@ export default [
     languageOptions: {
       globals: {
         ...globals.node,
-        ns: "writable",
+        libmount: "writable",
       },
     },
   },
@@ -77,7 +77,7 @@ export default [
     languageOptions: {
       globals: {
         ...globals.browser,
-        ns: "writable",
+        libmount: "writable",
       },
     },
   },
